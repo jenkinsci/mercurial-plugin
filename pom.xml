@@ -1,15 +1,100 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <parent>
-    <groupId>org.jvnet.hudson.plugins</groupId>
-    <artifactId>plugin</artifactId>
-    <version>1.0</version>
-    <relativePath>../pom.xml</relativePath>
-  </parent>
-  
+
+  <groupId>org.jvnet.hudson.plugins</groupId>
   <artifactId>mercurial</artifactId>
   <version>1.0-SNAPSHOT</version>
   <packaging>hpi</packaging>
   <name>Hudson Mercurial plugin</name>
   <description>Integrates Hudson to Mercurial SCM</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.jvnet.hudson.main</groupId>
+      <artifactId>hudson-war</artifactId>
+      <type>war</type>
+      <version>1.95</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jvnet.hudson.main</groupId>
+      <artifactId>hudson-core</artifactId>
+      <version>1.95</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>3.8</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <!--
+      Since new versions need to overwrite old versions, it's better
+      not to have version number in the .hpi file name.
+    -->
+    <finalName>${project.artifactId}</finalName>
+    <!--
+      I don't really understand how this works, but it makes Maven recognizes
+      <packaging>hpi</packaging> defined in maven-hpi-plugin.
+
+      <extensions>true</extensions> is apparently needed to have Maven read
+      the plugin's Plexus component file.
+    -->
+    <defaultGoal>package</defaultGoal>
+    <plugins>
+      <plugin>
+        <groupId>org.jvnet.hudson.tools</groupId>
+        <artifactId>maven-hpi-plugin</artifactId>
+        <version>1.7</version>
+        <extensions>true</extensions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.5</source>
+          <target>1.5</target>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>java.net2</id>
+      <url>https://maven2-repository.dev.java.net/nonav/repository</url>
+    </pluginRepository>
+    <pluginRepository>
+      <id>central</id>
+      <url>http://www.ibiblio.org/maven2</url>
+    </pluginRepository>
+  </pluginRepositories>
+
+  <repositories>
+    <repository>
+      <id>java.net</id>
+      <url>https://maven-repository.dev.java.net/nonav/repository</url>
+      <layout>legacy</layout>
+    </repository>
+    <repository>
+      <id>java.net2</id>
+      <url>https://maven2-repository.dev.java.net/nonav/repository</url>
+    </repository>
+    <repository>
+      <id>central</id>
+      <url>http://www.ibiblio.org/maven2</url>
+    </repository>
+    <repository>
+      <id>central1</id>
+      <url>http://www.ibiblio.org/maven</url>
+      <layout>legacy</layout>
+    </repository>
+    <repository>
+      <id>hudson-libs</id>
+      <url>https://hudson.dev.java.net/source/browse/*checkout*/hudson/hudson/main/lib</url>
+      <layout>legacy</layout>
+    </repository>
+  </repositories>
 </project>
