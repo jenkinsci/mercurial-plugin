@@ -34,7 +34,7 @@ public class MercurialSCM extends SCM {
     }
 
     @Override
-    public void buildEnvVars(Map<String, String> env) {
+    public void buildEnvVars(AbstractBuild build, Map<String, String> env) {
     }
 
     @Override
