@@ -66,13 +66,21 @@
       <id>java.net2</id>
       <url>https://maven2-repository.dev.java.net/nonav/repository</url>
     </pluginRepository>
-    <pluginRepository>
-      <id>central</id>
-      <url>http://www.ibiblio.org/maven2</url>
-    </pluginRepository>
   </pluginRepositories>
 
   <repositories>
+    <repository>
+      <id>central</id>
+      <url>http://repo1.maven.org/maven2</url>
+      <releases>
+        <enabled>true</enabled>
+        <!-- only look for jars here when they are not present locally -->
+        <updatePolicy>never</updatePolicy>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
     <repository>
       <id>java.net</id>
       <url>https://maven-repository.dev.java.net/nonav/repository</url>
@@ -81,15 +89,14 @@
     <repository>
       <id>java.net2</id>
       <url>https://maven2-repository.dev.java.net/nonav/repository</url>
-    </repository>
-    <repository>
-      <id>central</id>
-      <url>http://www.ibiblio.org/maven2</url>
-    </repository>
-    <repository>
-      <id>central1</id>
-      <url>http://www.ibiblio.org/maven</url>
-      <layout>legacy</layout>
+      <releases>
+        <enabled>true</enabled>
+        <!-- only look for jars here when they are not present locally -->
+        <updatePolicy>never</updatePolicy>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
     </repository>
     <repository>
       <id>hudson-libs</id>
