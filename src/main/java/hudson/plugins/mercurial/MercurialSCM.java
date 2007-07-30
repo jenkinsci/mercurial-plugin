@@ -2,6 +2,8 @@ package hudson.plugins.mercurial;
 
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.remoting.VirtualChannel;
+import hudson.FilePath.FileCallable;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
@@ -29,18 +31,17 @@ public class MercurialSCM extends SCM {
 
     @Override
     public boolean checkout(AbstractBuild build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile) throws IOException, InterruptedException {
+        workspace.act(new FileCallable<Object>() {
+            public Object invoke(File ws, VirtualChannel channel) throws IOException {
+                File hgrc = new File(ws, ".hg/hgrc");
+            }
+        })
         // TODO
         throw new UnsupportedOperationException();
     }
 
     @Override
     public void buildEnvVars(AbstractBuild build, Map<String, String> env) {
-    }
-
-    @Override
-    public FilePath getModuleRoot(FilePath workspace) {
-        // TODO
-        throw new UnsupportedOperationException();
     }
 
     @Override
