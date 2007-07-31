@@ -87,7 +87,7 @@ public class MercurialSCM extends SCM {
     /**
      * Updates the current workspace.
      */
-    private boolean update(AbstractBuild build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile) throws InterruptedException, IOException {
+    private boolean update(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile) throws InterruptedException, IOException {
         String oldRev=getTipRevision(launcher, build, workspace, listener);
 
         // pull
@@ -122,7 +122,7 @@ public class MercurialSCM extends SCM {
     /**
      * Determines the current tip revision id and reutnr it.
      */
-    private String getTipRevision(Launcher launcher, AbstractBuild build, FilePath workspace, BuildListener listener) throws IOException, InterruptedException {
+    private String getTipRevision(Launcher launcher, AbstractBuild<?,?> build, FilePath workspace, BuildListener listener) throws IOException, InterruptedException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         if(launcher.launch("hg tip --template {rev}",build.getEnvVars(),baos,workspace).join()!=0) {
             listener.error("Failed to check the tip revision");
@@ -137,7 +137,7 @@ public class MercurialSCM extends SCM {
     /**
      * Start from scratch and clone the whole repository.
      */
-    private boolean clone(AbstractBuild build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile) throws InterruptedException {
+    private boolean clone(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile) throws InterruptedException {
         try {
             workspace.deleteRecursive();
         } catch (IOException e) {
