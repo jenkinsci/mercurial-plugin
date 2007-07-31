@@ -113,7 +113,7 @@ public class MercurialSCM extends SCM {
         FileOutputStream os = new FileOutputStream(changelogFile);
         try {
             if(launcher.launch(
-                new String[]{getDescriptor().getHgExe(),"log","-r",oldRev+":"+newRev,"--template",CHANGELOG_TEMPLATE},
+                new String[]{getDescriptor().getHgExe(),"log","-r",oldRev+":"+newRev,"--template",MercurialChangeSet.CHANGELOG_TEMPLATE},
                 build.getEnvVars(),os,workspace).join()!=0) {
                 listener.error("Failed to calc changelog");
                 return false;
@@ -175,8 +175,7 @@ public class MercurialSCM extends SCM {
 
     @Override
     public ChangeLogParser createChangeLogParser() {
-        // TODO
-        throw new UnsupportedOperationException();
+        return new MercurialChangeLogParser();
     }
 
     @Override
@@ -220,6 +219,4 @@ public class MercurialSCM extends SCM {
             new FormFieldValidator.Executable(req,rsp).process();
         }
     }
-
-    private static final String CHANGELOG_TEMPLATE = "<changeset node='{node}' author='{author}' rev='{rev}' date='{date}'><log>{desc|escape}</log><added>{files_added}</added><deleted>{file_dels}</deleted><files>{files}</files}</changeset>\\n";
 }
