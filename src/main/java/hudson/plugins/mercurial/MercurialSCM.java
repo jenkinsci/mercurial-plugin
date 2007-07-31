@@ -111,6 +111,7 @@ public class MercurialSCM extends SCM {
 
         // calc changeset
         FileOutputStream os = new FileOutputStream(changelogFile);
+        os.write("<changesets>\n".getBytes());
         try {
             if(launcher.launch(
                 new String[]{getDescriptor().getHgExe(),"log","-r",oldRev+":"+newRev,"--template",MercurialChangeSet.CHANGELOG_TEMPLATE},
@@ -121,6 +122,9 @@ public class MercurialSCM extends SCM {
         } catch(IOException e) {
             listener.error("Failed to calc changelog");
             return false;
+        } finally {
+            os.write("</changesets>".getBytes());
+            os.close();
         }
 
         return true;
