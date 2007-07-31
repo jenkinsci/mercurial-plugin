@@ -13,10 +13,13 @@ import hudson.scm.ChangeLogParser;
 import hudson.scm.SCM;
 import hudson.scm.SCMDescriptor;
 import hudson.util.ArgumentListBuilder;
+import hudson.util.FormFieldValidator;
 import org.ini4j.Ini;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerResponse;
 
+import javax.servlet.ServletException;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -59,6 +62,7 @@ public class MercurialSCM extends SCM {
              * Loads the .ini file.
              */
             private Ini loadIni(File hgrc) throws IOException {
+                if(!hgrc.exists())  return new Ini();   // dummy file
                 FileInputStream in = new FileInputStream(hgrc);
                 try {
                     return new Ini(in);
@@ -92,7 +96,9 @@ public class MercurialSCM extends SCM {
 
         // pull
         try {
-            if(launcher.launch("hg pull -u",build.getEnvVars(),listener.getLogger(),workspace).join()!=0) {
+            if(launcher.launch(
+                new String[]{getDescriptor().getHgExe(),"pull","-u"},
+                build.getEnvVars(),listener.getLogger(),workspace).join()!=0) {
                 listener.error("Failed to pull");
                 return false;
             }
@@ -106,7 +112,8 @@ public class MercurialSCM extends SCM {
         // calc changeset
         FileOutputStream os = new FileOutputStream(changelogFile);
         try {
-            if(launcher.launch(new String[]{"hg","log","-r",oldRev+":"+newRev,"--template",CHANGELOG_TEMPLATE},
+            if(launcher.launch(
+                new String[]{getDescriptor().getHgExe(),"log","-r",oldRev+":"+newRev,"--template",CHANGELOG_TEMPLATE},
                 build.getEnvVars(),os,workspace).join()!=0) {
                 listener.error("Failed to calc changelog");
                 return false;
@@ -124,7 +131,9 @@ public class MercurialSCM extends SCM {
      */
     private String getTipRevision(Launcher launcher, AbstractBuild<?,?> build, FilePath workspace, BuildListener listener) throws IOException, InterruptedException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        if(launcher.launch("hg tip --template {rev}",build.getEnvVars(),baos,workspace).join()!=0) {
+        if(launcher.launch(
+            new String[]{getDescriptor().getHgExe(),"tip","--template","{rev}"},
+            build.getEnvVars(),baos,workspace).join()!=0) {
             listener.error("Failed to check the tip revision");
             throw new AbortException();
         }
@@ -146,7 +155,7 @@ public class MercurialSCM extends SCM {
         }
 
         ArgumentListBuilder args = new ArgumentListBuilder();
-        args.add("hg","clone",source,workspace.getRemote());
+        args.add(getDescriptor().getHgExe(),"clone",source,workspace.getRemote());
         try {
             if(launcher.launch(args.toCommandArray(),build.getEnvVars(),listener.getLogger(),null).join()!=0) {
                 listener.error("Failed to clone "+source);
@@ -177,16 +186,38 @@ public class MercurialSCM extends SCM {
 
     public static final class DescriptorImpl extends SCMDescriptor<MercurialSCM> {
         public static final DescriptorImpl DESCRIPTOR = new DescriptorImpl();
+
+        private String hgExe;
+
         private  DescriptorImpl() {
             super(MercurialSCM.class, null);
+            load();
         }
 
         public String getDisplayName() {
             return "Mercurial";
         }
 
+        /**
+         * Path to mercurial executable.
+         */
+        public String getHgExe() {
+            if(hgExe==null) return "hg";
+            return hgExe;
+        }
+        
         public SCM newInstance(StaplerRequest req) throws FormException {
             return req.bindParameters(MercurialSCM.class,"mercurial.");
+        }
+
+        public boolean configure(StaplerRequest req) throws FormException {
+            hgExe = req.getParameter("mercurial.hgExe");
+            save();
+            return true;
+        }
+
+        public void doHgExeCheck(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
+            new FormFieldValidator.Executable(req,rsp).process();
         }
     }
 
