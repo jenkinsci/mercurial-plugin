@@ -23,13 +23,13 @@ public class MercurialChangeLogParser extends ChangeLogParser {
         ArrayList<MercurialChangeSet> r = new ArrayList<MercurialChangeSet>();
         digester.push(r);
 
-        digester.addObjectCreate("*/changset", MercurialChangeSet.class);
-        digester.addSetProperties("*/changset");
-        digester.addBeanPropertySetter("*/changset/msg");
-        digester.addBeanPropertySetter("*/changset/added");
-        digester.addBeanPropertySetter("*/changset/deleted");
-        digester.addBeanPropertySetter("*/changset/files");
-        digester.addSetNext("*/changset","add");
+        digester.addObjectCreate("*/changeset", MercurialChangeSet.class);
+        digester.addSetProperties("*/changeset");
+        digester.addBeanPropertySetter("*/changeset/msg");
+        digester.addBeanPropertySetter("*/changeset/added");
+        digester.addBeanPropertySetter("*/changeset/deleted");
+        digester.addBeanPropertySetter("*/changeset/files");
+        digester.addSetNext("*/changeset","add");
 
         try {
             digester.parse(changelogFile);
