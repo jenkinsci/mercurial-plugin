@@ -1,9 +1,13 @@
 package hudson.plugins.mercurial;
 
-import hudson.scm.ChangeLogSet;
 import hudson.model.User;
+import hudson.scm.ChangeLogSet;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Represents a change set.
@@ -20,6 +24,10 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
     private long rev;
     private String date;
     private String msg;
+
+    private List<String> added = Collections.emptyList();
+    private List<String> deleted = Collections.emptyList();
+    private List<String> modified = Collections.emptyList();
 
     /**
      * Commit message.
@@ -85,6 +93,30 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
     public void setDate(String date) {
         this.date = date;
     }
-    
+
+    @Deprecated
+    public void setAdded(String list) {
+        added = toList(list);
+    }
+
+    @Deprecated
+    public void setDeleted(String list) {
+        deleted = toList(list);
+    }
+
+    @Deprecated
+    public void setFiles(String list) {
+        modified = toList(list);
+        if(!added.isEmpty() || !deleted.isEmpty()) {
+            modified = new ArrayList<String>(modified);
+            modified.removeAll(added);
+            modified.removeAll(deleted);
+        }
+    }
+
+    private List<String> toList(String list) {
+        return Arrays.asList(list.split(" "));
+    }
+
     static final String CHANGELOG_TEMPLATE = "<changeset node='{node}' author='{author}' rev='{rev}' date='{date}'><msg>{desc|escape}</msg><added>{files_added}</added><deleted>{file_dels}</deleted><files>{files}</files></changeset>\\n";
 }
