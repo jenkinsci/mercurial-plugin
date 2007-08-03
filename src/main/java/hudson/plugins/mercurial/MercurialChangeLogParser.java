@@ -29,6 +29,7 @@ public class MercurialChangeLogParser extends ChangeLogParser {
         digester.addBeanPropertySetter("*/changset/added");
         digester.addBeanPropertySetter("*/changset/deleted");
         digester.addBeanPropertySetter("*/changset/files");
+        digester.addSetNext("*/logentry","add");
 
         try {
             digester.parse(changelogFile);
