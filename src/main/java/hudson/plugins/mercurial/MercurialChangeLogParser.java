@@ -2,6 +2,7 @@ package hudson.plugins.mercurial;
 
 import hudson.model.AbstractBuild;
 import hudson.scm.ChangeLogParser;
+import hudson.util.Digester2;
 import hudson.util.IOException2;
 import org.apache.commons.digester.Digester;
 import org.xml.sax.SAXException;
@@ -19,7 +20,7 @@ import java.util.ArrayList;
  */
 public class MercurialChangeLogParser extends ChangeLogParser {
     public MercurialChangeSetList parse(AbstractBuild build, File changelogFile) throws IOException, SAXException {
-        Digester digester = new Digester();
+        Digester digester = new Digester2();
         ArrayList<MercurialChangeSet> r = new ArrayList<MercurialChangeSet>();
         digester.push(r);
 
