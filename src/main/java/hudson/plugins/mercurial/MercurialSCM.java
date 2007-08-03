@@ -64,10 +64,16 @@ public class MercurialSCM extends SCM {
             private Ini loadIni(File hgrc) throws IOException {
                 if(!hgrc.exists())  return new Ini();   // dummy file
                 FileInputStream in = new FileInputStream(hgrc);
+
+                // ini4j internally relies on the context classloader to load the parser,
+                // so switch to the plugin classloader for a while
+                ClassLoader ccl = Thread.currentThread().getContextClassLoader();
+                Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
                 try {
                     return new Ini(in);
                 } finally {
                     in.close();
+                    Thread.currentThread().setContextClassLoader(ccl);
                 }
             }
 
