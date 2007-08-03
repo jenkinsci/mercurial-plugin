@@ -41,6 +41,14 @@ public class MercurialSCM extends SCM {
         this.source = source;
     }
 
+    /**
+     * Gets the source repository path.
+     * Either URL or local file path.
+     */
+    public String getSource() {
+        return source;
+    }
+
     @Override
     public boolean pollChanges(AbstractProject project, Launcher launcher, FilePath workspace, TaskListener listener) throws IOException, InterruptedException {
         // TODO
