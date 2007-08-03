@@ -12,12 +12,4 @@
   <packaging>hpi</packaging>
   <name>Hudson Mercurial plugin</name>
   <description>Integrates Hudson to Mercurial SCM</description>
-
-  <dependencies>
-    <dependency>
-      <groupId>org.jvnet.hudson.plugins.mercurial</groupId>
-      <artifactId>ini4j</artifactId>
-      <version>0.2.6</version>
-    </dependency>
-  </dependencies>
 </project>
