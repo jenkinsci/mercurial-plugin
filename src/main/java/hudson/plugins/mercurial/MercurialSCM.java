@@ -14,7 +14,6 @@ import hudson.scm.SCM;
 import hudson.scm.SCMDescriptor;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.FormFieldValidator;
-import org.ini4j.Ini;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
@@ -22,7 +21,6 @@ import org.kohsuke.stapler.StaplerResponse;
 import javax.servlet.ServletException;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Map;
@@ -53,34 +51,14 @@ public class MercurialSCM extends SCM {
     public boolean checkout(AbstractBuild build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile) throws IOException, InterruptedException {
         boolean canUpdate = workspace.act(new FileCallable<Boolean>() {
             public Boolean invoke(File ws, VirtualChannel channel) throws IOException {
-                File hgrc = new File(ws, ".hg/hgrc");
-                Ini ini = loadIni(hgrc);
-                return canUpdate(ini);
+                if(!HgRc.getHgRcFile(ws).exists())
+                    return false;
+                HgRc hgrc = new HgRc(ws);
+                return canUpdate(hgrc);
             }
 
-            /**
-             * Loads the .ini file.
-             */
-            private Ini loadIni(File hgrc) throws IOException {
-                if(!hgrc.exists())  return new Ini();   // dummy file
-                FileInputStream in = new FileInputStream(hgrc);
-
-                // ini4j internally relies on the context classloader to load the parser,
-                // so switch to the plugin classloader for a while
-                ClassLoader ccl = Thread.currentThread().getContextClassLoader();
-                Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-                try {
-                    return new Ini(in);
-                } finally {
-                    in.close();
-                    Thread.currentThread().setContextClassLoader(ccl);
-                }
-            }
-
-            private boolean canUpdate(Ini ini) {
-                Ini.Section section = ini.get("paths");
-                if(section==null)   return false;
-                String upstream = section.get("default");
+            private boolean canUpdate(HgRc ini) {
+                String upstream = ini.getSection("paths").get("default");
                 if(upstream==null)  return false;
 
                 if(upstream.equals(source)) return true;
