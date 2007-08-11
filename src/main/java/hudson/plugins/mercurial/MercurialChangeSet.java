@@ -123,7 +123,8 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
      * Placed here to simplify access from views.
      */
     public List<EditType> getEditTypes() {
-        return EditType.ALL;
+        // return EditType.ALL;
+        return Arrays.asList(EditType.ADD,EditType.EDIT,EditType.DELETE);
     }
 
     protected void setParent(ChangeLogSet parent) {
