@@ -57,6 +57,14 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
     }
 
     /**
+     * Short node ID that hg CLI uses.
+     * The first 12 characters of {@link #getNode()}.
+     */
+    public String getShortNode() {
+        return node.substring(0,12);
+    }
+
+    /**
      * Gets repository revision number, which is local in the current repository.
      */
     public long getRev() {

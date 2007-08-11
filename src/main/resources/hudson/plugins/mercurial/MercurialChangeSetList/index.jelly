@@ -17,8 +17,7 @@
           <a name="detail${loop.index}"></a>
           <div class="changeset-message">
             <b>
-              Revision
-              <a href="${browser.getChangeSetLink(cs)}">${cs.revision}</a>
+              Changeset ${cs.rev}:${cs.shortNode}
               by <a href="${rootURL}/${cs.author.url}/">${cs.author}</a>:
             </b><br/>
             ${cs.msgAnnotated}
