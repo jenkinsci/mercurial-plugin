@@ -16,6 +16,7 @@ public class MercurialChangeSetList extends ChangeLogSet<MercurialChangeSet> {
 
     /*package*/ MercurialChangeSetList(AbstractBuild build, List<MercurialChangeSet> logs) {
         super(build);
+        Collections.reverse(logs);  // put new things first
         this.changeSets = Collections.unmodifiableList(logs);
         for (MercurialChangeSet log : logs)
             log.setParent(this);
