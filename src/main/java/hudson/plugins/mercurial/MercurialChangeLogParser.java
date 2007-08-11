@@ -26,6 +26,7 @@ public class MercurialChangeLogParser extends ChangeLogParser {
 
         digester.addObjectCreate("*/changeset", MercurialChangeSet.class);
         digester.addSetProperties("*/changeset");
+        digester.addSetProperties("*/changeset","author","user");
         digester.addBeanPropertySetter("*/changeset/msg");
         digester.addBeanPropertySetter("*/changeset/added");
         digester.addBeanPropertySetter("*/changeset/deleted");

@@ -80,6 +80,16 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
     }
 
     @Deprecated
+    public void setUser(String author) {
+        this.author = author;
+    }
+
+    @Deprecated
+    public String getUser() {
+        return author;
+    }
+
+    @Deprecated
     public void setAuthor(String author) {
         this.author = author;
     }
