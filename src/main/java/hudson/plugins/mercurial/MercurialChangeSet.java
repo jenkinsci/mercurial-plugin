@@ -2,6 +2,7 @@ package hudson.plugins.mercurial;
 
 import hudson.model.User;
 import hudson.scm.ChangeLogSet;
+import hudson.scm.EditType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,6 +29,11 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
     private List<String> added = Collections.emptyList();
     private List<String> deleted = Collections.emptyList();
     private List<String> modified = Collections.emptyList();
+
+    /**
+     * Lazily computed.
+     */
+    private volatile List<String> affectedPaths;
 
     /**
      * Commit message.
@@ -61,14 +67,64 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
         return date;
     }
 
+    @Override
     public Collection<String> getAffectedPaths() {
-        throw new UnsupportedOperationException();
+        if(affectedPaths==null) {
+            List<String> r = new ArrayList<String>(added.size()+modified.size()+deleted.size());
+            r.addAll(added);
+            r.addAll(modified);
+            r.addAll(deleted);
+            affectedPaths = r;
+        }
+        return affectedPaths;
+    }
+
+    /**
+     * Gets all the files that were added.
+     */
+    public List<String> getAddedPaths() {
+        return added;
+    }
+
+    /**
+     * Gets all the files that were deleted.
+     */
+    public List<String> getDeletedPaths() {
+        return deleted;
+    }
+
+    /**
+     * Gets all the files that were modified.
+     */
+    public List<String> getModifiedPaths() {
+        return modified;
+    }
+
+    public List<String> getPaths(EditType kind) {
+        if(kind==EditType.ADD)
+            return getAddedPaths();
+        if(kind==EditType.EDIT)
+            return getModifiedPaths();
+        if(kind==EditType.DELETE)
+            return getDeletedPaths();
+        return null;
+    }
+
+    /**
+     * Returns all three variations of {@link EditType}.
+     * Placed here to simplify access from views.
+     */
+    public List<EditType> getEditTypes() {
+        return EditType.ALL;
     }
 
     protected void setParent(ChangeLogSet parent) {
         super.setParent(parent);
     }
 
+//
+// used by Digester 
+//
     @Deprecated
     public void setMsg(String msg) {
         this.msg = msg;
@@ -125,6 +181,8 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
     }
 
     private List<String> toList(String list) {
+        list = list.trim();
+        if(list.length()==0) return Collections.emptyList();
         return Arrays.asList(list.split(" "));
     }
 
