@@ -1,6 +1,5 @@
 package hudson.plugins.mercurial;
 
-import hudson.AbortException;
 import hudson.FilePath;
 import hudson.FilePath.FileCallable;
 import hudson.Launcher;
@@ -19,7 +18,6 @@ import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
 import javax.servlet.ServletException;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -84,12 +82,30 @@ public class MercurialSCM extends SCM {
      * Updates the current workspace.
      */
     private boolean update(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile) throws InterruptedException, IOException {
-        String oldRev=getTipRevision(launcher, build, workspace, listener);
+        // calc changelog and create bundle
+        FileOutputStream os = new FileOutputStream(changelogFile);
+        os.write("<changesets>\n".getBytes());
+        try {
+            if(launcher.launch(
+                new String[]{getDescriptor().getHgExe(),
+                    "incoming","--bundle","hg.bundle",
+                    "--template",MercurialChangeSet.CHANGELOG_TEMPLATE},
+                build.getEnvVars(),os,workspace).join()!=0) {
+                listener.error("Failed to determine incoming changes");
+                return false;
+            }
+        } catch (IOException e) {
+            listener.error("Failed to pull");
+            return false;
+        } finally {
+            os.write("</changesets>".getBytes());
+            os.close();
+        }
 
         // pull
         try {
             if(launcher.launch(
-                new String[]{getDescriptor().getHgExe(),"pull","-u"},
+                new String[]{getDescriptor().getHgExe(),"pull","-u","hg.bundle"},
                 build.getEnvVars(),listener.getLogger(),workspace).join()!=0) {
                 listener.error("Failed to pull");
                 return false;
@@ -99,43 +115,7 @@ public class MercurialSCM extends SCM {
             return false;
         }
 
-        String newRev=getTipRevision(launcher, build, workspace, listener);
-
-        // calc changeset
-        FileOutputStream os = new FileOutputStream(changelogFile);
-        os.write("<changesets>\n".getBytes());
-        try {
-            if(launcher.launch(
-                new String[]{getDescriptor().getHgExe(),"log","-r",oldRev+":"+newRev,"--template",MercurialChangeSet.CHANGELOG_TEMPLATE},
-                build.getEnvVars(),os,workspace).join()!=0) {
-                listener.error("Failed to calc changelog");
-                return false;
-            }
-        } catch(IOException e) {
-            listener.error("Failed to calc changelog");
-            return false;
-        } finally {
-            os.write("</changesets>".getBytes());
-            os.close();
-        }
-
         return true;
-    }
-
-    /**
-     * Determines the current tip revision id and reutnr it.
-     */
-    private String getTipRevision(Launcher launcher, AbstractBuild<?,?> build, FilePath workspace, BuildListener listener) throws IOException, InterruptedException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        if(launcher.launch(
-            new String[]{getDescriptor().getHgExe(),"tip","--template","{rev}"},
-            build.getEnvVars(),baos,workspace).join()!=0) {
-            listener.error("Failed to check the tip revision");
-            throw new AbortException();
-        }
-
-        // obtain the current changeset node number
-        return new String(baos.toByteArray(), "ASCII");
     }
 
 
