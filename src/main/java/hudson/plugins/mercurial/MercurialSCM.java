@@ -120,7 +120,7 @@ public class MercurialSCM extends SCM {
         try {
             r = launcher.launch(
                 new String[]{getDescriptor().getHgExe(),
-                    "incoming", "--bundle", "hg.bundle",
+                    "incoming","--quiet","--bundle","hg.bundle",
                     "--template", MercurialChangeSet.CHANGELOG_TEMPLATE},
                 build.getEnvVars(), os, workspace).join();
             if(r!=0 && r!=1) {// 0.9.4 returns 1 for no changes
