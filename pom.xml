@@ -8,8 +8,12 @@
   </parent>
 
   <artifactId>mercurial</artifactId>
-  <version>1.1-SNAPSHOT</version>
+  <version>1.1</version>
   <packaging>hpi</packaging>
   <name>Hudson Mercurial plugin</name>
   <description>Integrates Hudson to Mercurial SCM</description>
+
+  <scm>
+    <tag>mercurial-1_1</tag>
+  </scm>
 </project>
