@@ -136,7 +136,7 @@ public class MercurialSCM extends SCM {
         }
 
         // pull
-        if(r==1) // if incoming didn't fetch anything, it will return 1.
+        if(r==0) // if incoming didn't fetch anything, it will return 1.
             try {
                 if(launcher.launch(
                     new String[]{getDescriptor().getHgExe(),"pull","-u","hg.bundle"},
