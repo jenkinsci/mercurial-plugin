@@ -1,10 +1,10 @@
 package hudson.plugins.mercurial;
 
+import hudson.AbortException;
+import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.FilePath.FileCallable;
 import hudson.Launcher;
-import hudson.AbortException;
-import hudson.EnvVars;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
@@ -20,11 +20,12 @@ import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
 import javax.servlet.ServletException;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.io.Serializable;
 import java.util.Map;
 
 /**
@@ -32,7 +33,7 @@ import java.util.Map;
  * 
  * @author Kohsuke Kawaguchi
  */
-public class MercurialSCM extends SCM {
+public class MercurialSCM extends SCM implements Serializable {
     /**
      * Source repository URL from which we pull.
      */
@@ -229,4 +230,6 @@ public class MercurialSCM extends SCM {
             new FormFieldValidator.Executable(req,rsp).process();
         }
     }
+
+    private static final long serialVersionUID = 1L;
 }
