@@ -137,7 +137,9 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         // pull
-        if(r==0) // if incoming didn't fetch anything, it will return 1.
+        if(r==0 && new FilePath(workspace,"hg.bundle").exists())
+            // if incoming didn't fetch anything, it will return 1. That was for 0.9.3.
+            // in 0.9.4 apparently it returns 0.
             try {
                 if(launcher.launch(
                     new String[]{getDescriptor().getHgExe(),"pull","-u","hg.bundle"},
