@@ -1,0 +1,7 @@
+<project>
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>org.jvnet.hudson.plugins.mercurial</groupId>
+  <artifactId>ini4j</artifactId>
+  <version>0.2.6</version>
+</project>
