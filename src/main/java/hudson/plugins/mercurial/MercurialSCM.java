@@ -1,10 +1,7 @@
 package hudson.plugins.mercurial;
 
-import hudson.AbortException;
-import hudson.EnvVars;
-import hudson.FilePath;
+import hudson.*;
 import hudson.FilePath.FileCallable;
-import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
@@ -20,12 +17,7 @@ import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
 import javax.servlet.ServletException;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.io.Serializable;
+import java.io.*;
 import java.util.Map;
 
 /**
@@ -77,6 +69,8 @@ public class MercurialSCM extends SCM implements Serializable {
         if(launcher.launch(
             new String[]{getDescriptor().getHgExe(),"id","default"},
             EnvVars.masterEnvVars,baos,workspace).join()!=0) {
+            // dump the output from hg to assist trouble-shooting.
+            Util.copyStream(new ByteArrayInputStream(baos.toByteArray()),listener.getLogger());
             listener.error("Failed to check the tip revision");
             throw new AbortException();
         }
