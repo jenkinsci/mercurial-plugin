@@ -31,9 +31,20 @@ public class MercurialSCM extends SCM implements Serializable {
      */
     private final String source;
 
+    /**
+     * In-repository branch to follow. Null indicates "default". 
+     */
+    private final String branch;
+
     @DataBoundConstructor
-    public MercurialSCM(String source) {
+    public MercurialSCM(String source, String branch) {
         this.source = source;
+        
+        // normalization
+        branch = Util.fixEmpty(branch);
+        if(branch!=null && branch.equals("default"))
+            branch = null;
+        this.branch = branch;
     }
 
     /**
@@ -42,6 +53,13 @@ public class MercurialSCM extends SCM implements Serializable {
      */
     public String getSource() {
         return source;
+    }
+
+    /**
+     * In-repository branch to follow. Null indicates "default".
+     */
+    public String getBranch() {
+        return branch;
     }
 
     @Override
@@ -66,9 +84,14 @@ public class MercurialSCM extends SCM implements Serializable {
      */
     private String getTipRevision(Launcher launcher, FilePath workspace, TaskListener listener) throws IOException, InterruptedException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        if(launcher.launch(
-            new String[]{getDescriptor().getHgExe(),"id","default"},
-            EnvVars.masterEnvVars,baos,workspace).join()!=0) {
+
+        ArgumentListBuilder args = new ArgumentListBuilder();
+        args.add(getDescriptor().getHgExe(),"id");
+        if(branch!=null)
+            args.add("-r",branch);
+        args.add("default");
+
+        if(launcher.launch(args.toCommandArray(),EnvVars.masterEnvVars,baos,workspace).join()!=0) {
             // dump the output from hg to assist trouble-shooting.
             Util.copyStream(new ByteArrayInputStream(baos.toByteArray()),listener.getLogger());
             listener.error("Failed to check the tip revision");
@@ -113,11 +136,12 @@ public class MercurialSCM extends SCM implements Serializable {
         os.write("<changesets>\n".getBytes());
         int r;
         try {
-            r = launcher.launch(
-                new String[]{getDescriptor().getHgExe(),
-                    "incoming","--quiet","--bundle","hg.bundle",
-                    "--template", MercurialChangeSet.CHANGELOG_TEMPLATE},
-                build.getEnvVars(), os, workspace).join();
+            ArgumentListBuilder args = new ArgumentListBuilder();
+            args.add(getDescriptor().getHgExe(),"incoming","--quiet","--bundle","hg.bundle");
+            args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
+            if(branch!=null)    args.add("-r",branch);
+
+            r = launcher.launch(args.toCommandArray(),build.getEnvVars(), os, workspace).join();
             if(r!=0 && r!=1) {// 0.9.4 returns 1 for no changes
                 listener.error("Failed to determine incoming changes");
                 return false;
@@ -162,7 +186,9 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         ArgumentListBuilder args = new ArgumentListBuilder();
-        args.add(getDescriptor().getHgExe(),"clone",source,workspace.getRemote());
+        args.add(getDescriptor().getHgExe(),"clone");
+        if(branch!=null)    args.add("-r",branch);
+        args.add(source,workspace.getRemote());
         try {
             if(launcher.launch(args.toCommandArray(),build.getEnvVars(),listener.getLogger(),null).join()!=0) {
                 listener.error("Failed to clone "+source);
