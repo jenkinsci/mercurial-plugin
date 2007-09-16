@@ -12,6 +12,7 @@ import hudson.scm.SCM;
 import hudson.scm.SCMDescriptor;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.FormFieldValidator;
+import hudson.util.ForkOutputStream;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
@@ -141,8 +142,11 @@ public class MercurialSCM extends SCM implements Serializable {
             args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
             if(branch!=null)    args.add("-r",branch);
 
-            r = launcher.launch(args.toCommandArray(),build.getEnvVars(), os, workspace).join();
+            ByteArrayOutputStream errorLog = new ByteArrayOutputStream();
+
+            r = launcher.launch(args.toCommandArray(),build.getEnvVars(), new ForkOutputStream(os,errorLog), workspace).join();
             if(r!=0 && r!=1) {// 0.9.4 returns 1 for no changes
+                Util.copyStream(new ByteArrayInputStream(errorLog.toByteArray()),listener.getLogger());
                 listener.error("Failed to determine incoming changes");
                 return false;
             }
