@@ -2,17 +2,12 @@ package hudson.plugins.mercurial;
 
 import hudson.*;
 import hudson.FilePath.FileCallable;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
-import hudson.model.BuildListener;
-import hudson.model.TaskListener;
+import hudson.model.*;
 import hudson.remoting.VirtualChannel;
 import hudson.scm.ChangeLogParser;
 import hudson.scm.SCM;
 import hudson.scm.SCMDescriptor;
-import hudson.util.ArgumentListBuilder;
-import hudson.util.FormFieldValidator;
-import hudson.util.ForkOutputStream;
+import hudson.util.*;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
@@ -20,6 +15,8 @@ import org.kohsuke.stapler.StaplerResponse;
 import javax.servlet.ServletException;
 import java.io.*;
 import java.util.Map;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 /**
  * Mercurial SCM.
@@ -253,9 +250,45 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         public void doHgExeCheck(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
-            new FormFieldValidator.Executable(req,rsp).process();
+            new FormFieldValidator.Executable(req,rsp) {
+                protected void checkExecutable(File exe) throws IOException, ServletException {
+                    ByteBuffer baos = new ByteBuffer();
+                    try {
+                        Proc proc = Hudson.getInstance().createLauncher(TaskListener.NULL).launch(
+                            new String[]{getHgExe(), "version"}, new String[0], baos, null);
+                        proc.join();
+
+                        Matcher m = VERSION_STRING.matcher(baos.toString());
+                        if(m.find()) {
+                            try {
+                                if(new VersionNumber(m.group(1)).compareTo(V0_9_4)>=0) {
+                                    ok(); // right version
+                                } else {
+                                    error("This hg is ver."+m.group(1)+" but we need 0.9.4");
+                                }
+                            } catch (IllegalArgumentException e) {
+                                warning("Hudson can't tell if this hg is 0.9.4 or later (detected version is %s)",m.group(1));
+                            }
+                            return;
+                        }
+                    } catch (IOException e) {
+                        // failed
+                    } catch (InterruptedException e) {
+                        // failed
+                    }
+                    error("Unable to check hg version");
+                }
+            }.process();
         }
+
+        /**
+         * Pattern matcher for the version number.
+         */
+        private static final Pattern VERSION_STRING = Pattern.compile("\\(version ([0-9.]+)");
+
+        private static final VersionNumber V0_9_4 = new VersionNumber("0.9.4");
     }
+
 
     private static final long serialVersionUID = 1L;
 }
