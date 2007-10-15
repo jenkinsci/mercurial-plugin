@@ -195,5 +195,5 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
         return Arrays.asList(list.split(" "));
     }
 
-    static final String CHANGELOG_TEMPLATE = "<changeset node='{node}' author='{author}' rev='{rev}' date='{date}'><msg>{desc|escape}</msg><added>{files_added}</added><deleted>{file_dels}</deleted><files>{files}</files></changeset>\\n";
+    static final String CHANGELOG_TEMPLATE = "<changeset node='{node}' author='{author|escape}' rev='{rev}' date='{date}'><msg>{desc|escape}</msg><added>{files_added}</added><deleted>{file_dels}</deleted><files>{files}</files></changeset>\\n";
 }
