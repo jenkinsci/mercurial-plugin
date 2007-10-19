@@ -1,7 +1,11 @@
 <!--
-  Displays the change log digest for the build top page
+  Displays the Mercurial change log digest for the build top page 
+  when a build history link (or number) is followed
+  e.g http://<hudson server>/job/<project>/<build number>/
 -->
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <j:set var="browser" value="${it.build.parent.scm.effectiveBrowser}"/>
+
   <j:choose>
     <j:when test="${it.emptySet}">
       No changes.
@@ -12,7 +16,13 @@
         <j:forEach var="cs" items="${it.logs}" varStatus="loop">
           <li>
             ${cs.msgAnnotated}
-            (<a href="changes#detail${loop.index}">${cs.rev}:${cs.shortNode}</a>)
+            (<a href="changes#detail${loop.index}">detail</a>
+            <j:set var="cslink" value="${browser.getChangeSetLink(cs)}"/>
+            <j:if test="${cslink!=null}">
+              <j:text> / </j:text>
+              <a href="${cslink}">${browser.descriptor.displayName}</a>
+            </j:if>
+            <j:text>)</j:text>
           </li>
         </j:forEach>
       </ol>

@@ -61,6 +61,11 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
      * The first 12 characters of {@link #getNode()}.
      */
     public String getShortNode() {
+        // TODO: consider getting this value using the changelog template
+        // via {node|short}
+        // this will ensure that Hudson is consistent with the Mercurial project
+        // should they change the length of short nodes.
+    	
         return node.substring(0,12);
     }
 
@@ -195,5 +200,5 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
         return Arrays.asList(list.split(" "));
     }
 
-    static final String CHANGELOG_TEMPLATE = "<changeset node='{node}' author='{author|escape}' rev='{rev}' date='{date}'><msg>{desc|escape}</msg><added>{files_added}</added><deleted>{file_dels}</deleted><files>{files}</files></changeset>\\n";
+    static final String CHANGELOG_TEMPLATE = "<changeset node='{node}' author='{author|escape}' rev='{rev}' date='{date}'><msg>{desc|escape}</msg><added>{file_adds}</added><deleted>{file_dels}</deleted><files>{files}</files></changeset>\\n";
 }

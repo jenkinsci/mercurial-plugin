@@ -5,4 +5,6 @@
   <f:entry title="Branch" help="/plugin/mercurial/branch.html">
     <f:textbox name="mercurial.branch" value="${scm.branch}" />
   </f:entry>
+
+  <t:listScmBrowsers name="mercurial.browser" />
 </j:jelly>

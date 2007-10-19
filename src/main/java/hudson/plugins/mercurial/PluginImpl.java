@@ -1,6 +1,8 @@
 package hudson.plugins.mercurial;
 
 import hudson.Plugin;
+import hudson.plugins.mercurial.browser.HgWeb;
+import hudson.scm.RepositoryBrowsers;
 import hudson.scm.SCMS;
 
 /**
@@ -12,5 +14,6 @@ import hudson.scm.SCMS;
 public class PluginImpl extends Plugin {
     public void start() throws Exception {
         SCMS.SCMS.add(MercurialSCM.DescriptorImpl.DESCRIPTOR);
-    }
+        RepositoryBrowsers.LIST.add(HgWeb.DESCRIPTOR);
+     }
 }

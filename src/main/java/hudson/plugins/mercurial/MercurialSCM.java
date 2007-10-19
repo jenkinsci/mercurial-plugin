@@ -3,8 +3,10 @@ package hudson.plugins.mercurial;
 import hudson.*;
 import hudson.FilePath.FileCallable;
 import hudson.model.*;
+import hudson.plugins.mercurial.browser.HgWeb;
 import hudson.remoting.VirtualChannel;
 import hudson.scm.ChangeLogParser;
+import hudson.scm.RepositoryBrowsers;
 import hudson.scm.SCM;
 import hudson.scm.SCMDescriptor;
 import hudson.util.*;
@@ -34,15 +36,19 @@ public class MercurialSCM extends SCM implements Serializable {
      */
     private final String branch;
 
+    private HgWeb browser;
+
     @DataBoundConstructor
-    public MercurialSCM(String source, String branch) {
+    public MercurialSCM(String source, String branch, HgWeb browser) {
         this.source = source;
-        
+
         // normalization
         branch = Util.fixEmpty(branch);
         if(branch!=null && branch.equals("default"))
             branch = null;
         this.branch = branch;
+
+        this.browser = browser;
     }
 
     /**
@@ -58,6 +64,11 @@ public class MercurialSCM extends SCM implements Serializable {
      */
     public String getBranch() {
         return branch;
+    }
+
+    @Override
+    public HgWeb getBrowser() {
+        return browser;
     }
 
     @Override
@@ -137,6 +148,19 @@ public class MercurialSCM extends SCM implements Serializable {
             ArgumentListBuilder args = new ArgumentListBuilder();
             args.add(getDescriptor().getHgExe(),"incoming","--quiet","--bundle","hg.bundle");
             args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
+
+            // NOTE:
+            // Need to pass debug flag to get list of adds and deletes for changeset view
+            // 		http://marc.info/?l=mercurial&m=116595041401081&w=2
+            // 		http://www.selenic.com/pipermail/mercurial/2007-September/014481.html
+            // or maybe using a style file would do it?
+            //		http://mail-archives.apache.org/mod_mbox/maven-issues/200610.mbox/%3C76668191.1160089827292.JavaMail.haus-jira@codehaus01.managed.contegix.com%3E
+            // 
+            // TODO: Noted in the above links this may be expensive to compute, consider 
+            //       making it an option; should run some cursory test to determine how expensive.
+            // TODO: This is also spammy in the changelog.  Should file a feature request to fix this as described in the first link.
+            args.add("--debug");
+
             if(branch!=null)    args.add("-r",branch);
 
             ByteArrayOutputStream errorLog = new ByteArrayOutputStream();
@@ -223,7 +247,7 @@ public class MercurialSCM extends SCM implements Serializable {
         private String hgExe;
 
         private  DescriptorImpl() {
-            super(MercurialSCM.class, null);
+            super(MercurialSCM.class, HgWeb.class);
             load();
         }
 
@@ -238,9 +262,13 @@ public class MercurialSCM extends SCM implements Serializable {
             if(hgExe==null) return "hg";
             return hgExe;
         }
-        
+
         public SCM newInstance(StaplerRequest req) throws FormException {
-            return req.bindParameters(MercurialSCM.class,"mercurial.");
+            //return req.bindParameters(MercurialSCM.class,"mercurial.");
+            return new MercurialSCM(
+                    req.getParameter("mercurial.source"),
+                    req.getParameter("mercurial.branch"),
+                    RepositoryBrowsers.createInstance(HgWeb.class, req, "mercurial.browser"));
         }
 
         public boolean configure(StaplerRequest req) throws FormException {
@@ -255,7 +283,7 @@ public class MercurialSCM extends SCM implements Serializable {
                     ByteBuffer baos = new ByteBuffer();
                     try {
                         Proc proc = Hudson.getInstance().createLauncher(TaskListener.NULL).launch(
-                            new String[]{getHgExe(), "version"}, new String[0], baos, null);
+                                new String[]{getHgExe(), "version"}, new String[0], baos, null);
                         proc.join();
 
                         Matcher m = VERSION_STRING.matcher(baos.toString());
