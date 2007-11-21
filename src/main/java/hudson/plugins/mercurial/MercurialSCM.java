@@ -140,6 +140,13 @@ public class MercurialSCM extends SCM implements Serializable {
      * Updates the current workspace.
      */
     private boolean update(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile) throws InterruptedException, IOException {
+        FilePath hgBundle = new FilePath(workspace, "hg.bundle");
+
+        // delete the file prior to "hg incoming",
+        // as one user reported that it causes a failure.
+        // The error message was "abort: file 'hg.bundle' already exists"
+        hgBundle.delete();
+
         // calc changelog and create bundle
         FileOutputStream os = new FileOutputStream(changelogFile);
         os.write("<changesets>\n".getBytes());
@@ -180,7 +187,7 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         // pull
-        if(r==0 && new FilePath(workspace,"hg.bundle").exists())
+        if(r==0 && hgBundle.exists())
             // if incoming didn't fetch anything, it will return 1. That was for 0.9.3.
             // in 0.9.4 apparently it returns 0.
             try {
