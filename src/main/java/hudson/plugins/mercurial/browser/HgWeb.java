@@ -6,6 +6,7 @@ import hudson.scm.RepositoryBrowser;
 
 import java.io.IOException;
 import java.net.URL;
+import java.net.MalformedURLException;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
@@ -18,12 +19,13 @@ public class HgWeb extends RepositoryBrowser<MercurialChangeSet>{
 	private final URL url;
 	
 	@DataBoundConstructor
-	public HgWeb(URL url) {
-		this.url = url;
-		
-		// TODO finish:
+	public HgWeb(String url) throws MalformedURLException {
+        if(!url.endsWith("/"))
+            url += '/';
+        this.url = new URL(url);
+
+        // TODO finish:
 		//    add verification of url
-		//    normalization of url
 	}
 	
 	public URL getUrl() {
