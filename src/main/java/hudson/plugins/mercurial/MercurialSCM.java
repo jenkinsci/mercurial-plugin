@@ -172,7 +172,10 @@ public class MercurialSCM extends SCM implements Serializable {
 
             ByteArrayOutputStream errorLog = new ByteArrayOutputStream();
 
-            r = launcher.launch(args.toCommandArray(),build.getEnvVars(), new ForkOutputStream(os,errorLog), workspace).join();
+            // mercurial produces text in the platform default encoding, so we need to
+            // convert it back to UTF-8
+            r = launcher.launch(args.toCommandArray(),build.getEnvVars(), new ForkOutputStream(
+                    new WriterOutputStream(new OutputStreamWriter(os,"UTF-8")),errorLog), workspace).join();
             if(r!=0 && r!=1) {// 0.9.4 returns 1 for no changes
                 Util.copyStream(new ByteArrayInputStream(errorLog.toByteArray()),listener.getLogger());
                 listener.error("Failed to determine incoming changes");
