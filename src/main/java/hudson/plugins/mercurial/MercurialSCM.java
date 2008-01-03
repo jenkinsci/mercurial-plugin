@@ -174,8 +174,12 @@ public class MercurialSCM extends SCM implements Serializable {
 
             // mercurial produces text in the platform default encoding, so we need to
             // convert it back to UTF-8
-            r = launcher.launch(args.toCommandArray(),build.getEnvVars(), new ForkOutputStream(
-                    new WriterOutputStream(new OutputStreamWriter(os,"UTF-8")),errorLog), workspace).join();
+            WriterOutputStream o = new WriterOutputStream(new OutputStreamWriter(os, "UTF-8"));
+            try {
+                r = launcher.launch(args.toCommandArray(),build.getEnvVars(), new ForkOutputStream(o,errorLog), workspace).join();
+            } finally {
+                o.flush(); // make sure to commit all output
+            }
             if(r!=0 && r!=1) {// 0.9.4 returns 1 for no changes
                 Util.copyStream(new ByteArrayInputStream(errorLog.toByteArray()),listener.getLogger());
                 listener.error("Failed to determine incoming changes");
