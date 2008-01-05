@@ -1,0 +1,4 @@
+<div>
+  This plugin integrates <a href="http://www.selenic.com/mercurial/">Mercurial SCM</a> to Hudson.  
+  It includes repository browsing support for hg serve/hgweb. 
+</div>
