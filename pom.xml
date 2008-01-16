@@ -8,13 +8,9 @@
   </parent>
 
   <artifactId>mercurial</artifactId>
-  <version>1.7</version>
+  <version>1.8-SNAPSHOT</version>
   <packaging>hpi</packaging>
   <name>Hudson Mercurial plugin</name>
   <description>Integrates Hudson to Mercurial SCM</description>
   <url>http://hudson.gotdns.com/wiki/display/HUDSON/Mercurial+Plugin</url>
-
-  <scm>
-    <tag>mercurial-1_7</tag>
-  </scm>
 </project>
