@@ -36,9 +36,8 @@ public class HgWeb extends RepositoryBrowser<MercurialChangeSet>{
 	@Override
 	public URL getChangeSetLink(MercurialChangeSet changeSet)
 			throws IOException {
-		// TODO: not very robust if the user defined url is malformed or already ends with /
-		// Also consider verifying the repository connection to tip at configuration time?
-		return new URL(url, "/rev/" + changeSet.getShortNode());
+		// TODO: consider verifying the repository connection to tip at configuration time?
+		return new URL(url, "rev/" + changeSet.getShortNode());
 	}
 
 	public Descriptor<RepositoryBrowser<?>> getDescriptor() {
