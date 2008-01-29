@@ -209,6 +209,8 @@ public class MercurialSCM extends SCM implements Serializable {
                 return false;
             }
 
+        hgBundle.delete(); // do not leave it in workspace
+
         return true;
     }
 
