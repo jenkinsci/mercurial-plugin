@@ -108,8 +108,22 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         // obtain the current changeset node number
-        return new String(baos.toByteArray(), "ASCII").trim();
+        String rev = null;
+        for( String line : Util.tokenize(new String(baos.toByteArray(), "ASCII"),"\r\n") ) {
+            line = line.trim();
+            if(REVISION_PATTERN.matcher(line).matches())
+               rev = line;
+        }
+        if(rev==null) {
+            Util.copyStream(new ByteArrayInputStream(baos.toByteArray()),listener.getLogger());
+            listener.error("Failed to identify a revision");
+            throw new AbortException();
+        }
+
+        return rev;
     }
+
+    private static final Pattern REVISION_PATTERN = Pattern.compile("[0-9A-Fa-f]{12}");
 
     @Override
     public boolean checkout(AbstractBuild build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile) throws IOException, InterruptedException {
