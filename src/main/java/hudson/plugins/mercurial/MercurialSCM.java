@@ -322,7 +322,7 @@ public class MercurialSCM extends SCM implements Serializable {
                                 if(new VersionNumber(m.group(1)).compareTo(V0_9_4)>=0) {
                                     ok(); // right version
                                 } else {
-                                    error("This hg is ver."+m.group(1)+" but we need 0.9.4");
+                                    error("This hg is ver."+m.group(1)+" but we need 0.9.4+");
                                 }
                             } catch (IllegalArgumentException e) {
                                 warning("Hudson can't tell if this hg is 0.9.4 or later (detected version is %s)",m.group(1));
