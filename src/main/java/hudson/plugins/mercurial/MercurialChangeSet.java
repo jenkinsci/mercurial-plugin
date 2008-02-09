@@ -25,6 +25,7 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
     private long rev;
     private String date;
     private String msg;
+    private boolean merge;
 
     private List<String> added = Collections.emptyList();
     private List<String> deleted = Collections.emptyList();
@@ -113,6 +114,13 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
         return modified;
     }
 
+    /**
+     * Checks if this is a merge changeset.
+     */
+    public boolean isMerge() {
+        return merge;
+    }
+
     public List<String> getPaths(EditType kind) {
         if(kind==EditType.ADD)
             return getAddedPaths();
@@ -194,11 +202,26 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
         }
     }
 
+    @Deprecated
+    public void setParents(String parents) {
+        // Possible values for parents when not using --debug:
+        // ""                                     - commit made in succession
+        // "6019:b70a530bdb93 "                   - commit with older parent
+        // "6021:df659eb23360 6027:b7f44f01a632 " - merge
+        // Possible values for parents when using --debug:
+        // "6031:36a60bd5b70715aea20bb3b4da56cd27c5fade20 -1:0000000000000000000000000000000000000000 "   - commit
+        // "6029:dd3267698d84458686b3c5682ce027438900ffbd 6030:cee68264ed92444e59a9bd5cf9519702b092363e " - merge
+        merge = parents.indexOf(':') != parents.lastIndexOf(':') && !parents.contains("-1");
+    }
+
     private List<String> toList(String list) {
         list = list.trim();
         if(list.length()==0) return Collections.emptyList();
         return Arrays.asList(list.split(" "));
     }
 
-    static final String CHANGELOG_TEMPLATE = "<changeset node='{node}' author='{author|escape}' rev='{rev}' date='{date}'><msg>{desc|escape}</msg><added>{file_adds}</added><deleted>{file_dels}</deleted><files>{files}</files></changeset>\\n";
+    static final String CHANGELOG_TEMPLATE =
+            "<changeset node='{node}' author='{author|escape}' rev='{rev}' date='{date}'>" +
+            "<msg>{desc|escape}</msg><added>{file_adds}</added><deleted>{file_dels}</deleted>" +
+            "<files>{files}</files><parents>{parents}</parents></changeset>\\n";
 }
