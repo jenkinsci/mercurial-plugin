@@ -220,6 +220,7 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
         return Arrays.asList(list.split(" "));
     }
 
+    // XXX could use |xmlescape filter for unsafe content (author, desc, file*) as of Hg #434139080ed4
     static final String CHANGELOG_TEMPLATE =
             "<changeset node='{node}' author='{author|escape}' rev='{rev}' date='{date}'>" +
             "<msg>{desc|escape}</msg><added>{file_adds}</added><deleted>{file_dels}</deleted>" +
