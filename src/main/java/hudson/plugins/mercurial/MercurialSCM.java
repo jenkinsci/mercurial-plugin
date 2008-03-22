@@ -16,7 +16,10 @@ import org.kohsuke.stapler.StaplerResponse;
 
 import javax.servlet.ServletException;
 import java.io.*;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.Arrays;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
@@ -30,7 +33,15 @@ public class MercurialSCM extends SCM implements Serializable {
      * Source repository URL from which we pull.
      */
     private final String source;
-
+    
+    /**
+     * Prefixes of files within the repository which we're dependent on.
+     * Storing as member variable so as to only parse the dependencies string once.
+     */
+    private transient final Set<String> _modules = new HashSet<String>();
+    // Same thing, but not parsed for jelly.
+    private final String modules;
+    
     /**
      * In-repository branch to follow. Null indicates "default". 
      */
@@ -39,8 +50,25 @@ public class MercurialSCM extends SCM implements Serializable {
     private HgWeb browser;
 
     @DataBoundConstructor
-    public MercurialSCM(String source, String branch, HgWeb browser) {
+    public MercurialSCM(String source, String branch, String modules, HgWeb browser) {
         this.source = source;
+        this.modules = modules;
+
+        // split by commas and whitespace, except "\ "
+        String[] r = modules.split("(?<!\\\\)[ \\r\\n,]+");
+        for (int i = 0; i < r.length; i++) {
+            // now replace "\ " to " ".
+            r[i] = r[i].replaceAll("\\\\ ", " ");
+
+            // Strip leading slashes
+            while (r[i].startsWith("/"))
+                r[i] = r[i].substring(1);
+
+            // Use unix file path separators
+            r[i] = r[i].replaceAll("\\", "/");
+        }
+
+        this._modules.addAll(Arrays.asList(r));
 
         // normalization
         branch = Util.fixEmpty(branch);
@@ -71,59 +99,78 @@ public class MercurialSCM extends SCM implements Serializable {
         return browser;
     }
 
+    private static final String FILES_STYLE = "changeset = 'files:{files}\\n'\n" + "file = '{file}:'";
+
     @Override
     public boolean pollChanges(AbstractProject project, Launcher launcher, FilePath workspace, TaskListener listener) throws IOException, InterruptedException {
-        String remoteTip = getTipRevision(launcher,workspace,listener);
         PrintStream output = listener.getLogger();
 
-        if(launcher.launch(
-            new String[]{getDescriptor().getHgExe(),"id","-r",remoteTip},
-            EnvVars.masterEnvVars, output,workspace).join()==0) {
+        // Mercurial requires the style file to be in a file..
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        File tmpFile = File.createTempFile("tmp", "style");
+        TextFile tmpTxt = new TextFile(tmpFile);
+        tmpTxt.write(FILES_STYLE);
 
+        // Get the list of changed files.
+        launcher.launch(
+                new String[]{getDescriptor().getHgExe(), "incoming", "--style", tmpFile.getCanonicalPath()},
+                EnvVars.masterEnvVars, new ForkOutputStream(baos, output), workspace).join();
+
+
+        Set<String> changedFileNames = new HashSet<String>();
+        parseIncomingOutput(baos, changedFileNames);
+
+        tmpFile.delete();
+
+        if (changedFileNames.isEmpty()) {
             output.println("No changes");
             return false;
         }
 
-        output.println("Changes detected");
+        if (dependentChanges(changedFileNames).isEmpty()) {
+            output.println("Non-dependent changes detected");
+            return false;
+        }
+
+        output.println("Dependent changes detected");
         return true;
     }
 
     /**
-     * Determines the current tip revision id in the upstream and return it.
+     * Filter out the given file name list by picking up changes that are in the modules we care about.
      */
-    private String getTipRevision(Launcher launcher, FilePath workspace, TaskListener listener) throws IOException, InterruptedException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    private Set<String> dependentChanges(Set<String> changedFileNames) {
+        Set<String> affecting = new HashSet<String>();
 
-        ArgumentListBuilder args = new ArgumentListBuilder();
-        args.add(getDescriptor().getHgExe(),"id");
-        if(branch!=null)
-            args.add("-r",branch);
-        args.add("default");
-
-        if(launcher.launch(args.toCommandArray(),EnvVars.masterEnvVars,baos,workspace).join()!=0) {
-            // dump the output from hg to assist trouble-shooting.
-            Util.copyStream(new ByteArrayInputStream(baos.toByteArray()),listener.getLogger());
-            listener.error("Failed to check the tip revision");
-            throw new AbortException();
+        for (String changedFile : changedFileNames) {
+            for (String depdendency : _modules) {
+                if (changedFile.startsWith(depdendency)) {
+                    affecting.add(changedFile);
+                    break;
+                }
+            }
         }
 
-        // obtain the current changeset node number
-        String rev = null;
-        for( String line : Util.tokenize(new String(baos.toByteArray(), "ASCII"),"\r\n") ) {
-            line = line.trim();
-            if(REVISION_PATTERN.matcher(line).matches())
-               rev = line;
-        }
-        if(rev==null) {
-            Util.copyStream(new ByteArrayInputStream(baos.toByteArray()),listener.getLogger());
-            listener.error("Failed to identify a revision");
-            throw new AbortException();
-        }
-
-        return rev;
+        return affecting;
     }
 
-    private static final Pattern REVISION_PATTERN = Pattern.compile("[0-9A-Fa-f]{12}");
+    private static Pattern FILES_LINE = Pattern.compile("files:(.*)");
+
+    private void parseIncomingOutput(ByteArrayOutputStream output, Set<String> result) throws IOException {
+        BufferedReader in = new BufferedReader(new InputStreamReader(
+                new ByteArrayInputStream(output.toByteArray())));
+        String line;
+        while ((line = in.readLine()) != null) {
+            Matcher matcher = FILES_LINE.matcher(line);
+            if (matcher.matches()) {
+                for (String s : matcher.group(1).split(":")) {
+                    if (s.length() > 0) {
+                        result.add(s);
+                    }
+                }
+            }
+        }
+    }
 
     @Override
     public boolean checkout(AbstractBuild build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile) throws IOException, InterruptedException {
@@ -271,6 +318,10 @@ public class MercurialSCM extends SCM implements Serializable {
         return DescriptorImpl.DESCRIPTOR;
     }
 
+    public String getModules() {
+        return modules;
+    }
+
     public static final class DescriptorImpl extends SCMDescriptor<MercurialSCM> {
         public static final DescriptorImpl DESCRIPTOR = new DescriptorImpl();
 
@@ -293,14 +344,17 @@ public class MercurialSCM extends SCM implements Serializable {
             return hgExe;
         }
 
+        @Override
         public SCM newInstance(StaplerRequest req) throws FormException {
             //return req.bindParameters(MercurialSCM.class,"mercurial.");
             return new MercurialSCM(
                     req.getParameter("mercurial.source"),
                     req.getParameter("mercurial.branch"),
+                    req.getParameter("mercurial.modules"),
                     RepositoryBrowsers.createInstance(HgWeb.class, req, "mercurial.browser"));
         }
 
+        @Override
         public boolean configure(StaplerRequest req) throws FormException {
             hgExe = req.getParameter("mercurial.hgExe");
             save();
@@ -309,6 +363,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
         public void doHgExeCheck(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
             new FormFieldValidator.Executable(req,rsp) {
+				@Override
                 protected void checkExecutable(File exe) throws IOException, ServletException {
                     ByteBuffer baos = new ByteBuffer();
                     try {
