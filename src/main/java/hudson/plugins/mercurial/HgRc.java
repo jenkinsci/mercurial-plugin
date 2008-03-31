@@ -4,8 +4,9 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.Reader;
 import java.util.Map;
-import java.util.HashMap;
+import java.util.TreeMap;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
@@ -16,15 +17,21 @@ import java.util.regex.Matcher;
  * @author Kohsuke Kawaguchi
  */
 final class HgRc {
-    private final Map<String,Section> sections = new HashMap<String,Section>();
+    private final Map<String,Section> sections = new TreeMap<String,Section>();
 
     public HgRc(File workspace) throws IOException {
+        this(load(workspace), getHgRcFile(workspace));
+    }
+    private static Reader load(File workspace) throws IOException {
         File hgrc = getHgRcFile(workspace);
         if(!hgrc.exists())
             throw new IOException("No such file: "+hgrc);
-
         // TODO: what is the encoding of hgrc?
-        BufferedReader r = new BufferedReader(new FileReader(hgrc));
+        return new FileReader(hgrc);
+    }
+
+    HgRc(Reader input, File hgrc) throws IOException {
+        BufferedReader r = new BufferedReader(input);
         String line;
         Section current=null;
         String key=null,value=null;
@@ -98,8 +105,13 @@ final class HgRc {
         return s;
     }
 
+    @Override
+    public String toString() {
+        return sections.toString();
+    }
+
     public static final class Section {
-        private final Map<String,String> values = new HashMap<String, String>();
+        private final Map<String,String> values = new TreeMap<String, String>();
 
         public void add(String key, String value) {
             values.put(key,value);
@@ -108,10 +120,15 @@ final class HgRc {
         public String get(String key) {
             return values.get(key);
         }
+
+        @Override
+        public String toString() {
+            return values.toString();
+        }
     }
 
     private static final Pattern SECTION_HEADER = Pattern.compile("\\[(\\w+)\\].*");
-    private static final Pattern KEY_VALUE = Pattern.compile("(\\w+)\\s*[=:]\\s*(\\S.*)");
+    private static final Pattern KEY_VALUE = Pattern.compile("([^:=\\s][^:=]*?)\\s*[=:]\\s*(.*)");
 
     private static final Logger LOGGER = Logger.getLogger(HgRc.class.getName());
 
