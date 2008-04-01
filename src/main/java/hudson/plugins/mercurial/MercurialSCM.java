@@ -65,7 +65,7 @@ public class MercurialSCM extends SCM implements Serializable {
                 r[i] = r[i].substring(1);
 
             // Use unix file path separators
-            r[i] = r[i].replaceAll("\\", "/");
+            r[i] = r[i].replace('\\', '/');
         }
 
         this._modules.addAll(Arrays.asList(r));
@@ -215,19 +215,34 @@ public class MercurialSCM extends SCM implements Serializable {
         try {
             ArgumentListBuilder args = new ArgumentListBuilder();
             args.add(getDescriptor().getHgExe(),"incoming","--quiet","--bundle","hg.bundle");
-            args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
+            String template = MercurialChangeSet.CHANGELOG_TEMPLATE_09x;
+            try {
+                String v = getDescriptor().findHgVersion();
+                if (v != null && new VersionNumber(v).compareTo(new VersionNumber("1.0"))>=0) {
+                    template = MercurialChangeSet.CHANGELOG_TEMPLATE_10x;
+                }
+            } catch (IOException x) {
+                // don't know, never mind
+            } catch (InterruptedException x) {
+                // ditto
+            }
+            args.add("--template", template);
 
-            // NOTE:
-            // Need to pass debug flag to get list of adds and deletes for changeset view
-            // 		http://marc.info/?l=mercurial&m=116595041401081&w=2
-            // 		http://www.selenic.com/pipermail/mercurial/2007-September/014481.html
-            // or maybe using a style file would do it?
-            //		http://mail-archives.apache.org/mod_mbox/maven-issues/200610.mbox/%3C76668191.1160089827292.JavaMail.haus-jira@codehaus01.managed.contegix.com%3E
-            // 
-            // TODO: Noted in the above links this may be expensive to compute, consider 
-            //       making it an option; should run some cursory test to determine how expensive.
-            // TODO: This is also spammy in the changelog.  Should file a feature request to fix this as described in the first link.
-            args.add("--debug");
+            boolean hg10 = false;
+            try {
+                String v = getDescriptor().findHgVersion();
+                if (v != null && new VersionNumber(v).compareTo(new VersionNumber("1.0"))>=0) {
+                    hg10 = true;
+                }
+            } catch (IOException x) {
+                // don't know, never mind
+            } catch (InterruptedException x) {
+                // ditto
+            }
+            if (!hg10) {
+                // Pre-1.0 Hg fails to honor {file_adds} and {file_dels} without --debug.
+                args.add("--debug");
+            }
 
             if(branch!=null)    args.add("-r",branch);
 
@@ -326,6 +341,7 @@ public class MercurialSCM extends SCM implements Serializable {
         public static final DescriptorImpl DESCRIPTOR = new DescriptorImpl();
 
         private String hgExe;
+        private transient String version;
 
         private  DescriptorImpl() {
             super(MercurialSCM.class, HgWeb.class);
@@ -357,30 +373,26 @@ public class MercurialSCM extends SCM implements Serializable {
         @Override
         public boolean configure(StaplerRequest req) throws FormException {
             hgExe = req.getParameter("mercurial.hgExe");
+            version = null;
             save();
             return true;
         }
 
         public void doHgExeCheck(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
             new FormFieldValidator.Executable(req,rsp) {
-				@Override
+                @Override
                 protected void checkExecutable(File exe) throws IOException, ServletException {
-                    ByteBuffer baos = new ByteBuffer();
                     try {
-                        Proc proc = Hudson.getInstance().createLauncher(TaskListener.NULL).launch(
-                                new String[]{getHgExe(), "version"}, new String[0], baos, null);
-                        proc.join();
-
-                        Matcher m = VERSION_STRING.matcher(baos.toString());
-                        if(m.find()) {
+                        String v = findHgVersion();
+                        if(v != null) {
                             try {
-                                if(new VersionNumber(m.group(1)).compareTo(V0_9_4)>=0) {
+                                if(new VersionNumber(v).compareTo(V0_9_4)>=0) {
                                     ok(); // right version
                                 } else {
-                                    error("This hg is ver."+m.group(1)+" but we need 0.9.4+");
+                                    error("This hg is ver."+v+" but we need 0.9.4+");
                                 }
                             } catch (IllegalArgumentException e) {
-                                warning("Hudson can't tell if this hg is 0.9.4 or later (detected version is %s)",m.group(1));
+                                warning("Hudson can't tell if this hg is 0.9.4 or later (detected version is %s)",v);
                             }
                             return;
                         }
@@ -392,6 +404,23 @@ public class MercurialSCM extends SCM implements Serializable {
                     error("Unable to check hg version");
                 }
             }.process();
+        }
+
+        private String findHgVersion() throws IOException, InterruptedException {
+            if (version != null) {
+                return version;
+            }
+            ByteBuffer baos = new ByteBuffer();
+            Proc proc = Hudson.getInstance().createLauncher(TaskListener.NULL).launch(
+                    new String[] {getHgExe(), "version"}, new String[0], baos, null);
+            proc.join();
+            Matcher m = VERSION_STRING.matcher(baos.toString());
+            if (m.find()) {
+                version = m.group(1);
+                return version;
+            } else {
+                return null;
+            }
         }
 
         /**
