@@ -401,6 +401,11 @@ public class MercurialSCM extends SCM implements Serializable {
                             }
                             return;
                         }
+                        v = findHgVersion(UUID_VERSION_STRING);
+                        if(v!=null) {
+                            warning("Hudson can't tell if this hg is 0.9.4 or later (detected version is %s)",v);
+                            return;
+                        }
                     } catch (IOException e) {
                         // failed
                     } catch (InterruptedException e) {
@@ -412,6 +417,10 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         private String findHgVersion() throws IOException, InterruptedException {
+            return findHgVersion(VERSION_STRING);
+        }
+
+        private String findHgVersion(Pattern p) throws IOException, InterruptedException {
             if (version != null) {
                 return version;
             }
@@ -419,7 +428,7 @@ public class MercurialSCM extends SCM implements Serializable {
             Proc proc = Hudson.getInstance().createLauncher(TaskListener.NULL).launch(
                     new String[] {getHgExe(), "version"}, new String[0], baos, null);
             proc.join();
-            Matcher m = VERSION_STRING.matcher(baos.toString());
+            Matcher m = p.matcher(baos.toString());
             if (m.find()) {
                 version = m.group(1);
                 return version;
@@ -432,6 +441,12 @@ public class MercurialSCM extends SCM implements Serializable {
          * Pattern matcher for the version number.
          */
         private static final Pattern VERSION_STRING = Pattern.compile("\\(version ([0-9.]+)");
+
+        /**
+         * UUID version string.
+         * This appears to be used for snapshot builds. See issue #1683
+         */
+        private static final Pattern UUID_VERSION_STRING = Pattern.compile("\\(version ([0-9a-f]+)");
 
         private static final VersionNumber V0_9_4 = new VersionNumber("0.9.4");
     }
