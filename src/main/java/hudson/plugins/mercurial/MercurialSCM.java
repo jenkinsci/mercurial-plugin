@@ -13,6 +13,7 @@ import hudson.util.*;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
+import org.kohsuke.stapler.framework.io.WriterOutputStream;
 
 import javax.servlet.ServletException;
 import java.io.*;
