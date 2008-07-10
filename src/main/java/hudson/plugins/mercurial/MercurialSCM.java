@@ -21,6 +21,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.Arrays;
+import java.util.logging.Logger;
+import java.util.logging.Level;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
@@ -224,8 +226,12 @@ public class MercurialSCM extends SCM implements Serializable {
             String template = MercurialChangeSet.CHANGELOG_TEMPLATE_09x;
             try {
                 String v = getDescriptor().findHgVersion();
-                if (v != null && new VersionNumber(v).compareTo(new VersionNumber("1.0"))>=0) {
-                    template = MercurialChangeSet.CHANGELOG_TEMPLATE_10x;
+                try {
+                    if (v != null && new VersionNumber(v).compareTo(new VersionNumber("1.0"))>=0) {
+                        template = MercurialChangeSet.CHANGELOG_TEMPLATE_10x;
+                    }
+                } catch (IllegalArgumentException e) {
+                    LOGGER.log(Level.INFO,"Failed to parse Mercurial version number: "+v,e);
                 }
             } catch (IOException x) {
                 // don't know, never mind
@@ -454,4 +460,6 @@ public class MercurialSCM extends SCM implements Serializable {
 
 
     private static final long serialVersionUID = 1L;
+
+    private static final Logger LOGGER = Logger.getLogger(MercurialSCM.class.getName());
 }
