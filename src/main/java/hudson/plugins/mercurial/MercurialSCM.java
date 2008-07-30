@@ -223,38 +223,16 @@ public class MercurialSCM extends SCM implements Serializable {
         try {
             ArgumentListBuilder args = new ArgumentListBuilder();
             args.add(getDescriptor().getHgExe(),"incoming","--quiet","--bundle","hg.bundle");
-            String template = MercurialChangeSet.CHANGELOG_TEMPLATE_09x;
-            try {
-                String v = getDescriptor().findHgVersion();
-                try {
-                    if (v != null && new VersionNumber(v).compareTo(new VersionNumber("1.0"))>=0) {
-                        template = MercurialChangeSet.CHANGELOG_TEMPLATE_10x;
-                    }
-                } catch (IllegalArgumentException e) {
-                    LOGGER.log(Level.INFO,"Failed to parse Mercurial version number: "+v,e);
-                }
-            } catch (IOException x) {
-                // don't know, never mind
-            } catch (InterruptedException x) {
-                // ditto
-            }
-            args.add("--template", template);
 
-            boolean hg10 = false;
-            try {
-                String v = getDescriptor().findHgVersion();
-                if (v != null && new VersionNumber(v).compareTo(new VersionNumber("1.0"))>=0) {
-                    hg10 = true;
-                }
-            } catch (IOException x) {
-                // don't know, never mind
-            } catch (InterruptedException x) {
-                // ditto
-            }
-            if (!hg10) {
+            String template = MercurialChangeSet.CHANGELOG_TEMPLATE_09x;
+
+            if(isHg10orLater()) {
+                template = MercurialChangeSet.CHANGELOG_TEMPLATE_10x;
                 // Pre-1.0 Hg fails to honor {file_adds} and {file_dels} without --debug.
                 args.add("--debug");
             }
+
+            args.add("--template", template);
 
             if(branch!=null)    args.add("-r",branch);
 
@@ -300,6 +278,28 @@ public class MercurialSCM extends SCM implements Serializable {
         hgBundle.delete(); // do not leave it in workspace
 
         return true;
+    }
+
+    /**
+     * Returns true if we think our Mercurial is 1.0 or newer.
+     */
+    private boolean isHg10orLater() {
+        boolean hg10 = false;
+        try {
+            String v = getDescriptor().findHgVersion();
+            try {
+                if (v != null && new VersionNumber(v).compareTo(new VersionNumber("1.0"))>=0) {
+                    hg10 = true;
+                }
+            } catch (IllegalArgumentException e) {
+                LOGGER.log(Level.INFO,"Failed to parse Mercurial version number: "+v,e);
+            }
+        } catch (IOException x) {
+            // don't know, never mind
+        } catch (InterruptedException x) {
+            // ditto
+        }
+        return hg10;
     }
 
 
