@@ -54,12 +54,15 @@ public class MercurialSCM extends SCM implements Serializable {
      */
     private final String branch;
 
+    private final boolean clean;
+
     private HgWeb browser;
 
     @DataBoundConstructor
-    public MercurialSCM(String source, String branch, String modules, HgWeb browser) {
+    public MercurialSCM(String source, String branch, String modules, HgWeb browser, boolean clean) {
         this.source = source;
         this.modules = modules;
+        this.clean = clean;
 
         // split by commas and whitespace, except "\ "
         String[] r = modules.split("(?<!\\\\)[ \\r\\n,]+");
@@ -104,6 +107,14 @@ public class MercurialSCM extends SCM implements Serializable {
     @Override
     public HgWeb getBrowser() {
         return browser;
+    }
+
+    /**
+     * True if we want clean check out each time. This means deleting everything in the workspace
+     * (except <tt>.hg</tt>)
+     */
+    public boolean isClean() {
+        return clean;
     }
 
     private static final String FILES_STYLE = "changeset = 'files:{files}\\n'\n" + "file = '{file}:'";
