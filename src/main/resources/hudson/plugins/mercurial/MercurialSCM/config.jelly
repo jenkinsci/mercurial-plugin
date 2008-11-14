@@ -1,13 +1,13 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
   <f:entry title="Repository URL" help="/plugin/mercurial/help.html">
-    <f:textbox name="mercurial.source" value="${scm.source}" />
+    <f:textbox field="source" />
   </f:entry>
   <f:entry title="Branch" help="/plugin/mercurial/branch.html">
-    <f:textbox name="mercurial.branch" value="${scm.branch}" />
+    <f:textbox field="branch" />
   </f:entry>
   <f:advanced>
     <f:entry title="Modules" help="/plugin/mercurial/modules.html">
-      <f:textbox name="mercurial.modules" value="${scm.modules}" />
+      <f:textbox field="modules" />
     </f:entry>
   </f:advanced>
 

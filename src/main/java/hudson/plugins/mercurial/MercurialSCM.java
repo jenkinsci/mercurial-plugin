@@ -9,6 +9,8 @@ import hudson.scm.ChangeLogParser;
 import hudson.scm.RepositoryBrowsers;
 import hudson.scm.SCM;
 import hudson.scm.SCMDescriptor;
+import hudson.scm.CVSRepositoryBrowser;
+import hudson.scm.CVSSCM;
 import hudson.util.*;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
@@ -25,6 +27,8 @@ import java.util.logging.Logger;
 import java.util.logging.Level;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+
+import net.sf.json.JSONObject;
 
 /**
  * Mercurial SCM.
@@ -371,13 +375,10 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         @Override
-        public SCM newInstance(StaplerRequest req) throws FormException {
-            //return req.bindParameters(MercurialSCM.class,"mercurial.");
-            return new MercurialSCM(
-                    req.getParameter("mercurial.source"),
-                    req.getParameter("mercurial.branch"),
-                    req.getParameter("mercurial.modules"),
-                    RepositoryBrowsers.createInstance(HgWeb.class, req, "mercurial.browser"));
+        public SCM newInstance(StaplerRequest req, JSONObject formData) throws FormException {
+            MercurialSCM scm = req.bindJSON(MercurialSCM.class,formData);
+            scm.browser = RepositoryBrowsers.createInstance(HgWeb.class,req,formData,"browser");
+            return scm;
         }
 
         @Override
