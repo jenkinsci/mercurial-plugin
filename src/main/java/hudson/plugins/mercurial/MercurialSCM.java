@@ -222,6 +222,13 @@ public class MercurialSCM extends SCM implements Serializable {
      * Updates the current workspace.
      */
     private boolean update(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile) throws InterruptedException, IOException {
+        if(clean) {
+            listener.getLogger().println("Cleaning up the workspace");
+            for( FilePath child : workspace.list((FileFilter)null) ) {
+                if(child.getName().equals(".hg"))   continue;
+                child.deleteRecursive();
+            }
+        }
         FilePath hgBundle = new FilePath(workspace, "hg.bundle");
 
         // delete the file prior to "hg incoming",
