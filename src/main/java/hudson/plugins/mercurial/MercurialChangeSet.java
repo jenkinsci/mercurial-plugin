@@ -10,6 +10,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import org.kohsuke.stapler.export.Exported;
+
 /**
  * Represents a change set.
  *
@@ -39,6 +41,7 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
     /**
      * Commit message.
      */
+    @Exported
     public String getMsg() {
         return msg;
     }
@@ -46,6 +49,7 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
     /**
      * Gets the user who made this change.
      */
+    @Exported
     public User getAuthor() {
         return User.get(author);
     }
@@ -53,6 +57,7 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
     /**
      * Gets the globally unique changeset ID.
      */
+    @Exported
     public String getNode() {
         return node;
     }
@@ -73,10 +78,12 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
     /**
      * Gets repository revision number, which is local in the current repository.
      */
+    @Exported
     public long getRev() {
         return rev;
     }
 
+    @Exported
     public String getDate() {
         return date;
     }
@@ -96,6 +103,7 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
     /**
      * Gets all the files that were added.
      */
+    @Exported
     public List<String> getAddedPaths() {
         return added;
     }
@@ -103,6 +111,7 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
     /**
      * Gets all the files that were deleted.
      */
+    @Exported
     public List<String> getDeletedPaths() {
         return deleted;
     }
@@ -110,6 +119,7 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
     /**
      * Gets all the files that were modified.
      */
+    @Exported
     public List<String> getModifiedPaths() {
         return modified;
     }
@@ -117,6 +127,7 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
     /**
      * Checks if this is a merge changeset.
      */
+    @Exported
     public boolean isMerge() {
         return merge;
     }
