@@ -9,8 +9,6 @@ import hudson.scm.ChangeLogParser;
 import hudson.scm.RepositoryBrowsers;
 import hudson.scm.SCM;
 import hudson.scm.SCMDescriptor;
-import hudson.scm.CVSRepositoryBrowser;
-import hudson.scm.CVSSCM;
 import hudson.util.*;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
@@ -244,10 +242,12 @@ public class MercurialSCM extends SCM implements Serializable {
             ArgumentListBuilder args = new ArgumentListBuilder();
             args.add(getDescriptor().getHgExe(),"incoming","--quiet","--bundle","hg.bundle");
 
-            String template = MercurialChangeSet.CHANGELOG_TEMPLATE_09x;
+            String template;
 
             if(isHg10orLater()) {
                 template = MercurialChangeSet.CHANGELOG_TEMPLATE_10x;
+            } else {
+                template = MercurialChangeSet.CHANGELOG_TEMPLATE_09x;
                 // Pre-1.0 Hg fails to honor {file_adds} and {file_dels} without --debug.
                 args.add("--debug");
             }
