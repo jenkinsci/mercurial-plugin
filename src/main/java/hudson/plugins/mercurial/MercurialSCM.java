@@ -206,6 +206,7 @@ public class MercurialSCM extends SCM implements Serializable {
                 if(upstream==null)  return false;
 
                 if(upstream.equals(source)) return true;
+                if((upstream+'/').equals(source))   return true;
                 return source.startsWith("file:/") && new File(upstream).toURI().toString().equals(source);
             }
         });
