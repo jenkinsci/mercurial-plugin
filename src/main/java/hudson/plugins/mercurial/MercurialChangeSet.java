@@ -222,6 +222,7 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
         // Possible values for parents when using --debug:
         // "6031:36a60bd5b70715aea20bb3b4da56cd27c5fade20 -1:0000000000000000000000000000000000000000 "   - commit
         // "6029:dd3267698d84458686b3c5682ce027438900ffbd 6030:cee68264ed92444e59a9bd5cf9519702b092363e " - merge
+        // Would be nicer if --debug did not matter: http://www.selenic.com/mercurial/bts/issue1435
         merge = parents.indexOf(':') != parents.lastIndexOf(':') && !parents.contains("-1");
     }
 
