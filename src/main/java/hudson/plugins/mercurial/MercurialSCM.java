@@ -126,8 +126,12 @@ public class MercurialSCM extends SCM implements Serializable {
         FilePath tmpFile = workspace.createTextTempFile("tmp", "style", FILES_STYLE);
 
         // Get the list of changed files.
+        ArgumentListBuilder cmd = new ArgumentListBuilder();
+        cmd.add(getDescriptor().getHgExe(), "incoming", "--style" , tmpFile.getRemote());
+        if ( getBranch() != null )
+        	cmd.add("-r",getBranch());
         launcher.launch(
-                new String[]{getDescriptor().getHgExe(), "incoming", "--style", tmpFile.getRemote()},
+                cmd.toCommandArray(),
                 EnvVars.masterEnvVars, new ForkOutputStream(baos, output), workspace).join();
 
 
