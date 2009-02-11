@@ -226,10 +226,17 @@ public class MercurialSCM extends SCM implements Serializable {
      */
     private boolean update(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile) throws InterruptedException, IOException {
         if(clean) {
-            listener.getLogger().println("Cleaning up the workspace");
-            for( FilePath child : workspace.list((FileFilter)null) ) {
-                if(child.getName().equals(".hg"))   continue;
-                child.deleteRecursive();
+            if (launcher.launch(
+                    new String[] {getDescriptor().getHgExe(), "update", "-C", "."},
+                    build.getEnvVars(), listener.getLogger(), workspace).join() != 0) {
+                listener.error("Failed to clobber local modifications");
+                return false;
+            }
+            if (launcher.launch(
+                    new String[] {getDescriptor().getHgExe(), "--config", "extensions.purge=", "clean", "--all"},
+                    build.getEnvVars(), listener.getLogger(), workspace).join() != 0) {
+                listener.error("Failed to clean unversioned files");
+                return false;
             }
         }
         FilePath hgBundle = new FilePath(workspace, "hg.bundle");
