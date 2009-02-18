@@ -17,6 +17,7 @@ import org.kohsuke.stapler.framework.io.WriterOutputStream;
 
 import javax.servlet.ServletException;
 import java.io.*;
+import java.net.MalformedURLException;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -104,6 +105,13 @@ public class MercurialSCM extends SCM implements Serializable {
 
     @Override
     public HgWeb getBrowser() {
+        if (browser == null) {
+            try {
+                return new HgWeb(source); // #2406
+            } catch (MalformedURLException x) {
+                // forget it
+            }
+        }
         return browser;
     }
 
