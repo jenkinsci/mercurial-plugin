@@ -33,4 +33,9 @@ public class MercurialChangeSetList extends ChangeLogSet<MercurialChangeSet> {
     public List<MercurialChangeSet> getLogs() {
         return changeSets;
     }
+
+    public @Override String getKind() {
+        return "hg";
+    }
+
 }
