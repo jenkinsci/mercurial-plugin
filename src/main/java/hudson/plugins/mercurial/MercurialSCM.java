@@ -130,9 +130,10 @@ public class MercurialSCM extends SCM implements Serializable {
         PrintStream output = listener.getLogger();
 
         // Mercurial requires the style file to be in a file..
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        Set<String> changedFileNames = new HashSet<String>();
         FilePath tmpFile = workspace.createTextTempFile("tmp", "style", FILES_STYLE);
         try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
             // Get the list of changed files.
             ArgumentListBuilder cmd = new ArgumentListBuilder();
             cmd.add(getDescriptor().getHgExe(), "incoming", "--style" , tmpFile.getRemote());
@@ -143,7 +144,6 @@ public class MercurialSCM extends SCM implements Serializable {
                     EnvVars.masterEnvVars, new ForkOutputStream(baos, output), workspace).join();
 
 
-            Set<String> changedFileNames = new HashSet<String>();
             parseIncomingOutput(baos, changedFileNames);
         } finally {
             tmpFile.delete();
