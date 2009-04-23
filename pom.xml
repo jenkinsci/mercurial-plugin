@@ -12,5 +12,5 @@
   <packaging>hpi</packaging>
   <name>Hudson Mercurial plugin</name>
   <description>Integrates Hudson to Mercurial SCM</description>
-  <url>http://hudson.gotdns.com/wiki/display/HUDSON/Mercurial+Plugin</url>
+  <url>http://wiki.hudson-ci.org/display/HUDSON/Mercurial+Plugin</url>
 </project>
