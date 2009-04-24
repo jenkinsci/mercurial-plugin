@@ -1,7 +1,0 @@
-target
-*.iml
-work
-ini4j.jar
-ini4j-sources.jar
-.project
-.settings
