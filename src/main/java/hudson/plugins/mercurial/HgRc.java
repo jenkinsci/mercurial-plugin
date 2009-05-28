@@ -1,5 +1,7 @@
 package hudson.plugins.mercurial;
 
+import org.apache.commons.io.IOUtils;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -31,58 +33,62 @@ final class HgRc {
     }
 
     HgRc(Reader input, File hgrc) throws IOException {
-        BufferedReader r = new BufferedReader(input);
-        String line;
-        Section current=null;
-        String key=null,value=null;
+        try {
+            BufferedReader r = new BufferedReader(input);
+            String line;
+            Section current=null;
+            String key=null,value=null;
 
-        while((line=r.readLine())!=null) {
-            if(line.length()==0)    continue;
-            switch(line.charAt(0)) {
-            case ';':
-            case '#':
-                // comment
-                break;
-            case '[':
-                // section
-                if(key!=null) {
-                    // commit the previous value
-                    current.add(key,value);
-                    key=null;
-                }
+            while((line=r.readLine())!=null) {
+                if(line.length()==0)    continue;
+                switch(line.charAt(0)) {
+                case ';':
+                case '#':
+                    // comment
+                    break;
+                case '[':
+                    // section
+                    if(key!=null) {
+                        // commit the previous value
+                        current.add(key,value);
+                        key=null;
+                    }
 
-                Matcher m = SECTION_HEADER.matcher(line);
-                if(!m.matches()) {
-                    LOGGER.warning("Failed to parse "+hgrc+" : "+line);
+                    Matcher m = SECTION_HEADER.matcher(line);
+                    if(!m.matches()) {
+                        LOGGER.warning("Failed to parse "+hgrc+" : "+line);
+                        continue;
+                    }
+                    current = createSection(m.group(1));
+                    break;
+                case ' ':
+                case '\t':
+                    // continuation of previous value
+                    while(line.length()>0 && Character.isWhitespace(line.charAt(0)))
+                        line = line.substring(1);
+                    value += line;
+                    continue;
+                default:
+                    // key=value line
+                    m = KEY_VALUE.matcher(line);
+                    if(!m.matches()) {
+                        LOGGER.warning("Failed to parse "+hgrc+" : "+line);
+                        continue;
+                    }
+                    if(key!=null)   // commit the previous value
+                        current.add(key,value);
+                    key = m.group(1);
+                    value = m.group(2);
                     continue;
                 }
-                current = createSection(m.group(1));
-                break;
-            case ' ':
-            case '\t':
-                // continuation of previous value
-                while(line.length()>0 && Character.isWhitespace(line.charAt(0)))
-                    line = line.substring(1);
-                value += line;
-                continue;
-            default:
-                // key=value line
-                m = KEY_VALUE.matcher(line);
-                if(!m.matches()) {
-                    LOGGER.warning("Failed to parse "+hgrc+" : "+line);
-                    continue;
-                }
-                if(key!=null)   // commit the previous value
-                    current.add(key,value);
-                key = m.group(1);
-                value = m.group(2);
-                continue;
             }
-        }
 
-        if(key!=null)
-            // commit the last value
-            current.add(key,value);
+            if(key!=null)
+                // commit the last value
+                current.add(key,value);
+        } finally {
+            IOUtils.closeQuietly(input);
+        }
     }
 
     public static File getHgRcFile(File workspace) {
