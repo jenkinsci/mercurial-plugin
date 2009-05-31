@@ -11,7 +11,7 @@ import hudson.scm.SCM;
 import hudson.scm.SCMDescriptor;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.ForkOutputStream;
-import hudson.util.FormFieldValidator;
+import hudson.util.FormValidation;
 import hudson.util.VersionNumber;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
@@ -432,37 +432,34 @@ public class MercurialSCM extends SCM implements Serializable {
             return true;
         }
 
-        public void doHgExeCheck(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
-            new FormFieldValidator.Executable(req,rsp) {
-                @Override
-                protected void checkExecutable(File exe) throws IOException, ServletException {
+        public FormValidation doHgExeCheck(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
+            return FormValidation.validateExecutable(req.getParameter("value"), new FormValidation.FileValidator() {
+                public FormValidation validate(File f) {
                     try {
                         String v = findHgVersion();
                         if(v != null) {
                             try {
                                 if(new VersionNumber(v).compareTo(V0_9_4)>=0) {
-                                    ok(); // right version
+                                    return FormValidation.ok(); // right version
                                 } else {
-                                    error("This hg is ver."+v+" but we need 0.9.4+");
+                                    return FormValidation.error("This hg is ver."+v+" but we need 0.9.4+");
                                 }
                             } catch (IllegalArgumentException e) {
-                                warning("Hudson can't tell if this hg is 0.9.4 or later (detected version is %s)",v);
+                                return FormValidation.warning("Hudson can't tell if this hg is 0.9.4 or later (detected version is %s)",v);
                             }
-                            return;
                         }
                         v = findHgVersion(UUID_VERSION_STRING);
                         if(v!=null) {
-                            warning("Hudson can't tell if this hg is 0.9.4 or later (detected version is %s)",v);
-                            return;
+                            return FormValidation.warning("Hudson can't tell if this hg is 0.9.4 or later (detected version is %s)",v);
                         }
                     } catch (IOException e) {
                         // failed
                     } catch (InterruptedException e) {
                         // failed
                     }
-                    error("Unable to check hg version");
+                    return FormValidation.error("Unable to check hg version");
                 }
-            }.process();
+            });
         }
 
         private String findHgVersion() throws IOException, InterruptedException {
