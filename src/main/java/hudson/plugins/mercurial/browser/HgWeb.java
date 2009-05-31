@@ -1,5 +1,6 @@
 package hudson.plugins.mercurial.browser;
 
+import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.plugins.mercurial.MercurialChangeSet;
 import hudson.scm.RepositoryBrowser;
@@ -8,6 +9,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.net.MalformedURLException;
 
+import net.sf.json.JSONObject;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
@@ -40,19 +42,16 @@ public class HgWeb extends RepositoryBrowser<MercurialChangeSet>{
 		return new URL(url, "rev/" + changeSet.getShortNode());
 	}
 
-	public Descriptor<RepositoryBrowser<?>> getDescriptor() {
-		return DESCRIPTOR;
-	}
-	
-    public static final Descriptor<RepositoryBrowser<?>> DESCRIPTOR = new Descriptor<RepositoryBrowser<?>>(HgWeb.class) {
+    @Extension
+    public static class DescriptorImpl extends Descriptor<RepositoryBrowser<?>> {
         public String getDisplayName() {
             return "hgweb";
         }
 
-        public HgWeb newInstance(StaplerRequest req) throws FormException {
+        public @Override HgWeb newInstance(StaplerRequest req, JSONObject json) throws FormException {
             return req.bindParameters(HgWeb.class,"hgweb.");
         }
-    };
+    }
 
     private static final long serialVersionUID = 1L;
 }

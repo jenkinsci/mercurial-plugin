@@ -151,7 +151,7 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
         return Arrays.asList(EditType.ADD,EditType.EDIT,EditType.DELETE);
     }
 
-    protected void setParent(ChangeLogSet parent) {
+    protected @Override void setParent(ChangeLogSet parent) {
         super.setParent(parent);
     }
 
