@@ -11,7 +11,6 @@ import hudson.scm.SCM;
 import hudson.scm.SCMDescriptor;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.ForkOutputStream;
-import hudson.util.FormValidation;
 import hudson.util.VersionNumber;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
@@ -28,9 +27,7 @@ import java.util.logging.Level;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
-import javax.servlet.ServletException;
 import net.sf.json.JSONObject;
-import org.kohsuke.stapler.StaplerResponse;
 import org.kohsuke.stapler.framework.io.ByteBuffer;
 
 /**
@@ -39,6 +36,12 @@ import org.kohsuke.stapler.framework.io.ByteBuffer;
  * @author Kohsuke Kawaguchi
  */
 public class MercurialSCM extends SCM implements Serializable {
+
+    /**
+     * Name of selected installation, if any.
+     */
+    private final String installation;
+
     /**
      * Source repository URL from which we pull.
      */
@@ -62,7 +65,8 @@ public class MercurialSCM extends SCM implements Serializable {
     private HgWeb browser;
 
     @DataBoundConstructor
-    public MercurialSCM(String source, String branch, String modules, HgWeb browser, boolean clean) {
+    public MercurialSCM(String installation, String source, String branch, String modules, HgWeb browser, boolean clean) {
+        this.installation = installation;
         this.source = source;
         this.modules = modules;
         this.clean = clean;
@@ -90,6 +94,10 @@ public class MercurialSCM extends SCM implements Serializable {
         this.branch = branch;
 
         this.browser = browser;
+    }
+
+    public String getInstallation() {
+        return installation;
     }
 
     /**
@@ -127,6 +135,16 @@ public class MercurialSCM extends SCM implements Serializable {
         return clean;
     }
 
+    private String findHgExe(TaskListener listener) throws IOException, InterruptedException {
+        for (MercurialInstallation inst : MercurialInstallation.allInstallations()) {
+            if (inst.getName().equals(installation)) {
+                // XXX what about forEnvironment?
+                return inst.forNode(Computer.currentComputer().getNode(), listener).getHome() + "/bin/hg";
+            }
+        }
+        return getDescriptor().getHgExe();
+    }
+
     private static final String FILES_STYLE = "changeset = 'files:{files}\\n'\n" + "file = '{file}:'";
 
     @Override
@@ -140,7 +158,7 @@ public class MercurialSCM extends SCM implements Serializable {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             // Get the list of changed files.
             ArgumentListBuilder cmd = new ArgumentListBuilder();
-            cmd.add(getDescriptor().getHgExe(), "incoming", "--style" , tmpFile.getRemote());
+            cmd.add(findHgExe(listener), "incoming", "--style" , tmpFile.getRemote());
             if ( getBranch() != null )
                 cmd.add("-r",getBranch());
             launcher.launch(
@@ -240,13 +258,13 @@ public class MercurialSCM extends SCM implements Serializable {
     private boolean update(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile) throws InterruptedException, IOException {
         if(clean) {
             if (launcher.launch(
-                    new String[] {getDescriptor().getHgExe(), "update", "-C", "."},
+                    new String[] {findHgExe(listener), "update", "-C", "."},
                     build.getEnvironment(listener), listener.getLogger(), workspace).join() != 0) {
                 listener.error("Failed to clobber local modifications");
                 return false;
             }
             if (launcher.launch(
-                    new String[] {getDescriptor().getHgExe(), "--config", "extensions.purge=", "clean", "--all"},
+                    new String[] {findHgExe(listener), "--config", "extensions.purge=", "clean", "--all"},
                     build.getEnvironment(listener), listener.getLogger(), workspace).join() != 0) {
                 listener.error("Failed to clean unversioned files");
                 return false;
@@ -265,7 +283,7 @@ public class MercurialSCM extends SCM implements Serializable {
         int r;
         try {
             ArgumentListBuilder args = new ArgumentListBuilder();
-            args.add(getDescriptor().getHgExe(),"incoming","--quiet","--bundle","hg.bundle");
+            args.add(findHgExe(listener),"incoming","--quiet","--bundle","hg.bundle");
 
             String template;
 
@@ -310,7 +328,7 @@ public class MercurialSCM extends SCM implements Serializable {
             // in 0.9.4 apparently it returns 0.
             try {
                 if(launcher.launch(
-                    new String[]{getDescriptor().getHgExe(),"pull","-u","hg.bundle"},
+                    new String[]{findHgExe(listener),"pull","-u","hg.bundle"},
                     build.getEnvironment(listener),listener.getLogger(),workspace).join()!=0) {
                     listener.error("Failed to pull");
                     return false;
@@ -351,7 +369,7 @@ public class MercurialSCM extends SCM implements Serializable {
     /**
      * Start from scratch and clone the whole repository.
      */
-    private boolean clone(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile) throws InterruptedException {
+    private boolean clone(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile) throws InterruptedException, IOException {
         try {
             workspace.deleteRecursive();
         } catch (IOException e) {
@@ -360,7 +378,7 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         ArgumentListBuilder args = new ArgumentListBuilder();
-        args.add(getDescriptor().getHgExe(),"clone");
+        args.add(findHgExe(listener),"clone");
         if(branch!=null)    args.add("-r",branch);
         args.add(source,workspace.getRemote());
         try {
@@ -432,6 +450,7 @@ public class MercurialSCM extends SCM implements Serializable {
             return true;
         }
 
+        /* XXX restore insofar as that is possible:
         public FormValidation doHgExeCheck(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
             return FormValidation.validateExecutable(req.getParameter("value"), new FormValidation.FileValidator() {
                 public FormValidation validate(File f) {
@@ -461,6 +480,7 @@ public class MercurialSCM extends SCM implements Serializable {
                 }
             });
         }
+        */
 
         private String findHgVersion() throws IOException, InterruptedException {
             return findHgVersion(VERSION_STRING);
