@@ -540,6 +540,6 @@ public class MercurialSCM extends SCM implements Serializable {
     /**
      * Pattern that matches revision ID.
      */
-    private static final Pattern REVISIONID_PATTERN = Pattern.compile("[0-9a-fA-F]+");
+    private static final Pattern REVISIONID_PATTERN = Pattern.compile("[0-9a-f]{12}");
 
 }
