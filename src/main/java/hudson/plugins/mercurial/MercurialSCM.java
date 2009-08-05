@@ -68,11 +68,11 @@ public class MercurialSCM extends SCM implements Serializable {
     public MercurialSCM(String installation, String source, String branch, String modules, HgWeb browser, boolean clean) {
         this.installation = installation;
         this.source = source;
-        this.modules = modules;
+        this.modules = Util.fixNull(modules);
         this.clean = clean;
 
         // split by commas and whitespace, except "\ "
-        String[] r = modules.split("(?<!\\\\)[ \\r\\n,]+");
+        String[] r = this.modules.split("(?<!\\\\)[ \\r\\n,]+");
         for (int i = 0; i < r.length; i++) {
             // now replace "\ " to " ".
             r[i] = r[i].replaceAll("\\\\ ", " ");
