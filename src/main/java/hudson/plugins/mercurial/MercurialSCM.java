@@ -161,10 +161,8 @@ public class MercurialSCM extends SCM implements Serializable {
             cmd.add(findHgExe(listener), "incoming", "--style" , tmpFile.getRemote());
             if ( getBranch() != null )
                 cmd.add("-r",getBranch());
-            launcher.launch(
-                    cmd.toCommandArray(),
-                    EnvVars.masterEnvVars, new ForkOutputStream(baos, output), workspace).join();
-
+            launcher.launch().cmds(cmd)
+                    .stdout(new ForkOutputStream(baos, output)).pwd(workspace).join();
 
             parseIncomingOutput(baos, changedFileNames);
         } finally {
@@ -340,7 +338,27 @@ public class MercurialSCM extends SCM implements Serializable {
 
         hgBundle.delete(); // do not leave it in workspace
 
+        addTagActionToBuild(build, launcher, workspace, listener);
+
         return true;
+    }
+
+    private void addTagActionToBuild(AbstractBuild<?, ?> build, Launcher launcher, FilePath workspace, BuildListener listener) throws IOException, InterruptedException {
+        ByteArrayOutputStream rev = new ByteArrayOutputStream();
+        if (launcher.launch().cmds(findHgExe(listener), "id", "-i")
+                .pwd(workspace).stdout(rev).join()!=0) {
+            listener.error("Failed to id");
+            listener.getLogger().write(rev.toByteArray());
+            throw new AbortException();
+        } else {
+            String id = rev.toString().trim();
+            if(id.endsWith("+"))    id=id.substring(0,id.length()-1);
+            if(!REVISIONID_PATTERN.matcher(id).matches()) {
+                listener.error("Expected to get an id but got "+id+" instead.");
+                throw new AbortException();
+            }
+            build.addAction(new MercurialTagAction(id));
+        }
     }
 
     /**
@@ -391,11 +409,16 @@ public class MercurialSCM extends SCM implements Serializable {
             return false;
         }
 
+        addTagActionToBuild(build, launcher, workspace, listener);
+
         return createEmptyChangeLog(changelogFile, listener, "changelog");
     }
 
     @Override
     public void buildEnvVars(AbstractBuild build, Map<String, String> env) {
+        MercurialTagAction a = build.getAction(MercurialTagAction.class);
+        if (a!=null)
+            env.put("MERCURIAL_REVISION",a.id);
     }
 
     @Override
@@ -521,4 +544,10 @@ public class MercurialSCM extends SCM implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private static final Logger LOGGER = Logger.getLogger(MercurialSCM.class.getName());
+
+    /**
+     * Pattern that matches revision ID.
+     */
+    private static final Pattern REVISIONID_PATTERN = Pattern.compile("[0-9a-fA-F]+");
+
 }
