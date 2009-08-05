@@ -255,15 +255,14 @@ public class MercurialSCM extends SCM implements Serializable {
      */
     private boolean update(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile) throws InterruptedException, IOException {
         if(clean) {
-            if (launcher.launch(
-                    new String[] {findHgExe(listener), "update", "-C", "."},
-                    build.getEnvironment(listener), listener.getLogger(), workspace).join() != 0) {
+            if (launcher.launch().cmds(findHgExe(listener), "update", "-C", ".")
+                .envs(build.getEnvironment(listener)).stdout(listener)
+                .pwd(workspace).join() != 0) {
                 listener.error("Failed to clobber local modifications");
                 return false;
             }
-            if (launcher.launch(
-                    new String[] {findHgExe(listener), "--config", "extensions.purge=", "clean", "--all"},
-                    build.getEnvironment(listener), listener.getLogger(), workspace).join() != 0) {
+            if (launcher.launch().cmds(findHgExe(listener), "--config", "extensions.purge=", "clean", "--all")
+                    .envs(build.getEnvironment(listener)).stdout(listener).pwd(workspace).join() != 0) {
                 listener.error("Failed to clean unversioned files");
                 return false;
             }
@@ -303,7 +302,8 @@ public class MercurialSCM extends SCM implements Serializable {
             // convert it back to UTF-8
             WriterOutputStream o = new WriterOutputStream(new OutputStreamWriter(os, "UTF-8"));
             try {
-                r = launcher.launch(args.toCommandArray(), build.getEnvironment(listener), new ForkOutputStream(o,errorLog), workspace).join();
+                r = launcher.launch().cmds(args).envs(build.getEnvironment(listener))
+                        .stdout(new ForkOutputStream(o,errorLog)).pwd(workspace).join();
             } finally {
                 o.flush(); // make sure to commit all output
             }
@@ -325,9 +325,9 @@ public class MercurialSCM extends SCM implements Serializable {
             // if incoming didn't fetch anything, it will return 1. That was for 0.9.3.
             // in 0.9.4 apparently it returns 0.
             try {
-                if(launcher.launch(
-                    new String[]{findHgExe(listener),"pull","-u","hg.bundle"},
-                    build.getEnvironment(listener),listener.getLogger(),workspace).join()!=0) {
+                if(launcher.launch()
+                    .cmds(findHgExe(listener),"pull","-u","hg.bundle")
+                    .envs(build.getEnvironment(listener)).stdout(listener).pwd(workspace).join()!=0) {
                     listener.error("Failed to pull");
                     return false;
                 }
@@ -400,7 +400,7 @@ public class MercurialSCM extends SCM implements Serializable {
         if(branch!=null)    args.add("-r",branch);
         args.add(source,workspace.getRemote());
         try {
-            if(launcher.launch(args.toCommandArray(),build.getEnvironment(listener),listener.getLogger(),null).join()!=0) {
+            if(launcher.launch().cmds(args).envs(build.getEnvironment(listener)).stdout(listener).join()!=0) {
                 listener.error("Failed to clone "+source);
                 return false;
             }
@@ -514,8 +514,8 @@ public class MercurialSCM extends SCM implements Serializable {
                 return version;
             }
             ByteBuffer baos = new ByteBuffer();
-            Proc proc = Hudson.getInstance().createLauncher(TaskListener.NULL).launch(
-                    new String[] {getHgExe(), "version"}, new String[0], baos, null);
+            Proc proc = Hudson.getInstance().createLauncher(TaskListener.NULL).launch()
+                    .cmds(getHgExe(), "version").stdout(baos).start();
             proc.join();
             Matcher m = p.matcher(baos.toString());
             if (m.find()) {
@@ -530,14 +530,6 @@ public class MercurialSCM extends SCM implements Serializable {
          * Pattern matcher for the version number.
          */
         private static final Pattern VERSION_STRING = Pattern.compile("\\(version ([0-9.]+)");
-
-        /**
-         * UUID version string.
-         * This appears to be used for snapshot builds. See issue #1683
-         */
-        private static final Pattern UUID_VERSION_STRING = Pattern.compile("\\(version ([0-9a-f]+)");
-
-        private static final VersionNumber V0_9_4 = new VersionNumber("0.9.4");
     }
 
 
