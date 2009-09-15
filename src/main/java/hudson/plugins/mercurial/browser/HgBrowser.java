@@ -9,7 +9,7 @@ import java.net.URL;
 
 /**
  * Parent class, as there is more than one browser.
- * {@link HgBrowser#resolveObject()} will return the old default {@link HgWeb}.
+ * {@link HgBrowser#readResolve()} will return the old default {@link HgWeb}.
  * Direct calls on this class will always throw {@link UnsupportedOperationException}s.
  */
 public class HgBrowser extends RepositoryBrowser<MercurialChangeSet> {
@@ -33,8 +33,9 @@ public class HgBrowser extends RepositoryBrowser<MercurialChangeSet> {
     public URL getUrl() {
     	return url;
     }
-    
-    public Object resolveObject() {
+
+    // compatibility with earlier plugins
+    public Object readResolve() {
         try {
             return new HgWeb(url.toExternalForm());
         } catch (MalformedURLException e) {

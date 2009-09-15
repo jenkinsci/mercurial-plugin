@@ -2,12 +2,14 @@ package hudson.plugins.mercurial;
 
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.plugins.mercurial.browser.HgWeb;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Hudson;
 import hudson.model.TaskListener;
 import hudson.util.StreamTaskListener;
 import org.jvnet.hudson.test.HudsonTestCase;
+import org.jvnet.hudson.test.recipes.LocalData;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,5 +55,18 @@ public class MercurialSCMTest extends HudsonTestCase {
 
     private void hg(String... args) throws Exception {
         assertEquals(0,launcher.launch().cmds(args).pwd(repo).stdout(listener).join());
+    }
+
+    /**
+     * With an introduction of HgBrowser base class, a care has to be taken to load existing dataset.
+     *
+     * This test verifies that. 
+     */
+    @LocalData
+    public void testRepositoryBrowserCompatibility() throws Exception {
+        FreeStyleProject p = (FreeStyleProject)hudson.getItem("foo");
+        MercurialSCM ms = (MercurialSCM)p.getScm();
+        assertTrue(ms.getBrowser() instanceof HgWeb);
+        assertEqualBeans(new HgWeb("http://www.yahoo.com/"),ms.getBrowser(),"url");
     }
 }
