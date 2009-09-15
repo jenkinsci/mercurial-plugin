@@ -1,34 +1,56 @@
 package hudson.plugins.mercurial;
 
-import hudson.*;
+import hudson.AbortException;
+import hudson.Extension;
+import hudson.FilePath;
+import hudson.Launcher;
+import hudson.Proc;
+import hudson.Util;
 import hudson.FilePath.FileCallable;
-import hudson.model.*;
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
+import hudson.model.BuildListener;
+import hudson.model.Computer;
+import hudson.model.Hudson;
+import hudson.model.TaskListener;
+import hudson.plugins.mercurial.browser.HgBrowser;
 import hudson.plugins.mercurial.browser.HgWeb;
 import hudson.remoting.VirtualChannel;
 import hudson.scm.ChangeLogParser;
+import hudson.scm.RepositoryBrowser;
 import hudson.scm.RepositoryBrowsers;
 import hudson.scm.SCM;
 import hudson.scm.SCMDescriptor;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.ForkOutputStream;
 import hudson.util.VersionNumber;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.framework.io.WriterOutputStream;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintStream;
+import java.io.Serializable;
 import java.net.MalformedURLException;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.Arrays;
-import java.util.logging.Logger;
 import java.util.logging.Level;
-import java.util.regex.Pattern;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import net.sf.json.JSONObject;
+
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.framework.io.ByteBuffer;
+import org.kohsuke.stapler.framework.io.WriterOutputStream;
 
 /**
  * Mercurial SCM.
@@ -62,10 +84,10 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private final boolean clean;
 
-    private HgWeb browser;
+    private HgBrowser browser;
 
     @DataBoundConstructor
-    public MercurialSCM(String installation, String source, String branch, String modules, HgWeb browser, boolean clean) {
+    public MercurialSCM(String installation, String source, String branch, String modules, HgBrowser browser, boolean clean) {
         this.installation = installation;
         this.source = source;
         this.modules = Util.fixNull(modules);
@@ -116,7 +138,7 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     @Override
-    public HgWeb getBrowser() {
+    public HgBrowser getBrowser() {
         if (browser == null) {
             try {
                 return new HgWeb(source); // #2406
@@ -442,10 +464,14 @@ public class MercurialSCM extends SCM implements Serializable {
         private transient String version;
 
         public DescriptorImpl() {
-            super(MercurialSCM.class, HgWeb.class);
+            super(HgBrowser.class);
             load();
         }
 
+        protected DescriptorImpl(Class clazz, Class<? extends RepositoryBrowser> repositoryBrowser) {
+            super(clazz,repositoryBrowser);
+        }
+        
         public String getDisplayName() {
             return "Mercurial";
         }
@@ -460,9 +486,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
         @Override
         public SCM newInstance(StaplerRequest req, JSONObject formData) throws FormException {
-            MercurialSCM scm = req.bindJSON(MercurialSCM.class,formData);
-            scm.browser = RepositoryBrowsers.createInstance(HgWeb.class,req,formData,"browser");
-            return scm;
+            return super.newInstance(req, formData);
         }
 
         @Override

@@ -14,30 +14,29 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
 /**
- * Mercurial web interface served using the standalone server
- * or hgweb CGI scripts.
+ * Mercurial web interface served using a <a href="http://bitbucket.org/">BitBucket</a> repository.
  */
-public class HgWeb extends HgBrowser {
+public class BitBucket extends HgBrowser {
+	
 	@DataBoundConstructor
-	public HgWeb(String url) throws MalformedURLException {
+	public BitBucket(String url) throws MalformedURLException {
 	    super(url);
 	}
 	
 	@Override
 	public URL getChangeSetLink(MercurialChangeSet changeSet)
 			throws IOException {
-		// TODO: consider verifying the repository connection to tip at configuration time?
-		return new URL(getUrl(), "rev/" + changeSet.getShortNode());
+		return new URL(getUrl(), "changeset/" + changeSet.getShortNode() + "/");
 	}
 
     @Extension
     public static class DescriptorImpl extends Descriptor<RepositoryBrowser<?>> {
         public String getDisplayName() {
-            return "hgweb";
+            return "bitbucket";
         }
 
-        public @Override HgWeb newInstance(StaplerRequest req, JSONObject json) throws FormException {
-            return req.bindParameters(HgWeb.class,"hgweb.");
+        public @Override BitBucket newInstance(StaplerRequest req, JSONObject json) throws FormException {
+            return req.bindParameters(BitBucket.class,"bitbucket.");
         }
     }
 
