@@ -8,7 +8,7 @@
   </parent>
 
   <artifactId>mercurial</artifactId>
-  <version>1.18-SNAPSHOT</version>
+  <version>1.17-SNAPSHOT</version>
   <packaging>hpi</packaging>
   <name>Hudson Mercurial plugin</name>
   <description>Integrates Hudson to Mercurial SCM</description>
