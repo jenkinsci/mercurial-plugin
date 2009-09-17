@@ -39,6 +39,9 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -182,9 +185,9 @@ public class MercurialSCM extends SCM implements Serializable {
             cmd.add(findHgExe(listener), "incoming", "--style" , tmpFile.getRemote());
             if ( getBranch() != null )
                 cmd.add("-r",getBranch());
-            launcher.launch().cmds(cmd)
-                    .stdout(new ForkOutputStream(baos, output)).pwd(workspace).join();
-
+            joinWithTimeout(
+                    launcher.launch().cmds(cmd).stdout(new ForkOutputStream(baos, output)).pwd(workspace).start(),
+                    1, TimeUnit.HOURS, listener);
             parseIncomingOutput(baos, changedFileNames);
         } finally {
             tmpFile.delete();
@@ -202,6 +205,28 @@ public class MercurialSCM extends SCM implements Serializable {
 
         output.println("Dependent changes detected");
         return true;
+    }
+
+    // XXX maybe useful enough to make a convenience method on Proc?
+    private int joinWithTimeout(final Proc proc, long timeout, TimeUnit unit,
+            final TaskListener listener) throws IOException, InterruptedException {
+        final AtomicBoolean done = new AtomicBoolean();
+        try {
+            Executors.newSingleThreadScheduledExecutor().schedule(new Runnable() {
+                public void run() {
+                    if (!done.get()) {
+                        try {
+                            proc.kill();
+                        } catch (Exception x) {
+                            listener.error(x.toString());
+                        }
+                    }
+                }
+            }, timeout, unit);
+            return proc.join();
+        } finally {
+            done.set(true);
+        }
     }
 
     /**
