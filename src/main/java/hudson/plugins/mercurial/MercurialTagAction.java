@@ -16,8 +16,7 @@ public class MercurialTagAction implements Action {
     // for now, we just remember the mercurial revision that was built in a given build
 
     /**
-     * 48-bit node name, like "272a7f93d92d" that are given from "hg id -i"
-     * (but except trailing '+' that can be present.)
+     * 160-bit node name, e.g. {@code 5703b34f17d5fec7bbff2f360c0b6c3d0b952f65} from {@code hg log -r . --template '{node}'}
      */
     public final String id;
 

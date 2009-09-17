@@ -366,14 +366,13 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private void addTagActionToBuild(AbstractBuild<?, ?> build, Launcher launcher, FilePath workspace, BuildListener listener) throws IOException, InterruptedException {
         ByteArrayOutputStream rev = new ByteArrayOutputStream();
-        if (launcher.launch().cmds(findHgExe(listener), "id", "-i")
+        if (launcher.launch().cmds(findHgExe(listener), "log", "-r", ".", "--template", "{node}")
                 .pwd(workspace).stdout(rev).join()!=0) {
             listener.error("Failed to id");
             listener.getLogger().write(rev.toByteArray());
             throw new AbortException();
         } else {
-            String id = rev.toString().trim();
-            if(id.endsWith("+"))    id=id.substring(0,id.length()-1);
+            String id = rev.toString();
             if(!REVISIONID_PATTERN.matcher(id).matches()) {
                 listener.error("Expected to get an id but got "+id+" instead.");
                 throw new AbortException();
@@ -563,6 +562,6 @@ public class MercurialSCM extends SCM implements Serializable {
     /**
      * Pattern that matches revision ID.
      */
-    private static final Pattern REVISIONID_PATTERN = Pattern.compile("[0-9a-f]{12}");
+    private static final Pattern REVISIONID_PATTERN = Pattern.compile("[0-9a-f]{40}");
 
 }
