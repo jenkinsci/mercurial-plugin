@@ -42,6 +42,39 @@ public class MercurialSCMTest extends HudsonTestCase {
         buildAndCheck(p,"b");   // this tests the update op
     }
 
+    @Bug(4281)
+    public void testBranches() throws Exception {
+        hg("init");
+        touchAndCommit("init");
+        hg("tag", "init");
+        touchAndCommit("default-1");
+        hg("up", "-C", "init");
+        hg("branch", "b");
+        touchAndCommit("b-1");
+        FreeStyleProject p = createFreeStyleProject();
+        // Clone off b.
+        p.setScm(new MercurialSCM(null, repo.getPath(), "b", null, null, false));
+        buildAndCheck(p, "b-1");
+        hg("up", "-C", "default");
+        touchAndCommit("default-2");
+        // Changes in default should be ignored.
+        assertFalse(p.pollSCMChanges(new StreamTaskListener(System.out)));
+        hg("up", "-C", "b");
+        touchAndCommit("b-2");
+        // But changes in b should be pulled.
+        assertTrue(p.pollSCMChanges(new StreamTaskListener(System.out)));
+        buildAndCheck(p, "b-2");
+        // Switch to default branch with an existing workspace.
+        p.setScm(new MercurialSCM(null, repo.getPath(), null, null, null, false));
+        // Should now consider preexisting changesets in default to be poll triggers.
+        assertTrue(p.pollSCMChanges(new StreamTaskListener(System.out)));
+        // Should switch working copy to default branch.
+        buildAndCheck(p, "default-2");
+        touchAndCommit("b-3");
+        // Changes in other branch should be ignored.
+        assertFalse(p.pollSCMChanges(new StreamTaskListener(System.out)));
+    }
+
     @Bug(1099)
     public void testPollingLimitedToModules() throws Exception {
         FreeStyleProject p = createFreeStyleProject();

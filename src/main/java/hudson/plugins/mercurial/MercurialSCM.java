@@ -133,10 +133,10 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     /**
-     * In-repository branch to follow. Null indicates "default".
+     * In-repository branch to follow. Never null.
      */
     public String getBranch() {
-        return branch;
+        return branch == null ? "default" : branch;
     }
 
     @Override
@@ -183,8 +183,7 @@ public class MercurialSCM extends SCM implements Serializable {
             // Get the list of changed files.
             ArgumentListBuilder cmd = new ArgumentListBuilder();
             cmd.add(findHgExe(listener), "incoming", "--style" , tmpFile.getRemote());
-            if ( getBranch() != null )
-                cmd.add("-r",getBranch());
+            cmd.add("-r", getBranch());
             joinWithTimeout(
                     launcher.launch().cmds(cmd).stdout(new ForkOutputStream(baos, output)).pwd(workspace).start(),
                     1, TimeUnit.HOURS, listener);
@@ -345,7 +344,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
             args.add("--template", template);
 
-            if(branch!=null)    args.add("-r",branch);
+            args.add("-r", getBranch());
 
             ByteArrayOutputStream errorLog = new ByteArrayOutputStream();
 
@@ -377,9 +376,15 @@ public class MercurialSCM extends SCM implements Serializable {
             // in 0.9.4 apparently it returns 0.
             try {
                 if(launcher.launch()
-                    .cmds(findHgExe(listener),"pull","-u","hg.bundle")
+                    .cmds(findHgExe(listener),"pull","hg.bundle")
                     .envs(build.getEnvironment(listener)).stdout(listener).pwd(workspace).join()!=0) {
                     listener.error("Failed to pull");
+                    return false;
+                }
+                if(launcher.launch()
+                    .cmds(findHgExe(listener),"up","-C", "-r", getBranch())
+                    .envs(build.getEnvironment(listener)).stdout(listener).pwd(workspace).join()!=0) {
+                    listener.error("Failed to update");
                     return false;
                 }
             } catch (IOException e) {
@@ -447,7 +452,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
         ArgumentListBuilder args = new ArgumentListBuilder();
         args.add(findHgExe(listener),"clone");
-        if(branch!=null)    args.add("-r",branch);
+        args.add("-r", getBranch());
         args.add(source,workspace.getRemote());
         try {
             if(launcher.launch().cmds(args).envs(build.getEnvironment(listener)).stdout(listener).join()!=0) {
