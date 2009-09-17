@@ -13,6 +13,7 @@ import org.junit.Test;
 public class BitBucketTest {
 
     @Test
+    @SuppressWarnings("deprecation")
     public void testGetChangeSetLinkMercurialChangeSet() throws IOException {
         final BitBucket browser = new BitBucket("http://www.example.org/hg/repos");
         assertEquals("http://www.example.org/hg/repos/", browser.getUrl().toExternalForm());

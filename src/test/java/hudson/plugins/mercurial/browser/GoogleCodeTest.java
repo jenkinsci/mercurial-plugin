@@ -12,6 +12,7 @@ import org.junit.Test;
 public class GoogleCodeTest {
 
     @Test
+    @SuppressWarnings("deprecation")
     public void testGetChangeSetLinkMercurialChangeSet() throws IOException {
         final GoogleCode browser = new GoogleCode("http://code.google.com/p/PROJECTNAME/source");
         final MercurialChangeSet changeSet = new MercurialChangeSet();

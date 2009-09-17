@@ -49,7 +49,7 @@ public class MercurialSCMTest extends HudsonTestCase {
 
     private void buildAndCheck(FreeStyleProject p, String name) throws InterruptedException, ExecutionException, IOException {
         FreeStyleBuild b = p.scheduleBuild2(0).get();
-        assertTrue(p.getWorkspace().child(name).exists());
+        assertTrue(b.getWorkspace().child(name).exists());
         assertNotNull(b.getAction(MercurialTagAction.class));
     }
 

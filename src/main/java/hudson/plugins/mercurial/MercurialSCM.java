@@ -18,7 +18,6 @@ import hudson.plugins.mercurial.browser.HgWeb;
 import hudson.remoting.VirtualChannel;
 import hudson.scm.ChangeLogParser;
 import hudson.scm.RepositoryBrowser;
-import hudson.scm.RepositoryBrowsers;
 import hudson.scm.SCM;
 import hudson.scm.SCMDescriptor;
 import hudson.util.ArgumentListBuilder;
@@ -468,7 +467,7 @@ public class MercurialSCM extends SCM implements Serializable {
             load();
         }
 
-        protected DescriptorImpl(Class clazz, Class<? extends RepositoryBrowser> repositoryBrowser) {
+        protected DescriptorImpl(Class<MercurialSCM> clazz, Class<? extends RepositoryBrowser> repositoryBrowser) {
             super(clazz,repositoryBrowser);
         }
         
