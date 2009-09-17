@@ -14,6 +14,7 @@ import org.jvnet.hudson.test.recipes.LocalData;
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
+import org.jvnet.hudson.test.Bug;
 
 /**
  * @author Kohsuke Kawaguchi
@@ -41,8 +42,26 @@ public class MercurialSCMTest extends HudsonTestCase {
         buildAndCheck(p,"b");   // this tests the update op
     }
 
+    @Bug(1099)
+    public void testPollingLimitedToModules() throws Exception {
+        FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(null, repo.getPath(), null, "dir1 dir2", null, false));
+        hg("init");
+        touchAndCommit("dir1/f");
+        buildAndCheck(p, "dir1/f");
+        touchAndCommit("dir2/f");
+        assertTrue(p.pollSCMChanges(new StreamTaskListener(System.out)));
+        buildAndCheck(p, "dir2/f");
+        touchAndCommit("dir3/f");
+        assertFalse(p.pollSCMChanges(new StreamTaskListener(System.out)));
+        // No support for partial checkouts yet, so workspace will contain everything.
+        buildAndCheck(p, "dir3/f");
+    }
+
     private void touchAndCommit(String name) throws Exception {
-        new FilePath(repo).child(name).touch(0);
+        FilePath toCreate = new FilePath(repo).child(name);
+        toCreate.getParent().mkdirs();
+        toCreate.touch(0);
         hg("add", name);
         hg("commit", "-m", "added " + name);
     }
