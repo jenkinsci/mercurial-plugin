@@ -34,7 +34,7 @@ public class MercurialSCMTest extends HudsonTestCase {
         FreeStyleProject p = createFreeStyleProject();
         p.setScm(new MercurialSCM(null,repo.getPath(),null,null,null,false));
 
-        hg("hg","init");
+        hg("init");
         touchAndCommit("a");
         buildAndCheck(p,"a");   // this tests the clone op
         touchAndCommit("b");
@@ -43,8 +43,8 @@ public class MercurialSCMTest extends HudsonTestCase {
 
     private void touchAndCommit(String name) throws Exception {
         new FilePath(repo).child(name).touch(0);
-        hg("hg","add",name);
-        hg("hg","commit","-m","added "+name);
+        hg("add", name);
+        hg("commit", "-m", "added " + name);
     }
 
     private void buildAndCheck(FreeStyleProject p, String name) throws InterruptedException, ExecutionException, IOException {
@@ -54,7 +54,7 @@ public class MercurialSCMTest extends HudsonTestCase {
     }
 
     private void hg(String... args) throws Exception {
-        assertEquals(0,launcher.launch().cmds(args).pwd(repo).stdout(listener).join());
+        assertEquals(0,launcher.launch().cmds(new File("hg"), args).pwd(repo).stdout(listener).join());
     }
 
     /**
