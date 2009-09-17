@@ -271,7 +271,7 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     @Override
-    public boolean checkout(AbstractBuild build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile) throws IOException, InterruptedException {
+    public boolean checkout(AbstractBuild build, Launcher launcher, FilePath workspace, final BuildListener listener, File changelogFile) throws IOException, InterruptedException {
         boolean canUpdate = workspace.act(new FileCallable<Boolean>() {
             public Boolean invoke(File ws, VirtualChannel channel) throws IOException {
                 if(!HgRc.getHgRcFile(ws).exists())
@@ -286,7 +286,12 @@ public class MercurialSCM extends SCM implements Serializable {
 
                 if(upstream.equals(source)) return true;
                 if((upstream+'/').equals(source))   return true;
-                return source.startsWith("file:/") && new File(upstream).toURI().toString().equals(source);
+                if (source.startsWith("file:/") && new File(upstream).toURI().toString().equals(source)) return true;
+                listener.error(
+                        "Workspace reports paths.default as " + upstream +
+                        "\nwhich looks different than " + source +
+                        "\nso falling back to fresh clone rather than incremental update");
+                return false;
             }
         });
 
