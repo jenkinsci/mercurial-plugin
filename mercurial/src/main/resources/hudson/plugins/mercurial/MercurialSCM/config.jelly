@@ -1,0 +1,31 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+  <j:invokeStatic var="installations" className="hudson.plugins.mercurial.MercurialInstallation" method="allInstallations"/>
+  <j:if test="${!empty(installations)}">
+    <f:entry title="Mercurial Version">
+      <select class="setting-input" name="installation">
+        <option value="(Default)">(Default)</option>
+        <j:forEach var="inst" items="${installations}">
+          <f:option selected="${inst.name==instance.installation}" value="${inst.name}">${inst.name}</f:option>
+        </j:forEach>
+      </select>
+    </f:entry>
+  </j:if>
+
+  <f:entry title="${%Repository URL}" help="/plugin/mercurial/help.html">
+    <f:textbox field="source" />
+  </f:entry>
+  <f:entry title="${%Branch}" help="/plugin/mercurial/branch.html">
+    <f:textbox field="branch" />
+  </f:entry>
+  <f:advanced>
+    <f:entry title="${%Modules}" help="/plugin/mercurial/modules.html">
+      <f:textbox field="modules" />
+    </f:entry>
+    <f:entry title="${%Clean Build}" help="/plugin/mercurial/clean.html">
+      <f:checkbox name="hg.clean" checked="${instance.clean}" />
+    </f:entry>
+  </f:advanced>
+
+  <t:listScmBrowsers name="mercurial.browser" />
+</j:jelly>

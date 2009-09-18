@@ -1,0 +1,22 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.jvnet.hudson.plugins</groupId>
+    <artifactId>plugin</artifactId>
+    <version>1.323</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>mercurial</artifactId>
+  <version>1.17</version>
+  <packaging>hpi</packaging>
+  <name>Hudson Mercurial plugin</name>
+  <description>Integrates Hudson to Mercurial SCM</description>
+  <url>http://wiki.hudson-ci.org/display/HUDSON/Mercurial+Plugin</url>
+
+  <scm>
+    <connection>scm:svn:https://guest@svn.dev.java.net/svn/hudson/tags/mercurial-1.17</connection>
+    <developerConnection>scm:svn:https://svn.dev.java.net/svn/hudson/tags/mercurial-1.17</developerConnection>
+    <url>https://hudson.dev.java.net/source/browse/hudson/hudson/plugins/mercurial/tags/mercurial-1.17</url>
+  </scm>
+</project>
