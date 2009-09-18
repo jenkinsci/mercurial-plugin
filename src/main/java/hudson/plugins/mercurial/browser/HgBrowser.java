@@ -23,10 +23,10 @@ public class HgBrowser extends RepositoryBrowser<MercurialChangeSet> {
      */
     @Override
     public URL getChangeSetLink(MercurialChangeSet changeset) throws IOException {
-        throw new UnsupportedOperationException("Method is not implemented for HgBrowser");
+        return doReadResolve().getChangeSetLink(changeset);
     }
 
-    protected HgBrowser(String url) throws MalformedURLException {
+    /*protected*/public HgBrowser(String url) throws MalformedURLException {
         this.url = normalizeToEndWithSlash(new URL(url));
     }
 
@@ -36,6 +36,9 @@ public class HgBrowser extends RepositoryBrowser<MercurialChangeSet> {
 
     // compatibility with earlier plugins
     public Object readResolve() {
+        return doReadResolve();
+    }
+    private HgWeb doReadResolve() {
         try {
             return new HgWeb(url.toExternalForm());
         } catch (MalformedURLException e) {
