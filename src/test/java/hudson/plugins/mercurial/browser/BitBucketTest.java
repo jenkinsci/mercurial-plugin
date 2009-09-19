@@ -3,22 +3,31 @@
  */
 package hudson.plugins.mercurial.browser;
 
-import static org.junit.Assert.assertEquals;
-import hudson.plugins.mercurial.MercurialChangeSet;
-
 import java.io.IOException;
+import java.net.MalformedURLException;
 
 import org.junit.Test;
 
-public class BitBucketTest {
+public class BitBucketTest extends AbstractBrowserTestBase {
+
+    private static final String REPO_URL = "http://www.example.org/hg/repos";
+
+    public BitBucketTest() throws MalformedURLException {
+        super(new BitBucket(REPO_URL));        
+    }
 
     @Test
-    @SuppressWarnings("deprecation")
     public void testGetChangeSetLinkMercurialChangeSet() throws IOException {
-        final BitBucket browser = new BitBucket("http://www.example.org/hg/repos");
-        assertEquals("http://www.example.org/hg/repos/", browser.getUrl().toExternalForm());
-        final MercurialChangeSet changeSet = new MercurialChangeSet();
-        changeSet.setNode("6704efde87541766fadba17f66d04b926cd4d343");
-        assertEquals("http://www.example.org/hg/repos/changeset/6704efde8754/", browser.getChangeSetLink(changeSet).toExternalForm());
+        testGetChangeSetLinkMercurialChangeSet(REPO_URL+ "/changeset/6704efde8754/");
+    }
+    
+    @Test
+    public void testGetFileLink() throws IOException {
+        testGetFileLink(REPO_URL + "/src/6704efde8754/src/main/java/hudson/plugins/mercurial/browser/HgBrowser.java");
+    }
+
+    @Test
+    public void testGetDiffLink() throws IOException {        
+        testGetDiffLink(REPO_URL + "/changeset/6704efde8754/#chg-src/main/java/hudson/plugins/mercurial/browser/HgBrowser.java");
     }
 }

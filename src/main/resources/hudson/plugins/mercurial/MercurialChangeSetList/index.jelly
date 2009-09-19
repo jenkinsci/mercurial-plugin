@@ -31,7 +31,19 @@
           <j:forEach var="p" items="${cs.getPaths(k)}">
             <tr>
               <td width="20"><t:editTypeIcon type="${k}" /></td>
-              <td>${p}</td>
+              <td>
+                <j:if test="${k.getName().equals('delete')}">
+                    <tt>${p}</tt>
+                </j:if>
+                <j:if test="${!k.getName().equals('delete')}">
+                    <a href="${browser.getFileLink(p)}"><tt>${p}</tt></a>
+                    <j:set var="diff" value="${browser.getDiffLink(p)}"/>
+                    <j:if test="${diff!=null and k.getName().equals('edit')}">
+                      <st:nbsp/>
+                      <a href="${diff}">(diff)</a>
+                    </j:if>
+                </j:if>
+              </td>
             </tr>
           </j:forEach>
         </j:forEach>
