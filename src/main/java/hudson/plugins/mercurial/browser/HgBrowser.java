@@ -73,7 +73,11 @@ public class HgBrowser extends RepositoryBrowser<MercurialChangeSet> {
     }
 
     // compatibility with earlier plugins
-    public Object readResolve() {
+    public Object readResolve() {        
+        if (!this.getClass().equals(HgBrowser.class)) {
+            return this;
+        }
+        // make sure to return the default HgWeb only if we no class is given in config.
         try {
             return new HgWeb(url.toExternalForm());
         } catch (MalformedURLException e) {
