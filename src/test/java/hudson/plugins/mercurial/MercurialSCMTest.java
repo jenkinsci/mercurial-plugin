@@ -2,17 +2,23 @@ package hudson.plugins.mercurial;
 
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.plugins.mercurial.browser.BitBucket;
+import hudson.plugins.mercurial.browser.HgBrowser;
 import hudson.plugins.mercurial.browser.HgWeb;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Hudson;
 import hudson.model.TaskListener;
 import hudson.util.StreamTaskListener;
+
+import org.junit.Ignore;
 import org.jvnet.hudson.test.HudsonTestCase;
 import org.jvnet.hudson.test.recipes.LocalData;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.concurrent.ExecutionException;
 import org.jvnet.hudson.test.Bug;
 
@@ -30,8 +36,8 @@ public class MercurialSCMTest extends HudsonTestCase {
         launcher = Hudson.getInstance().createLauncher(listener);
         repo = createTmpDir();
     }
-
-    public void testBasicOps() throws Exception {
+        
+    public void itestBasicOps() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
         p.setScm(new MercurialSCM(null,repo.getPath(),null,null,null,false));
 
@@ -42,8 +48,8 @@ public class MercurialSCMTest extends HudsonTestCase {
         buildAndCheck(p,"b");   // this tests the update op
     }
 
-    @Bug(4281)
-    public void testBranches() throws Exception {
+    @Bug(4281)    
+    public void itestBranches() throws Exception {
         hg("init");
         touchAndCommit("init");
         hg("tag", "init");
@@ -76,7 +82,7 @@ public class MercurialSCMTest extends HudsonTestCase {
     }
 
     @Bug(1099)
-    public void testPollingLimitedToModules() throws Exception {
+    public void itestPollingLimitedToModules() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
         p.setScm(new MercurialSCM(null, repo.getPath(), null, "dir1 dir2", null, false));
         hg("init");
@@ -115,10 +121,21 @@ public class MercurialSCMTest extends HudsonTestCase {
      * This test verifies that. 
      */
     @LocalData
-    public void testRepositoryBrowserCompatibility() throws Exception {
+    public void itestRepositoryBrowserCompatibility() throws Exception {
         FreeStyleProject p = (FreeStyleProject)hudson.getItem("foo");
         MercurialSCM ms = (MercurialSCM)p.getScm();
         assertTrue(ms.getBrowser() instanceof HgWeb);
         assertEqualBeans(new HgWeb("http://www.yahoo.com/"),ms.getBrowser(),"url");
+    }
+    
+    @Bug(4510)
+    @LocalData
+    public void testPickingUpAlternativeBrowser() throws MalformedURLException, Exception {
+        FreeStyleProject p = (FreeStyleProject)hudson.getItem("foo");
+        MercurialSCM ms = (MercurialSCM)p.getScm();
+        final HgBrowser browser = ms.getBrowser();
+        assertEquals("wrong url", new URL("http://bitbucket.org/"), browser.getUrl());
+        assertTrue("class:" + browser.getClass(), browser instanceof BitBucket);
+        assertEqualBeans(new BitBucket("http://bitbucket.org/"),browser,"url");        
     }
 }
