@@ -6,10 +6,11 @@ import hudson.plugins.mercurial.MercurialChangeSet;
 import hudson.scm.RepositoryBrowser;
 
 import java.io.IOException;
-import java.net.URL;
 import java.net.MalformedURLException;
+import java.net.URL;
 
 import net.sf.json.JSONObject;
+
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 

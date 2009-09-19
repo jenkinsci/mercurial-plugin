@@ -3,15 +3,14 @@ package hudson.plugins.mercurial.browser;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.plugins.mercurial.MercurialChangeSet;
-import hudson.plugins.mercurial.MercurialSCM;
 import hudson.scm.RepositoryBrowser;
 
 import java.io.IOException;
-import java.net.URL;
 import java.net.MalformedURLException;
-import java.util.logging.Logger;
+import java.net.URL;
 
 import net.sf.json.JSONObject;
+
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
