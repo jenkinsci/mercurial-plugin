@@ -37,7 +37,7 @@ public class MercurialSCMTest extends HudsonTestCase {
         repo = createTmpDir();
     }
         
-    public void itestBasicOps() throws Exception {
+    public void testBasicOps() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
         p.setScm(new MercurialSCM(null,repo.getPath(),null,null,null,false));
 
@@ -49,7 +49,7 @@ public class MercurialSCMTest extends HudsonTestCase {
     }
 
     @Bug(4281)    
-    public void itestBranches() throws Exception {
+    public void testBranches() throws Exception {
         hg("init");
         touchAndCommit("init");
         hg("tag", "init");
@@ -82,7 +82,7 @@ public class MercurialSCMTest extends HudsonTestCase {
     }
 
     @Bug(1099)
-    public void itestPollingLimitedToModules() throws Exception {
+    public void testPollingLimitedToModules() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
         p.setScm(new MercurialSCM(null, repo.getPath(), null, "dir1 dir2", null, false));
         hg("init");
@@ -121,7 +121,7 @@ public class MercurialSCMTest extends HudsonTestCase {
      * This test verifies that. 
      */
     @LocalData
-    public void itestRepositoryBrowserCompatibility() throws Exception {
+    public void testRepositoryBrowserCompatibility() throws Exception {
         FreeStyleProject p = (FreeStyleProject)hudson.getItem("foo");
         MercurialSCM ms = (MercurialSCM)p.getScm();
         assertTrue(ms.getBrowser() instanceof HgWeb);
