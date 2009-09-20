@@ -40,6 +40,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
@@ -207,11 +208,12 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     // XXX maybe useful enough to make a convenience method on Proc?
+    private static final ScheduledExecutorService executor = Executors.newScheduledThreadPool(0);
     private int joinWithTimeout(final Proc proc, long timeout, TimeUnit unit,
             final TaskListener listener) throws IOException, InterruptedException {
         final AtomicBoolean done = new AtomicBoolean();
         try {
-            Executors.newSingleThreadScheduledExecutor().schedule(new Runnable() {
+            executor.schedule(new Runnable() {
                 public void run() {
                     if (!done.get()) {
                         try {
