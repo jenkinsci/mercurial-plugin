@@ -506,15 +506,11 @@ public class MercurialSCM extends SCM implements Serializable {
             super(HgBrowser.class);
             load();
         }
-
-        protected DescriptorImpl(Class<MercurialSCM> clazz, Class<? extends RepositoryBrowser> repositoryBrowser) {
-            super(clazz,repositoryBrowser);
-        }
         
         /**
          * {@inheritDoc}
          * 
-         * Due to compatibility issues with older version we implement this ourselves instead of relaying
+         * Due to compatibility issues with older version we implement this ourselves instead of relying
          * on the parent method.
          * 
          * @see <a href="https://hudson.dev.java.net/issues/show_bug.cgi?id=4514">#4514</a>

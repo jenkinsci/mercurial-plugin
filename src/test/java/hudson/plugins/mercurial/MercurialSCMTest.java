@@ -13,7 +13,6 @@ import hudson.model.TaskListener;
 import hudson.scm.RepositoryBrowser;
 import hudson.util.StreamTaskListener;
 
-import org.junit.Ignore;
 import org.jvnet.hudson.test.HudsonTestCase;
 import org.jvnet.hudson.test.recipes.LocalData;
 
