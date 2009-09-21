@@ -11,6 +11,7 @@ import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
 import hudson.model.Computer;
+import hudson.model.Descriptor;
 import hudson.model.Hudson;
 import hudson.model.TaskListener;
 import hudson.plugins.mercurial.browser.HgBrowser;
@@ -18,6 +19,7 @@ import hudson.plugins.mercurial.browser.HgWeb;
 import hudson.remoting.VirtualChannel;
 import hudson.scm.ChangeLogParser;
 import hudson.scm.RepositoryBrowser;
+import hudson.scm.RepositoryBrowsers;
 import hudson.scm.SCM;
 import hudson.scm.SCMDescriptor;
 import hudson.util.ArgumentListBuilder;
@@ -36,7 +38,9 @@ import java.io.PrintStream;
 import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
@@ -505,6 +509,19 @@ public class MercurialSCM extends SCM implements Serializable {
 
         protected DescriptorImpl(Class<MercurialSCM> clazz, Class<? extends RepositoryBrowser> repositoryBrowser) {
             super(clazz,repositoryBrowser);
+        }
+        
+        /**
+         * {@inheritDoc}
+         * 
+         * Due to compatibility issues with older version we implement this ourselves instead of relaying
+         * on the parent method.
+         * 
+         * @see <a href="https://hudson.dev.java.net/issues/show_bug.cgi?id=4514">#4514</a>
+         */
+        @Override
+        public List<Descriptor<RepositoryBrowser<?>>> getBrowserDescriptors() {
+            return RepositoryBrowsers.filter(HgBrowser.class);
         }
         
         public String getDisplayName() {
