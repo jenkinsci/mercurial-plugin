@@ -5,10 +5,12 @@ import hudson.Launcher;
 import hudson.plugins.mercurial.browser.BitBucket;
 import hudson.plugins.mercurial.browser.HgBrowser;
 import hudson.plugins.mercurial.browser.HgWeb;
+import hudson.model.Descriptor;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Hudson;
 import hudson.model.TaskListener;
+import hudson.scm.RepositoryBrowser;
 import hudson.util.StreamTaskListener;
 
 import org.junit.Ignore;
@@ -19,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import org.jvnet.hudson.test.Bug;
 
@@ -136,6 +139,19 @@ public class MercurialSCMTest extends HudsonTestCase {
         final HgBrowser browser = ms.getBrowser();
         assertEquals("wrong url", new URL("http://bitbucket.org/"), browser.getUrl());
         assertTrue("class:" + browser.getClass(), browser instanceof BitBucket);
+        assertEqualBeans(new BitBucket("http://bitbucket.org/"),browser,"url");
+    }
+    
+    @Bug(4514)
+    @LocalData
+    public void testBrowsersAvailableInDropDown() throws MalformedURLException, Exception {
+        FreeStyleProject p = (FreeStyleProject)hudson.getItem("foo");
+        MercurialSCM ms = (MercurialSCM)p.getScm();
+        final HgBrowser browser = ms.getBrowser();
+        assertEquals("wrong url", new URL("http://bitbucket.org/"), browser.getUrl());
+        assertTrue("class:" + browser.getClass(), browser instanceof BitBucket);
         assertEqualBeans(new BitBucket("http://bitbucket.org/"),browser,"url");        
+        final List<Descriptor<RepositoryBrowser<?>>> browserDescriptors = ms.getDescriptor().getBrowserDescriptors();
+        assertTrue("Could not find BitBucket in " + browserDescriptors, browserDescriptors.contains(browser.getDescriptor()));
     }
 }
