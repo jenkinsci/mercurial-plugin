@@ -511,9 +511,13 @@ public class MercurialSCM extends SCM implements Serializable {
          * {@inheritDoc}
          * 
          * Due to compatibility issues with older version we implement this ourselves instead of relying
-         * on the parent method.
+         * on the parent method. Koshuke implemented a fix for this in the core (r21961), so we may drop
+         * this function after 1.325 is released.
+         * 
+         * @todo: remove this function after 1.325 is released.
          * 
          * @see <a href="https://hudson.dev.java.net/issues/show_bug.cgi?id=4514">#4514</a>
+         * @see <a href="http://fisheye4.atlassian.com/changelog/hudson/trunk/hudson?cs=21961">core fix</a>
          */
         @Override
         public List<Descriptor<RepositoryBrowser<?>>> getBrowserDescriptors() {
