@@ -8,9 +8,15 @@
   </parent>
 
   <artifactId>mercurial</artifactId>
-  <version>1.21-SNAPSHOT</version>
+  <version>1.21</version>
   <packaging>hpi</packaging>
   <name>Hudson Mercurial plugin</name>
   <description>Integrates Hudson to Mercurial SCM</description>
   <url>http://wiki.hudson-ci.org/display/HUDSON/Mercurial+Plugin</url>
+
+  <scm>
+    <connection>scm:svn:https://guest@svn.dev.java.net/svn/hudson/tags/mercurial-1.21</connection>
+    <developerConnection>scm:svn:https://svn.dev.java.net/svn/hudson/tags/mercurial-1.21</developerConnection>
+    <url>https://hudson.dev.java.net/source/browse/hudson/hudson/plugins/mercurial/tags/mercurial-1.21</url>
+  </scm>
 </project>
