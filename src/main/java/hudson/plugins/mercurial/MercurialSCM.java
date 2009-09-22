@@ -38,15 +38,15 @@ import java.io.PrintStream;
 import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -212,25 +212,27 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     // XXX maybe useful enough to make a convenience method on Proc?
-    private static final ScheduledExecutorService executor = Executors.newScheduledThreadPool(0);
-    private int joinWithTimeout(final Proc proc, long timeout, TimeUnit unit,
+    private static final ExecutorService executor = Executors.newCachedThreadPool();
+    private int joinWithTimeout(final Proc proc, final long timeout, final TimeUnit unit,
             final TaskListener listener) throws IOException, InterruptedException {
-        final AtomicBoolean done = new AtomicBoolean();
+        final CountDownLatch latch = new CountDownLatch(1);
         try {
-            executor.schedule(new Runnable() {
+            executor.submit(new Runnable() {
                 public void run() {
-                    if (!done.get()) {
-                        try {
+                    try {
+                        if (!latch.await(timeout, unit)) {
+                            listener.error("Timeout after " + timeout + " " +
+                                    unit.toString().toLowerCase(Locale.ENGLISH));
                             proc.kill();
-                        } catch (Exception x) {
-                            listener.error(x.toString());
                         }
+                    } catch (Exception x) {
+                        listener.error(x.toString());
                     }
                 }
-            }, timeout, unit);
+            });
             return proc.join();
         } finally {
-            done.set(true);
+            latch.countDown();
         }
     }
 
