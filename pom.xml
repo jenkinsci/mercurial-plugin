@@ -3,14 +3,25 @@
   <parent>
     <groupId>org.jvnet.hudson.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>1.323</version>
+    <version>1.324</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
-
   <artifactId>mercurial</artifactId>
   <version>1.22-SNAPSHOT</version>
   <packaging>hpi</packaging>
   <name>Hudson Mercurial plugin</name>
   <description>Integrates Hudson to Mercurial SCM</description>
   <url>http://wiki.hudson-ci.org/display/HUDSON/Mercurial+Plugin</url>
+  <developers>
+      <developer>
+          <id>jglick</id>
+          <name>Jesse Glick</name>
+          <email>jesse.glick@sun.com</email>
+      </developer>
+      <developer>
+          <id>mfriedenhagen</id>
+          <name>Mirko Friedenhagen</name>
+          <email>mfriedenhagen@dev.java.net</email>
+      </developer>
+  </developers>
 </project>
