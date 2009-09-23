@@ -191,7 +191,7 @@ public class MercurialSCM extends SCM implements Serializable {
             cmd.add("-r", getBranch());
             joinWithTimeout(
                     launcher.launch().cmds(cmd).stdout(new ForkOutputStream(baos, output)).pwd(workspace).start(),
-                    1, TimeUnit.HOURS, listener);
+                    /* #4528: not in JDK 5: 1, TimeUnit.HOURS*/60 * 60, TimeUnit.SECONDS, listener);
             parseIncomingOutput(baos, changedFileNames);
         } finally {
             tmpFile.delete();
