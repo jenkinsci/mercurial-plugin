@@ -20,7 +20,7 @@ public class HgBrowserTest {
     }
     
     @Test(expected=UnsupportedOperationException.class)
-    public final void testgetDiffLink() throws IOException {
+    public final void testGetDiffLink() throws IOException {
         new HgBrowser("http://abc/").getDiffLink("");
     }
     
