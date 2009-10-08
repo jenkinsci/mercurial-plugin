@@ -375,6 +375,7 @@ public class MercurialSCM extends SCM implements Serializable {
             }
         } catch (IOException e) {
             listener.error("Failed to pull");
+            e.printStackTrace(listener.getLogger());
             return false;
         } finally {
             os.write("</changesets>".getBytes());
@@ -400,6 +401,7 @@ public class MercurialSCM extends SCM implements Serializable {
                 }
             } catch (IOException e) {
                 listener.error("Failed to pull");
+                e.printStackTrace(listener.getLogger());
                 return false;
             }
 
