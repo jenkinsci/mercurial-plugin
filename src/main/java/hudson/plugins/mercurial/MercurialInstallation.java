@@ -24,6 +24,7 @@
 
 package hudson.plugins.mercurial;
 
+import edu.umd.cs.findbugs.annotations.SuppressWarnings;
 import hudson.CopyOnWrite;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -43,7 +44,8 @@ import org.kohsuke.stapler.DataBoundConstructor;
  * Installation of Mercurial.
  * Expects bin/hg (bin\hg.exe) to exist. XXX should you be able to point to a raw executable?
  */
-public class MercurialInstallation extends ToolInstallation implements NodeSpecific<MercurialInstallation>, EnvironmentSpecific<MercurialInstallation> {
+@SuppressWarnings("SE_NO_SERIALVERSIONID")
+public class MercurialInstallation extends ToolInstallation implements  NodeSpecific<MercurialInstallation>, EnvironmentSpecific<MercurialInstallation> {
 
     @DataBoundConstructor
     public MercurialInstallation(String name, String home, List<? extends ToolProperty<?>> properties) {
@@ -66,6 +68,7 @@ public class MercurialInstallation extends ToolInstallation implements NodeSpeci
     public static class DescriptorImpl extends ToolDescriptor<MercurialInstallation> {
 
         @CopyOnWrite
+        @SuppressWarnings("VO_VOLATILE_REFERENCE_TO_ARRAY")
         private volatile MercurialInstallation[] installations = new MercurialInstallation[0];
 
         public DescriptorImpl() {
@@ -77,6 +80,7 @@ public class MercurialInstallation extends ToolInstallation implements NodeSpeci
         }
 
         @Override
+        @SuppressWarnings(value = "EI_EXPOSE_REP")
         public MercurialInstallation[] getInstallations() {
             return installations;
         }

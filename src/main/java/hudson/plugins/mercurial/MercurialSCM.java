@@ -1,5 +1,6 @@
 package hudson.plugins.mercurial;
 
+import edu.umd.cs.findbugs.annotations.SuppressWarnings;
 import hudson.AbortException;
 import hudson.Extension;
 import hudson.FilePath;
@@ -80,6 +81,7 @@ public class MercurialSCM extends SCM implements Serializable {
      * Prefixes of files within the repository which we're dependent on.
      * Storing as member variable so as to only parse the dependencies string once.
      */
+    @SuppressWarnings("SE_TRANSIENT_FIELD_NOT_RESTORED")
     private transient final Set<String> _modules = new HashSet<String>();
     // Same thing, but not parsed for jelly.
     private final String modules;
@@ -145,6 +147,7 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     @Override
+    @SuppressWarnings("DLS_DEAD_LOCAL_STORE")
     public HgBrowser getBrowser() {
         if (browser == null) {
             try {
@@ -427,6 +430,7 @@ public class MercurialSCM extends SCM implements Serializable {
     /**
      * Returns true if we think our Mercurial is 1.0 or newer.
      */
+    @SuppressWarnings("DLS_DEAD_LOCAL_STORE")
     private boolean isHg10orLater() {
         boolean hg10 = false;
         try {

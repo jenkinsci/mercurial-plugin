@@ -24,4 +24,11 @@
           <email>mfriedenhagen@dev.java.net</email>
       </developer>
   </developers>
+  <dependencies>
+      <dependency>
+          <groupId>findbugs</groupId>
+          <artifactId>annotations</artifactId>
+          <version>1.0.0</version>
+      </dependency>
+  </dependencies>
 </project>
