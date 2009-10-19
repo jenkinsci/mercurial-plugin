@@ -3,6 +3,7 @@ package hudson.plugins.mercurial;
 import hudson.model.User;
 import hudson.scm.ChangeLogSet;
 import hudson.scm.EditType;
+import hudson.scm.ChangeLogSet.AffectedFile;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -88,6 +89,7 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
         return date;
     }
 
+    /** {@inheritDoc} */
     @Override
     public Collection<String> getAffectedPaths() {
         if(affectedPaths==null) {
@@ -100,6 +102,19 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
         return affectedPaths;
     }
 
+    /** {@inheritDoc} */
+    @Override
+    public Collection<? extends AffectedFile> getAffectedFiles() {
+        final List<MercurialAffectedFile> affected = new ArrayList<MercurialAffectedFile>(added.size() + modified.size()
+                + deleted.size());
+        for (EditType editType : EditType.ALL) {
+            for (String path : getPaths(editType)) {
+                affected.add(new MercurialAffectedFile(editType, path));
+            }
+        }
+        return affected;
+    }
+    
     /**
      * Gets all the files that were added.
      */
