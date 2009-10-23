@@ -38,7 +38,6 @@ import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.net.MalformedURLException;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.List;
@@ -80,9 +79,10 @@ public class MercurialSCM extends SCM implements Serializable {
     /**
      * Prefixes of files within the repository which we're dependent on.
      * Storing as member variable so as to only parse the dependencies string once.
+     * Will be either null (use whole repo), or nonempty list of subdir names.
      */
     @SuppressWarnings("SE_TRANSIENT_FIELD_NOT_RESTORED")
-    private transient final Set<String> _modules = new HashSet<String>();
+    private transient final Set<String> _modules;
     // Same thing, but not parsed for jelly.
     private final String modules;
     
@@ -102,21 +102,26 @@ public class MercurialSCM extends SCM implements Serializable {
         this.modules = Util.fixNull(modules);
         this.clean = clean;
 
-        // split by commas and whitespace, except "\ "
-        String[] r = this.modules.split("(?<!\\\\)[ \\r\\n,]+");
-        for (int i = 0; i < r.length; i++) {
-            // now replace "\ " to " ".
-            r[i] = r[i].replaceAll("\\\\ ", " ");
-
-            // Strip leading slashes
-            while (r[i].startsWith("/"))
-                r[i] = r[i].substring(1);
-
-            // Use unix file path separators
-            r[i] = r[i].replace('\\', '/');
+        if (this.modules.trim().length() > 0) {
+            _modules = new HashSet<String>();
+            // split by commas and whitespace, except "\ "
+            for (String r : this.modules.split("(?<!\\\\)[ \\r\\n,]+")) {
+                if (r.length() == 0) { // initial spaces should be ignored
+                    continue;
+                }
+                // now replace "\ " to " ".
+                r = r.replaceAll("\\\\ ", " ");
+                // Strip leading slashes
+                while (r.startsWith("/")) {
+                    r = r.substring(1);
+                }
+                // Use unix file path separators
+                r = r.replace('\\', '/');
+                _modules.add(r);
+            }
+        } else {
+            _modules = null;
         }
-
-        this._modules.addAll(Arrays.asList(r));
 
         // normalization
         branch = Util.fixEmpty(branch);
