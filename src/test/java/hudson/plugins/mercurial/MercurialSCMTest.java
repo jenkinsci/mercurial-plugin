@@ -10,6 +10,7 @@ import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Hudson;
 import hudson.model.TaskListener;
+import hudson.scm.ChangeLogSet;
 import hudson.scm.RepositoryBrowser;
 import hudson.util.StreamTaskListener;
 
@@ -20,6 +21,10 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import org.jvnet.hudson.test.Bug;
@@ -99,12 +104,54 @@ public class MercurialSCMTest extends HudsonTestCase {
         buildAndCheck(p, "dir3/f");
     }
 
-    private void touchAndCommit(String name) throws Exception {
-        FilePath toCreate = new FilePath(repo).child(name);
-        toCreate.getParent().mkdirs();
-        toCreate.touch(0);
-        hg("add", name);
-        hg("commit", "-m", "added " + name);
+    @Bug(4702)
+    public void testChangelogLimitedToModules() throws Exception {
+        FreeStyleProject p = createFreeStyleProject();
+        // Control case: no modules specified.
+        p.setScm(new MercurialSCM(null, repo.getPath(), null, null, null, false));
+        hg("init");
+        touchAndCommit("dir1/f1");
+        p.scheduleBuild2(0).get();
+        touchAndCommit("dir2/f1");
+        Iterator<? extends ChangeLogSet.Entry> it = p.scheduleBuild2(0).get().getChangeSet().iterator();
+        assertTrue(it.hasNext());
+        ChangeLogSet.Entry entry = it.next();
+        assertEquals(Collections.singleton("dir2/f1"), new HashSet<String>(entry.getAffectedPaths()));
+        assertFalse(it.hasNext());
+        p.setScm(new MercurialSCM(null, repo.getPath(), null, "dir1 extra", null, false));
+        // dir2/f2 change should be ignored.
+        touchAndCommit("dir1/f2");
+        touchAndCommit("dir2/f2");
+        it = p.scheduleBuild2(0).get().getChangeSet().iterator();
+        assertTrue(it.hasNext());
+        entry = it.next();
+        assertEquals(Collections.singleton("dir1/f2"), new HashSet<String>(entry.getAffectedPaths()));
+        assertFalse(it.hasNext());
+        // First commit should match (because at least one file does) but not second.
+        touchAndCommit("dir2/f3", "dir1/f3");
+        touchAndCommit("dir2/f4", "dir2/f5");
+        it = p.scheduleBuild2(0).get().getChangeSet().iterator();
+        assertTrue(it.hasNext());
+        entry = it.next();
+        assertEquals(new HashSet<String>(Arrays.asList("dir1/f3", "dir2/f3")), new HashSet<String>(entry.getAffectedPaths()));
+        assertFalse(it.hasNext());
+        // Any module in the list can trigger an inclusion.
+        touchAndCommit("extra/f1");
+        it = p.scheduleBuild2(0).get().getChangeSet().iterator();
+        assertTrue(it.hasNext());
+        entry = it.next();
+        assertEquals(Collections.singleton("extra/f1"), new HashSet<String>(entry.getAffectedPaths()));
+        assertFalse(it.hasNext());
+    }
+
+    private void touchAndCommit(String... names) throws Exception {
+        for (String name : names) {
+            FilePath toCreate = new FilePath(repo).child(name);
+            toCreate.getParent().mkdirs();
+            toCreate.touch(0);
+            hg("add", name);
+        }
+        hg("commit", "-m", "added " + Arrays.toString(names));
     }
 
     private void buildAndCheck(FreeStyleProject p, String name) throws InterruptedException, ExecutionException, IOException {

@@ -10,6 +10,8 @@ import org.xml.sax.SAXException;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Set;
 
 /**
  * Parses the changelog.xml.
@@ -19,6 +21,13 @@ import java.util.ArrayList;
  * @author Kohsuke Kawaguchi
  */
 public class MercurialChangeLogParser extends ChangeLogParser {
+
+    private final Set<String> modules;
+
+    public MercurialChangeLogParser(Set<String> modules) {
+        this.modules = modules;
+    }
+
     public MercurialChangeSetList parse(AbstractBuild build, File changelogFile) throws IOException, SAXException {
         Digester digester = new Digester2();
         ArrayList<MercurialChangeSet> r = new ArrayList<MercurialChangeSet>();
@@ -42,6 +51,25 @@ public class MercurialChangeLogParser extends ChangeLogParser {
             throw new IOException2("Failed to parse "+changelogFile,e);
         }
 
+        if (modules != null) {
+            Iterator<MercurialChangeSet> it = r.iterator();
+            while (it.hasNext()) {
+                boolean include = false;
+                INCLUDE: for (String path : it.next().getAffectedPaths()) {
+                    for (String module : modules) {
+                        if (path.startsWith(module)) {
+                            include = true;
+                            break INCLUDE;
+                        }
+                    }
+                }
+                if (!include) {
+                    it.remove();
+                }
+            }
+        }
+
         return new MercurialChangeSetList(build,r);
     }
+
 }

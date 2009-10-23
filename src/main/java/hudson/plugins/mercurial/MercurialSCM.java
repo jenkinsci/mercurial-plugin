@@ -497,7 +497,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
     @Override
     public ChangeLogParser createChangeLogParser() {
-        return new MercurialChangeLogParser();
+        return new MercurialChangeLogParser(_modules);
     }
 
     @Override
