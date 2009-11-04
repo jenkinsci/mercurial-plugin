@@ -49,6 +49,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import static java.util.logging.Level.FINE;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -205,12 +206,19 @@ public class MercurialSCM extends SCM implements Serializable {
             tmpFile.delete();
         }
 
+        if (LOGGER.isLoggable(FINE))
+            LOGGER.fine("Changed file names="+changedFileNames);
+
         if (changedFileNames.isEmpty()) {
             output.println("No changes");
             return false;
         }
 
-        if (dependentChanges(changedFileNames).isEmpty()) {
+        Set<String> depchanges = dependentChanges(changedFileNames);
+        if (LOGGER.isLoggable(FINE))
+            LOGGER.fine("Dependent changed file names="+depchanges);
+
+        if (depchanges.isEmpty()) {
             output.println("Non-dependent changes detected");
             return false;
         }
