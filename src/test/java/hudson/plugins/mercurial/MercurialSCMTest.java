@@ -154,8 +154,8 @@ public class MercurialSCMTest extends HudsonTestCase {
         hg("commit", "-m", "added " + Arrays.toString(names));
     }
 
-    private void buildAndCheck(FreeStyleProject p, String name) throws InterruptedException, ExecutionException, IOException {
-        FreeStyleBuild b = p.scheduleBuild2(0).get();
+    private void buildAndCheck(FreeStyleProject p, String name) throws Exception {
+        FreeStyleBuild b = assertBuildStatusSuccess(p.scheduleBuild2(0).get());
         assertTrue(b.getWorkspace().child(name).exists());
         assertNotNull(b.getAction(MercurialTagAction.class));
     }
