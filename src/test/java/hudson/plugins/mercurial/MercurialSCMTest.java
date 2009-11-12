@@ -46,7 +46,7 @@ public class MercurialSCMTest extends HudsonTestCase {
         
     public void testBasicOps() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
-        p.setScm(new MercurialSCM(null,repo.getPath(),null,null,null,false));
+        p.setScm(new MercurialSCM(null,repo.getPath(),null,null,null,false,false));
 
         hg("init");
         touchAndCommit("a");
@@ -66,7 +66,7 @@ public class MercurialSCMTest extends HudsonTestCase {
         touchAndCommit("b-1");
         FreeStyleProject p = createFreeStyleProject();
         // Clone off b.
-        p.setScm(new MercurialSCM(null, repo.getPath(), "b", null, null, false));
+        p.setScm(new MercurialSCM(null, repo.getPath(), "b", null, null, false, false));
         buildAndCheck(p, "b-1");
         hg("up", "-C", "default");
         touchAndCommit("default-2");
@@ -78,7 +78,7 @@ public class MercurialSCMTest extends HudsonTestCase {
         assertTrue(p.pollSCMChanges(new StreamTaskListener(System.out)));
         buildAndCheck(p, "b-2");
         // Switch to default branch with an existing workspace.
-        p.setScm(new MercurialSCM(null, repo.getPath(), null, null, null, false));
+        p.setScm(new MercurialSCM(null, repo.getPath(), null, null, null, false, false));
         // Should now consider preexisting changesets in default to be poll triggers.
         assertTrue(p.pollSCMChanges(new StreamTaskListener(System.out)));
         // Should switch working copy to default branch.
@@ -91,7 +91,7 @@ public class MercurialSCMTest extends HudsonTestCase {
     @Bug(1099)
     public void testPollingLimitedToModules() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
-        p.setScm(new MercurialSCM(null, repo.getPath(), null, "dir1 dir2", null, false));
+        p.setScm(new MercurialSCM(null, repo.getPath(), null, "dir1 dir2", null, false, false));
         hg("init");
         touchAndCommit("dir1/f");
         buildAndCheck(p, "dir1/f");
@@ -108,7 +108,7 @@ public class MercurialSCMTest extends HudsonTestCase {
     public void testChangelogLimitedToModules() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
         // Control case: no modules specified.
-        p.setScm(new MercurialSCM(null, repo.getPath(), null, null, null, false));
+        p.setScm(new MercurialSCM(null, repo.getPath(), null, null, null, false, false));
         hg("init");
         touchAndCommit("dir1/f1");
         p.scheduleBuild2(0).get();
@@ -118,7 +118,7 @@ public class MercurialSCMTest extends HudsonTestCase {
         ChangeLogSet.Entry entry = it.next();
         assertEquals(Collections.singleton("dir2/f1"), new HashSet<String>(entry.getAffectedPaths()));
         assertFalse(it.hasNext());
-        p.setScm(new MercurialSCM(null, repo.getPath(), null, "dir1 extra", null, false));
+        p.setScm(new MercurialSCM(null, repo.getPath(), null, "dir1 extra", null, false, false));
         // dir2/f2 change should be ignored.
         touchAndCommit("dir1/f2");
         touchAndCommit("dir2/f2");
