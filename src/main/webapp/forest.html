@@ -1,5 +1,14 @@
 <div>
-    When this option is checked, a repository is considered a forest. You should have the forest mercurial plugin 
-    installed to be able to use it. Note that "clean" will only clean the top level forest repository, since these 
-    two mercurial extensions don't know about each other.
+    When checked, the repository is considered the root of a forest.
+    Make sure your Mercurial installation enables the
+    <a href="http://mercurial.selenic.com/wiki/ForestExtension">Forest Extension</a>.
+    Known limitations in this release:
+    <ul>
+        <li>"Clean Build" will clean only the top-level repository.
+        <li>Changelog entries will not note which repository a file is from,
+            and hyperlinks to subrepositories will not work.
+        <li>Pulling changes takes twice as long.
+        <li>Snapshots are not yet supported;
+            the remote repository must also have the extension enabled.
+    </ul>
 </div>
