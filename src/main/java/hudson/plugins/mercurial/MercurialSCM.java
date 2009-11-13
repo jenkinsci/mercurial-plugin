@@ -38,11 +38,14 @@ import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.net.MalformedURLException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.StringTokenizer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -195,7 +198,8 @@ public class MercurialSCM extends SCM implements Serializable {
     private static final String FILES_STYLE = "changeset = 'files:{files}\\n'\n" + "file = '{file}:'";
 
     @Override
-    public boolean pollChanges(AbstractProject project, Launcher launcher, FilePath workspace, TaskListener listener) throws IOException, InterruptedException {
+    public boolean pollChanges(AbstractProject project, Launcher launcher, FilePath workspace, TaskListener listener)
+            throws IOException, InterruptedException {
         PrintStream output = listener.getLogger();
 
         // Mercurial requires the style file to be in a file..
@@ -303,7 +307,8 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     @Override
-    public boolean checkout(AbstractBuild build, Launcher launcher, FilePath workspace, final BuildListener listener, File changelogFile) throws IOException, InterruptedException {
+    public boolean checkout(AbstractBuild build, Launcher launcher, FilePath workspace, final BuildListener listener, File changelogFile)
+            throws IOException, InterruptedException {
         boolean canUpdate = workspace.act(new FileCallable<Boolean>() {
             public Boolean invoke(File ws, VirtualChannel channel) throws IOException {
                 if(!HgRc.getHgRcFile(ws).exists())
@@ -337,7 +342,8 @@ public class MercurialSCM extends SCM implements Serializable {
     /**
      * Updates the current workspace.
      */
-    private boolean update(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile) throws InterruptedException, IOException {
+    private boolean update(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile)
+            throws InterruptedException, IOException {
         if(clean) {
             if (launcher.launch().cmds(findHgExe(listener), forest ? "fupdate" : "update", "--clean", ".")
                 .envs(build.getEnvironment(listener)).stdout(listener)
@@ -345,10 +351,22 @@ public class MercurialSCM extends SCM implements Serializable {
                 listener.error("Failed to clobber local modifications");
                 return false;
             }
-            if (launcher.launch().cmds(findHgExe(listener), "--config", "extensions.purge=", "clean", "--all")
-                    .envs(build.getEnvironment(listener)).stdout(listener).pwd(workspace).join() != 0) {
-                listener.error("Failed to clean unversioned files");
-                return false;
+            if (forest) {
+                StringTokenizer trees = new StringTokenizer(runHgAndCaptureOutput(launcher, workspace, listener, "ftrees", "--convert"));
+                while (trees.hasMoreTokens()) {
+                    String tree = trees.nextToken();
+                    if (launcher.launch().cmds(findHgExe(listener), "--config", "extensions.purge=", "clean", "--all").
+                            envs(build.getEnvironment(listener)).stdout(listener).pwd(tree.equals(".") ? workspace : workspace.child(tree)).join() != 0) {
+                        listener.error("Failed to clean unversioned files in " + tree);
+                        return false;
+                    }
+                }
+            } else {
+                if (launcher.launch().cmds(findHgExe(listener), "--config", "extensions.purge=", "clean", "--all").
+                        envs(build.getEnvironment(listener)).stdout(listener).pwd(workspace).join() != 0) {
+                    listener.error("Failed to clean unversioned files");
+                    return false;
+                }
             }
         }
         FilePath hgBundle = new FilePath(workspace, "hg.bundle");
@@ -445,20 +463,28 @@ public class MercurialSCM extends SCM implements Serializable {
         return true;
     }
 
-    private void addTagActionToBuild(AbstractBuild<?, ?> build, Launcher launcher, FilePath workspace, BuildListener listener) throws IOException, InterruptedException {
+    private void addTagActionToBuild(AbstractBuild<?, ?> build, Launcher launcher, FilePath workspace, BuildListener listener)
+            throws IOException, InterruptedException {
+        String id = runHgAndCaptureOutput(launcher, workspace, listener, "log", "--rev", ".", "--template", "{node}");
+        if (!REVISIONID_PATTERN.matcher(id).matches()) {
+            listener.error("Expected to get an id but got " + id + " instead.");
+            throw new AbortException();
+        }
+        build.addAction(new MercurialTagAction(id));
+    }
+
+    private String runHgAndCaptureOutput(Launcher launcher, FilePath workspace, BuildListener listener, String... commands)
+            throws IOException, InterruptedException {
         ByteArrayOutputStream rev = new ByteArrayOutputStream();
-        if (launcher.launch().cmds(findHgExe(listener), "log", "--rev", ".", "--template", "{node}")
-                .pwd(workspace).stdout(rev).join()!=0) {
-            listener.error("Failed to id");
+        List<String> args = new ArrayList<String>(commands.length + 1);
+        args.add(findHgExe(listener));
+        args.addAll(Arrays.asList(commands));
+        if (launcher.launch().cmds(args).pwd(workspace).stdout(rev).join() == 0) {
+            return rev.toString();
+        } else {
+            listener.error("Failed to run " + args);
             listener.getLogger().write(rev.toByteArray());
             throw new AbortException();
-        } else {
-            String id = rev.toString();
-            if(!REVISIONID_PATTERN.matcher(id).matches()) {
-                listener.error("Expected to get an id but got "+id+" instead.");
-                throw new AbortException();
-            }
-            build.addAction(new MercurialTagAction(id));
         }
     }
 
@@ -489,7 +515,8 @@ public class MercurialSCM extends SCM implements Serializable {
     /**
      * Start from scratch and clone the whole repository.
      */
-    private boolean clone(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile) throws InterruptedException, IOException {
+    private boolean clone(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile)
+            throws InterruptedException, IOException {
         try {
             workspace.deleteRecursive();
         } catch (IOException e) {
