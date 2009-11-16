@@ -85,8 +85,7 @@ public class MercurialSCM extends SCM implements Serializable {
      * Storing as member variable so as to only parse the dependencies string once.
      * Will be either null (use whole repo), or nonempty list of subdir names.
      */
-    @SuppressWarnings("SE_TRANSIENT_FIELD_NOT_RESTORED")
-    private transient final Set<String> _modules;
+    private transient Set<String> _modules;
     // Same thing, but not parsed for jelly.
     private final String modules;
     
@@ -107,11 +106,19 @@ public class MercurialSCM extends SCM implements Serializable {
         this.modules = Util.fixNull(modules);
         this.clean = clean;
         this.forest = forest;
+        parseModules();
+        branch = Util.fixEmpty(branch);
+        if(branch!=null && branch.equals("default"))
+            branch = null;
+        this.branch = branch;
+        this.browser = browser;
+    }
 
-        if (this.modules.trim().length() > 0) {
+    private void parseModules() {
+        if (modules.trim().length() > 0) {
             _modules = new HashSet<String>();
             // split by commas and whitespace, except "\ "
-            for (String r : this.modules.split("(?<!\\\\)[ \\r\\n,]+")) {
+            for (String r : modules.split("(?<!\\\\)[ \\r\\n,]+")) {
                 if (r.length() == 0) { // initial spaces should be ignored
                     continue;
                 }
@@ -128,14 +135,11 @@ public class MercurialSCM extends SCM implements Serializable {
         } else {
             _modules = null;
         }
+    }
 
-        // normalization
-        branch = Util.fixEmpty(branch);
-        if(branch!=null && branch.equals("default"))
-            branch = null;
-        this.branch = branch;
-
-        this.browser = browser;
+    private Object readResolve() {
+        parseModules();
+        return this;
     }
 
     public String getInstallation() {
