@@ -12,21 +12,21 @@
     </f:entry>
   </j:if>
 
-  <f:entry title="${%Repository URL}" help="/plugin/mercurial/help.html">
-    <f:textbox field="source" />
+  <f:entry field="source" title="${%Repository URL}">
+    <f:textbox/>
   </f:entry>
-  <f:entry title="${%Branch}" help="/plugin/mercurial/branch.html">
-    <f:textbox field="branch" />
+  <f:entry field="branch" title="${%Branch}">
+    <f:textbox/>
   </f:entry>
   <f:advanced>
-    <f:entry title="${%Modules}" help="/plugin/mercurial/modules.html">
-      <f:textbox field="modules" />
+    <f:entry field="modules" title="${%Modules}">
+      <f:textbox/>
     </f:entry>
-    <f:entry title="${%Clean Build}" help="/plugin/mercurial/clean.html">
-      <f:checkbox name="hg.clean" checked="${instance.clean}" />
+    <f:entry field="clean" title="${%Clean Build}">
+      <f:checkbox/>
     </f:entry>
-    <f:entry title="${%Forest Extension - EXPERIMENTAL}" help="/plugin/mercurial/forest.html">
-      <f:checkbox name="hg.forest" checked="${instance.forest}" />
+    <f:entry field="forest" title="${%Forest Extension - EXPERIMENTAL}">
+      <f:checkbox/>
     </f:entry>
   </f:advanced>
 
