@@ -1,22 +1,13 @@
 package hudson.plugins.mercurial;
 
-import hudson.FilePath;
-import hudson.Launcher;
 import hudson.plugins.mercurial.browser.BitBucket;
 import hudson.plugins.mercurial.browser.HgBrowser;
 import hudson.plugins.mercurial.browser.HgWeb;
 import hudson.model.Descriptor;
-import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
-import hudson.model.Hudson;
-import hudson.model.TaskListener;
 import hudson.scm.ChangeLogSet;
 import hudson.scm.RepositoryBrowser;
 import hudson.util.StreamTaskListener;
-
-import org.jvnet.hudson.test.HudsonTestCase;
-import org.jvnet.hudson.test.recipes.LocalData;
-
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -26,52 +17,49 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import org.jvnet.hudson.test.Bug;
+import org.jvnet.hudson.test.recipes.LocalData;
 
 /**
- * @author Kohsuke Kawaguchi
+ * @author Kohsuke Kawaguchi, Jesse Glick
  */
-public class MercurialSCMTest extends HudsonTestCase {
-    TaskListener listener = new StreamTaskListener(System.out);
-    Launcher launcher;
-    private File repo;
+public class MercurialSCMTest extends MercurialTestCase {
 
-    @Override
-    protected void setUp() throws Exception {
+    private File repo;
+    protected @Override void setUp() throws Exception {
         super.setUp();
-        launcher = Hudson.getInstance().createLauncher(listener);
         repo = createTmpDir();
     }
-        
+
     public void testBasicOps() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
         p.setScm(new MercurialSCM(null,repo.getPath(),null,null,null,false,false));
 
-        hg("init");
-        touchAndCommit("a");
+        hg(repo, "init");
+        touchAndCommit(repo, "a");
         buildAndCheck(p,"a");   // this tests the clone op
-        touchAndCommit("b");
+        touchAndCommit(repo, "b");
         buildAndCheck(p,"b");   // this tests the update op
     }
 
     @Bug(4281)    
     public void testBranches() throws Exception {
-        hg("init");
-        touchAndCommit("init");
-        hg("tag", "init");
-        touchAndCommit("default-1");
-        hg("update", "--clean", "init");
-        hg("branch", "b");
-        touchAndCommit("b-1");
+        hg(repo, "init");
+        touchAndCommit(repo, "init");
+        hg(repo, "tag", "init");
+        touchAndCommit(repo, "default-1");
+        hg(repo, "update", "--clean", "init");
+        hg(repo, "branch", "b");
+        touchAndCommit(repo, "b-1");
         FreeStyleProject p = createFreeStyleProject();
         // Clone off b.
         p.setScm(new MercurialSCM(null, repo.getPath(), "b", null, null, false, false));
         buildAndCheck(p, "b-1");
-        hg("update", "--clean", "default");
-        touchAndCommit("default-2");
+        hg(repo, "update", "--clean", "default");
+        touchAndCommit(repo, "default-2");
         // Changes in default should be ignored.
         assertFalse(p.pollSCMChanges(new StreamTaskListener(System.out)));
-        hg("update", "--clean", "b");
-        touchAndCommit("b-2");
+        hg(repo, "update", "--clean", "b");
+        touchAndCommit(repo, "b-2");
         // But changes in b should be pulled.
         assertTrue(p.pollSCMChanges(new StreamTaskListener(System.out)));
         buildAndCheck(p, "b-2");
@@ -81,7 +69,7 @@ public class MercurialSCMTest extends HudsonTestCase {
         assertTrue(p.pollSCMChanges(new StreamTaskListener(System.out)));
         // Should switch working copy to default branch.
         buildAndCheck(p, "default-2");
-        touchAndCommit("b-3");
+        touchAndCommit(repo, "b-3");
         // Changes in other branch should be ignored.
         assertFalse(p.pollSCMChanges(new StreamTaskListener(System.out)));
     }
@@ -90,13 +78,13 @@ public class MercurialSCMTest extends HudsonTestCase {
     public void testPollingLimitedToModules() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
         p.setScm(new MercurialSCM(null, repo.getPath(), null, "dir1 dir2", null, false, false));
-        hg("init");
-        touchAndCommit("dir1/f");
+        hg(repo, "init");
+        touchAndCommit(repo, "dir1/f");
         buildAndCheck(p, "dir1/f");
-        touchAndCommit("dir2/f");
+        touchAndCommit(repo, "dir2/f");
         assertTrue(p.pollSCMChanges(new StreamTaskListener(System.out)));
         buildAndCheck(p, "dir2/f");
-        touchAndCommit("dir3/f");
+        touchAndCommit(repo, "dir3/f");
         assertFalse(p.pollSCMChanges(new StreamTaskListener(System.out)));
         // No support for partial checkouts yet, so workspace will contain everything.
         buildAndCheck(p, "dir3/f");
@@ -107,10 +95,10 @@ public class MercurialSCMTest extends HudsonTestCase {
         FreeStyleProject p = createFreeStyleProject();
         // Control case: no modules specified.
         p.setScm(new MercurialSCM(null, repo.getPath(), null, null, null, false, false));
-        hg("init");
-        touchAndCommit("dir1/f1");
+        hg(repo, "init");
+        touchAndCommit(repo, "dir1/f1");
         p.scheduleBuild2(0).get();
-        touchAndCommit("dir2/f1");
+        touchAndCommit(repo, "dir2/f1");
         Iterator<? extends ChangeLogSet.Entry> it = p.scheduleBuild2(0).get().getChangeSet().iterator();
         assertTrue(it.hasNext());
         ChangeLogSet.Entry entry = it.next();
@@ -118,48 +106,28 @@ public class MercurialSCMTest extends HudsonTestCase {
         assertFalse(it.hasNext());
         p.setScm(new MercurialSCM(null, repo.getPath(), null, "dir1 extra", null, false, false));
         // dir2/f2 change should be ignored.
-        touchAndCommit("dir1/f2");
-        touchAndCommit("dir2/f2");
+        touchAndCommit(repo, "dir1/f2");
+        touchAndCommit(repo, "dir2/f2");
         it = p.scheduleBuild2(0).get().getChangeSet().iterator();
         assertTrue(it.hasNext());
         entry = it.next();
         assertEquals(Collections.singleton("dir1/f2"), new HashSet<String>(entry.getAffectedPaths()));
         assertFalse(it.hasNext());
         // First commit should match (because at least one file does) but not second.
-        touchAndCommit("dir2/f3", "dir1/f3");
-        touchAndCommit("dir2/f4", "dir2/f5");
+        touchAndCommit(repo, "dir2/f3", "dir1/f3");
+        touchAndCommit(repo, "dir2/f4", "dir2/f5");
         it = p.scheduleBuild2(0).get().getChangeSet().iterator();
         assertTrue(it.hasNext());
         entry = it.next();
         assertEquals(new HashSet<String>(Arrays.asList("dir1/f3", "dir2/f3")), new HashSet<String>(entry.getAffectedPaths()));
         assertFalse(it.hasNext());
         // Any module in the list can trigger an inclusion.
-        touchAndCommit("extra/f1");
+        touchAndCommit(repo, "extra/f1");
         it = p.scheduleBuild2(0).get().getChangeSet().iterator();
         assertTrue(it.hasNext());
         entry = it.next();
         assertEquals(Collections.singleton("extra/f1"), new HashSet<String>(entry.getAffectedPaths()));
         assertFalse(it.hasNext());
-    }
-
-    private void touchAndCommit(String... names) throws Exception {
-        for (String name : names) {
-            FilePath toCreate = new FilePath(repo).child(name);
-            toCreate.getParent().mkdirs();
-            toCreate.touch(0);
-            hg("add", name);
-        }
-        hg("commit", "--message", "added " + Arrays.toString(names));
-    }
-
-    private void buildAndCheck(FreeStyleProject p, String name) throws Exception {
-        FreeStyleBuild b = assertBuildStatusSuccess(p.scheduleBuild2(0).get());
-        assertTrue(b.getWorkspace().child(name).exists());
-        assertNotNull(b.getAction(MercurialTagAction.class));
-    }
-
-    private void hg(String... args) throws Exception {
-        assertEquals(0,launcher.launch().cmds(new File("hg"), args).pwd(repo).stdout(listener).join());
     }
 
     /**
