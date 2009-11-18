@@ -193,7 +193,7 @@ public class MercurialSCM extends SCM implements Serializable {
         for (MercurialInstallation inst : MercurialInstallation.allInstallations()) {
             if (inst.getName().equals(installation)) {
                 // XXX what about forEnvironment?
-                return inst.forNode(Computer.currentComputer().getNode(), listener).getHome() + "/bin/hg";
+                return inst.executableWithSubstitution(inst.forNode(Computer.currentComputer().getNode(), listener).getHome());
             }
         }
         return getDescriptor().getHgExe();

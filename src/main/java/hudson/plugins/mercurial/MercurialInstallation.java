@@ -42,14 +42,24 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
  * Installation of Mercurial.
- * Expects bin/hg (bin\hg.exe) to exist. XXX should you be able to point to a raw executable?
  */
 @SuppressWarnings("SE_NO_SERIALVERSIONID")
 public class MercurialInstallation extends ToolInstallation implements  NodeSpecific<MercurialInstallation>, EnvironmentSpecific<MercurialInstallation> {
 
+    private String executable;
+
     @DataBoundConstructor
-    public MercurialInstallation(String name, String home, List<? extends ToolProperty<?>> properties) {
+    public MercurialInstallation(String name, String home, String executable, List<? extends ToolProperty<?>> properties) {
         super(name, home, properties);
+        this.executable = executable;
+    }
+
+    public String getExecutable() {
+        return executable != null ? executable : "INSTALLATION/bin/hg";
+    }
+
+    String executableWithSubstitution(String home) {
+        return getExecutable().replace("INSTALLATION", home);
     }
 
     public static MercurialInstallation[] allInstallations() {
@@ -57,11 +67,11 @@ public class MercurialInstallation extends ToolInstallation implements  NodeSpec
     }
 
     public MercurialInstallation forNode(Node node, TaskListener log) throws IOException, InterruptedException {
-        return new MercurialInstallation(getName(), translateFor(node, log), getProperties().toList());
+        return new MercurialInstallation(getName(), translateFor(node, log), executable, getProperties().toList());
     }
 
     public MercurialInstallation forEnvironment(EnvVars environment) {
-        return new MercurialInstallation(getName(), environment.expand(getHome()), getProperties().toList());
+        return new MercurialInstallation(getName(), environment.expand(getHome()), executable, getProperties().toList());
     }
 
     @Extension
