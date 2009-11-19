@@ -38,6 +38,9 @@ public abstract class MercurialTestCase extends HudsonTestCase {
 
     protected void buildAndCheck(FreeStyleProject p, String name) throws Exception {
         FreeStyleBuild b = assertBuildStatusSuccess(p.scheduleBuild2(0).get());
+//        for (String line : b.getLog(Integer.MAX_VALUE)) {
+//            System.err.println(">> " + line);
+//        }
         assertTrue(b.getWorkspace().child(name).exists());
         assertNotNull(b.getAction(MercurialTagAction.class));
     }
