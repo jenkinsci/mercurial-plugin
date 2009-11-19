@@ -1,0 +1,16 @@
+<div>
+    If you are using the Forest extension,
+    you need to ensure that your Mercurial installation enables it.
+    Since the extension is not bundled with Mercurial,
+    the Hudson plugin cannot simply use <code>--config extensions.forest=</code>
+    to enable it.
+    If it is impractical to enable the extension yourself in the Mercurial installation,
+    you can instead specify a download location as a URL accessible to the Hudson master.
+    Suggested values:
+</div>
+<dl>
+    <dt>Official repository</dt>
+    <dd><code>http://hg.akoha.org/hgforest/raw-file/default/forest.py</code></dd>
+    <dt>"Crew" fork (known to work with new Mercurial releases)</dt>
+    <dd><code>http://bitbucket.org/pmezard/hgforest-crew/raw/default/forest.py</code></dd>
+</dl>

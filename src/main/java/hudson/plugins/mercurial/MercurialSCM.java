@@ -33,13 +33,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.net.MalformedURLException;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.net.URL;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.List;
@@ -189,14 +189,33 @@ public class MercurialSCM extends SCM implements Serializable {
         return forest;
     }
 
-    private String findHgExe(TaskListener listener) throws IOException, InterruptedException {
+    private ArgumentListBuilder findHgExe(AbstractBuild build, TaskListener listener) throws IOException, InterruptedException {
         for (MercurialInstallation inst : MercurialInstallation.allInstallations()) {
             if (inst.getName().equals(installation)) {
                 // XXX what about forEnvironment?
-                return inst.executableWithSubstitution(inst.forNode(Computer.currentComputer().getNode(), listener).getHome());
+                ArgumentListBuilder b = new ArgumentListBuilder(inst.executableWithSubstitution(
+                        inst.forNode(Computer.currentComputer().getNode(), listener).getHome()));
+                if (forest) {
+                    String downloadForest = inst.getDownloadForest();
+                    if (downloadForest != null) {
+                        // Uniquify path so if user chooses a different URL it will be downloaded again.
+                        FilePath forestPy = build.getBuiltOn().getRootPath().child(String.format("forest-%08X.py", downloadForest.hashCode()));
+                        if (!forestPy.exists()) {
+                            listener.getLogger().println("Downloading: " + downloadForest);
+                            InputStream is = new URL(downloadForest).openStream();
+                            try {
+                                forestPy.copyFrom(is);
+                            } finally {
+                                is.close();
+                            }
+                        }
+                        b.add("--config", "extensions.forest=" + forestPy.getRemote());
+                    }
+                }
+                return b;
             }
         }
-        return getDescriptor().getHgExe();
+        return new ArgumentListBuilder(getDescriptor().getHgExe());
     }
 
     private static final String FILES_STYLE = "changeset = 'files:{files}\\n'\n" + "file = '{file}:'";
@@ -212,8 +231,9 @@ public class MercurialSCM extends SCM implements Serializable {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             // Get the list of changed files.
-            ArgumentListBuilder cmd = new ArgumentListBuilder();
-            cmd.add(findHgExe(listener), forest ? "fincoming" : "incoming", "--style", tmpFile.getRemote());
+            AbstractProject<?,?> _project = project; // javac considers project.getLastBuild() to be a Run
+            ArgumentListBuilder cmd = findHgExe(_project.getLastBuild(), listener);
+            cmd.add(forest ? "fincoming" : "incoming", "--style", tmpFile.getRemote());
             cmd.add("--rev", getBranch());
             joinWithTimeout(
                     launcher.launch().cmds(cmd).stdout(new ForkOutputStream(baos, output)).pwd(workspace).start(),
@@ -349,24 +369,24 @@ public class MercurialSCM extends SCM implements Serializable {
     private boolean update(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile)
             throws InterruptedException, IOException {
         if(clean) {
-            if (launcher.launch().cmds(findHgExe(listener), forest ? "fupdate" : "update", "--clean", ".")
+            if (launcher.launch().cmds(findHgExe(build, listener).add(forest ? "fupdate" : "update", "--clean", "."))
                 .envs(build.getEnvironment(listener)).stdout(listener)
                 .pwd(workspace).join() != 0) {
                 listener.error("Failed to clobber local modifications");
                 return false;
             }
             if (forest) {
-                StringTokenizer trees = new StringTokenizer(runHgAndCaptureOutput(launcher, workspace, listener, "ftrees", "--convert"));
+                StringTokenizer trees = new StringTokenizer(runHgAndCaptureOutput(build, launcher, workspace, listener, "ftrees", "--convert"));
                 while (trees.hasMoreTokens()) {
                     String tree = trees.nextToken();
-                    if (launcher.launch().cmds(findHgExe(listener), "--config", "extensions.purge=", "clean", "--all").
+                    if (launcher.launch().cmds(findHgExe(build, listener).add("--config", "extensions.purge=", "clean", "--all")).
                             envs(build.getEnvironment(listener)).stdout(listener).pwd(tree.equals(".") ? workspace : workspace.child(tree)).join() != 0) {
                         listener.error("Failed to clean unversioned files in " + tree);
                         return false;
                     }
                 }
             } else {
-                if (launcher.launch().cmds(findHgExe(listener), "--config", "extensions.purge=", "clean", "--all").
+                if (launcher.launch().cmds(findHgExe(build, listener).add("--config", "extensions.purge=", "clean", "--all")).
                         envs(build.getEnvironment(listener)).stdout(listener).pwd(workspace).join() != 0) {
                     listener.error("Failed to clean unversioned files");
                     return false;
@@ -385,8 +405,8 @@ public class MercurialSCM extends SCM implements Serializable {
         os.write("<changesets>\n".getBytes());
         int r;
         try {
-            ArgumentListBuilder args = new ArgumentListBuilder();
-            args.add(findHgExe(listener), forest ? "fincoming" : "incoming", "--quiet");
+            ArgumentListBuilder args = findHgExe(build, listener);
+            args.add(forest ? "fincoming" : "incoming", "--quiet");
             if (!forest) {
                 args.add("--bundle", "hg.bundle");
             }
@@ -435,12 +455,11 @@ public class MercurialSCM extends SCM implements Serializable {
             // if incoming didn't fetch anything, it will return 1. That was for 0.9.3.
             // in 0.9.4 apparently it returns 0.
             try {
-                ArgumentListBuilder args = new ArgumentListBuilder();
-                args.add(findHgExe(listener), forest ? "fpull" : "pull");
-                if (!forest) {
-                    args.add("hg.bundle");
+                ArgumentListBuilder args = findHgExe(build, listener);
+                if (forest) {
+                    args.add("fpull", "--rev", getBranch());
                 } else {
-                    args.add("--rev", getBranch());
+                    args.add("unbundle", "hg.bundle");
                 }
                 if(launcher.launch()
                     .cmds(args)
@@ -449,7 +468,7 @@ public class MercurialSCM extends SCM implements Serializable {
                     return false;
                 }
                 if(launcher.launch()
-                    .cmds(findHgExe(listener), forest ? "fupdate" : "update", "--clean", "--rev", getBranch())
+                    .cmds(findHgExe(build, listener).add(forest ? "fupdate" : "update", "--clean", "--rev", getBranch()))
                     .envs(build.getEnvironment(listener)).stdout(listener).pwd(workspace).join()!=0) {
                     listener.error("Failed to update");
                     return false;
@@ -469,7 +488,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private void addTagActionToBuild(AbstractBuild<?, ?> build, Launcher launcher, FilePath workspace, BuildListener listener)
             throws IOException, InterruptedException {
-        String id = runHgAndCaptureOutput(launcher, workspace, listener, "log", "--rev", ".", "--template", "{node}");
+        String id = runHgAndCaptureOutput(build, launcher, workspace, listener, "log", "--rev", ".", "--template", "{node}");
         if (!REVISIONID_PATTERN.matcher(id).matches()) {
             listener.error("Expected to get an id but got " + id + " instead.");
             throw new AbortException();
@@ -477,16 +496,14 @@ public class MercurialSCM extends SCM implements Serializable {
         build.addAction(new MercurialTagAction(id));
     }
 
-    private String runHgAndCaptureOutput(Launcher launcher, FilePath workspace, BuildListener listener, String... commands)
+    private String runHgAndCaptureOutput(AbstractBuild build, Launcher launcher, FilePath workspace, BuildListener listener, String... commands)
             throws IOException, InterruptedException {
         ByteArrayOutputStream rev = new ByteArrayOutputStream();
-        List<String> args = new ArrayList<String>(commands.length + 1);
-        args.add(findHgExe(listener));
-        args.addAll(Arrays.asList(commands));
+        ArgumentListBuilder args = findHgExe(build, listener).add(commands);
         if (launcher.launch().cmds(args).pwd(workspace).stdout(rev).join() == 0) {
             return rev.toString();
         } else {
-            listener.error("Failed to run " + args);
+            listener.error("Failed to run " + args.toStringWithQuote());
             listener.getLogger().write(rev.toByteArray());
             throw new AbortException();
         }
@@ -528,8 +545,8 @@ public class MercurialSCM extends SCM implements Serializable {
             return false;
         }
 
-        ArgumentListBuilder args = new ArgumentListBuilder();
-        args.add(findHgExe(listener), forest ? "fclone" : "clone");
+        ArgumentListBuilder args = findHgExe(build, listener);
+        args.add(forest ? "fclone" : "clone");
         args.add("--rev", getBranch());
         args.add(source,workspace.getRemote());
         try {

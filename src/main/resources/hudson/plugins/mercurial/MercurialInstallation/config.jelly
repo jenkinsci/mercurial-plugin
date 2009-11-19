@@ -8,4 +8,7 @@
   <f:entry title="${%Executable}" field="executable">
     <f:textbox default="INSTALLATION/bin/hg"/>
   </f:entry>
+  <f:entry title="${%Download Forest extension}" field="downloadForest">
+    <f:textbox/>
+  </f:entry>
 </j:jelly>

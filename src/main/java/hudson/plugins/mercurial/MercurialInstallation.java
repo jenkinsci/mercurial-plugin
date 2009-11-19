@@ -28,6 +28,7 @@ import edu.umd.cs.findbugs.annotations.SuppressWarnings;
 import hudson.CopyOnWrite;
 import hudson.EnvVars;
 import hudson.Extension;
+import hudson.Util;
 import hudson.model.EnvironmentSpecific;
 import hudson.model.Hudson;
 import hudson.model.Node;
@@ -47,11 +48,13 @@ import org.kohsuke.stapler.DataBoundConstructor;
 public class MercurialInstallation extends ToolInstallation implements  NodeSpecific<MercurialInstallation>, EnvironmentSpecific<MercurialInstallation> {
 
     private String executable;
+    private String downloadForest;
 
     @DataBoundConstructor
-    public MercurialInstallation(String name, String home, String executable, List<? extends ToolProperty<?>> properties) {
+    public MercurialInstallation(String name, String home, String executable, String downloadForest, List<? extends ToolProperty<?>> properties) {
         super(name, home, properties);
-        this.executable = executable;
+        this.executable = Util.fixEmpty(executable);
+        this.downloadForest = Util.fixEmpty(downloadForest);
     }
 
     public String getExecutable() {
@@ -62,16 +65,20 @@ public class MercurialInstallation extends ToolInstallation implements  NodeSpec
         return getExecutable().replace("INSTALLATION", home);
     }
 
+    public String getDownloadForest() {
+        return downloadForest;
+    }
+
     public static MercurialInstallation[] allInstallations() {
         return Hudson.getInstance().getDescriptorByType(DescriptorImpl.class).getInstallations();
     }
 
     public MercurialInstallation forNode(Node node, TaskListener log) throws IOException, InterruptedException {
-        return new MercurialInstallation(getName(), translateFor(node, log), executable, getProperties().toList());
+        return new MercurialInstallation(getName(), translateFor(node, log), executable, downloadForest, getProperties().toList());
     }
 
     public MercurialInstallation forEnvironment(EnvVars environment) {
-        return new MercurialInstallation(getName(), environment.expand(getHome()), executable, getProperties().toList());
+        return new MercurialInstallation(getName(), environment.expand(getHome()), executable, downloadForest, getProperties().toList());
     }
 
     @Extension
