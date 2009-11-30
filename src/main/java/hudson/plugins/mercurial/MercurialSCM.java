@@ -13,7 +13,6 @@ import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
 import hudson.model.Computer;
 import hudson.model.Descriptor;
-import hudson.model.Hudson;
 import hudson.model.TaskListener;
 import hudson.plugins.mercurial.browser.HgBrowser;
 import hudson.plugins.mercurial.browser.HgWeb;
@@ -25,7 +24,6 @@ import hudson.scm.SCM;
 import hudson.scm.SCMDescriptor;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.ForkOutputStream;
-import hudson.util.VersionNumber;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -50,7 +48,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import static java.util.logging.Level.FINE;
 import java.util.regex.Matcher;
@@ -60,7 +57,6 @@ import net.sf.json.JSONObject;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.framework.io.ByteBuffer;
 import org.kohsuke.stapler.framework.io.WriterOutputStream;
 
 /**
@@ -412,17 +408,7 @@ public class MercurialSCM extends SCM implements Serializable {
                 args.add("--bundle", "hg.bundle");
             }
 
-            String template;
-
-            if(isHg10orLater()) {
-                template = MercurialChangeSet.CHANGELOG_TEMPLATE_10x;
-            } else {
-                template = MercurialChangeSet.CHANGELOG_TEMPLATE_09x;
-                // Pre-1.0 Hg fails to honor {file_adds} and {file_dels} without --debug.
-                args.add("--debug");
-            }
-
-            args.add("--template", template);
+            args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
 
             args.add("--rev", getBranch());
 
@@ -509,30 +495,6 @@ public class MercurialSCM extends SCM implements Serializable {
             throw new AbortException();
         }
     }
-
-    /**
-     * Returns true if we think our Mercurial is 1.0 or newer.
-     */
-    @SuppressWarnings("DLS_DEAD_LOCAL_STORE")
-    private boolean isHg10orLater() {
-        boolean hg10 = false;
-        try {
-            String v = getDescriptor().findHgVersion();
-            try {
-                if (v != null && new VersionNumber(v).compareTo(new VersionNumber("1.0"))>=0) {
-                    hg10 = true;
-                }
-            } catch (IllegalArgumentException e) {
-                LOGGER.log(Level.INFO,"Failed to parse Mercurial version number: "+v,e);
-            }
-        } catch (IOException x) {
-            // don't know, never mind
-        } catch (InterruptedException x) {
-            // ditto
-        }
-        return hg10;
-    }
-
 
     /**
      * Start from scratch and clone the whole repository.
@@ -639,65 +601,7 @@ public class MercurialSCM extends SCM implements Serializable {
             return true;
         }
 
-        /* XXX restore insofar as that is possible:
-        public FormValidation doHgExeCheck(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
-            return FormValidation.validateExecutable(req.getParameter("value"), new FormValidation.FileValidator() {
-                public FormValidation validate(File f) {
-                    try {
-                        String v = findHgVersion();
-                        if(v != null) {
-                            try {
-                                if(new VersionNumber(v).compareTo(V0_9_4)>=0) {
-                                    return FormValidation.ok(); // right version
-                                } else {
-                                    return FormValidation.error("This hg is ver."+v+" but we need 0.9.4+");
-                                }
-                            } catch (IllegalArgumentException e) {
-                                return FormValidation.warning("Hudson can't tell if this hg is 0.9.4 or later (detected version is %s)",v);
-                            }
-                        }
-                        v = findHgVersion(UUID_VERSION_STRING);
-                        if(v!=null) {
-                            return FormValidation.warning("Hudson can't tell if this hg is 0.9.4 or later (detected version is %s)",v);
-                        }
-                    } catch (IOException e) {
-                        // failed
-                    } catch (InterruptedException e) {
-                        // failed
-                    }
-                    return FormValidation.error("Unable to check hg version");
-                }
-            });
-        }
-        */
-
-        private String findHgVersion() throws IOException, InterruptedException {
-            return findHgVersion(VERSION_STRING);
-        }
-
-        private String findHgVersion(Pattern p) throws IOException, InterruptedException {
-            if (version != null) {
-                return version;
-            }
-            ByteBuffer baos = new ByteBuffer();
-            Proc proc = Hudson.getInstance().createLauncher(TaskListener.NULL).launch()
-                    .cmds(getHgExe(), "version").stdout(baos).start();
-            proc.join();
-            Matcher m = p.matcher(baos.toString());
-            if (m.find()) {
-                version = m.group(1);
-                return version;
-            } else {
-                return null;
-            }
-        }
-
-        /**
-         * Pattern matcher for the version number.
-         */
-        private static final Pattern VERSION_STRING = Pattern.compile("\\(version ([0-9.]+)");
     }
-
 
     private static final long serialVersionUID = 1L;
 

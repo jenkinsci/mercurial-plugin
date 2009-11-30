@@ -247,12 +247,8 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
         return Arrays.asList(list.split(" "));
     }
 
-    static final String CHANGELOG_TEMPLATE_09x =
-            "<changeset node='{node}' author='{author|escape}' rev='{rev}' date='{date}'>" +
-            "<msg>{desc|escape}</msg><added>{file_adds|stringify|escape}</added><deleted>{file_dels|stringify|escape}</deleted>" +
-            "<files>{files|stringify|escape}</files><parents>{parents}</parents></changeset>\\n";
     /** |xmlescape handles a few cases that |escape does not */
-    static final String CHANGELOG_TEMPLATE_10x =
+    static final String CHANGELOG_TEMPLATE =
             "<changeset node='{node}' author='{author|xmlescape}' rev='{rev}' date='{date}'>" +
             "<msg>{desc|xmlescape}</msg><added>{file_adds|stringify|xmlescape}</added><deleted>{file_dels|stringify|xmlescape}</deleted>" +
             "<files>{files|stringify|xmlescape}</files><parents>{parents}</parents></changeset>\\n";
