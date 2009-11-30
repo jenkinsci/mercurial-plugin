@@ -49,12 +49,14 @@ public class MercurialInstallation extends ToolInstallation implements  NodeSpec
 
     private String executable;
     private String downloadForest;
+    private boolean debug;
 
     @DataBoundConstructor
-    public MercurialInstallation(String name, String home, String executable, String downloadForest, List<? extends ToolProperty<?>> properties) {
+    public MercurialInstallation(String name, String home, String executable, String downloadForest, boolean debug, List<? extends ToolProperty<?>> properties) {
         super(name, home, properties);
         this.executable = Util.fixEmpty(executable);
         this.downloadForest = Util.fixEmpty(downloadForest);
+        this.debug = debug;
     }
 
     public String getExecutable() {
@@ -69,16 +71,20 @@ public class MercurialInstallation extends ToolInstallation implements  NodeSpec
         return downloadForest;
     }
 
+    public boolean getDebug() {
+        return debug;
+    }
+
     public static MercurialInstallation[] allInstallations() {
         return Hudson.getInstance().getDescriptorByType(DescriptorImpl.class).getInstallations();
     }
 
     public MercurialInstallation forNode(Node node, TaskListener log) throws IOException, InterruptedException {
-        return new MercurialInstallation(getName(), translateFor(node, log), executable, downloadForest, getProperties().toList());
+        return new MercurialInstallation(getName(), translateFor(node, log), executable, downloadForest, debug, getProperties().toList());
     }
 
     public MercurialInstallation forEnvironment(EnvVars environment) {
-        return new MercurialInstallation(getName(), environment.expand(getHome()), executable, downloadForest, getProperties().toList());
+        return new MercurialInstallation(getName(), environment.expand(getHome()), executable, downloadForest, debug, getProperties().toList());
     }
 
     @Extension
