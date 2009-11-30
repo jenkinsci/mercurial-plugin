@@ -234,6 +234,7 @@ public class MercurialSCM extends SCM implements Serializable {
             AbstractProject<?,?> _project = project; // javac considers project.getLastBuild() to be a Run
             ArgumentListBuilder cmd = findHgExe(_project.getLastBuild(), listener);
             cmd.add(forest ? "fincoming" : "incoming", "--style", tmpFile.getRemote());
+            cmd.add("--no-merges");
             cmd.add("--rev", getBranch());
             joinWithTimeout(
                     launcher.launch().cmds(cmd).stdout(new ForkOutputStream(baos, output)).pwd(workspace).start(),

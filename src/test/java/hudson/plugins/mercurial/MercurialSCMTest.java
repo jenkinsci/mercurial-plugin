@@ -1,5 +1,6 @@
 package hudson.plugins.mercurial;
 
+import hudson.FilePath;
 import hudson.plugins.mercurial.browser.BitBucket;
 import hudson.plugins.mercurial.browser.HgBrowser;
 import hudson.plugins.mercurial.browser.HgWeb;
@@ -88,6 +89,16 @@ public class MercurialSCMTest extends MercurialTestCase {
         assertFalse(p.pollSCMChanges(new StreamTaskListener(System.out)));
         // No support for partial checkouts yet, so workspace will contain everything.
         buildAndCheck(p, "dir3/f");
+        // HUDSON-4972: do not pay attention to merges
+        // (reproduce using the pathological scenario, since reproducing the actual scenario
+        // where merge gives meaningless file list is not so easy)
+        hg(repo, "update", "0");
+        touchAndCommit(repo, "dir4/f");
+        hg(repo, "merge");
+        new FilePath(repo).child("dir2/f").write("stuff", "UTF-8");
+        hg(repo, "commit", "--message", "merged");
+        assertFalse(p.pollSCMChanges(new StreamTaskListener(System.out)));
+        buildAndCheck(p, "dir4/f");
     }
 
     @Bug(4702)
