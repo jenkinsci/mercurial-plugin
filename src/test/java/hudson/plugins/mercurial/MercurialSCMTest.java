@@ -6,6 +6,8 @@ import hudson.plugins.mercurial.browser.HgBrowser;
 import hudson.plugins.mercurial.browser.HgWeb;
 import hudson.model.Descriptor;
 import hudson.model.FreeStyleProject;
+import hudson.model.ParametersAction;
+import hudson.model.StringParameterValue;
 import hudson.scm.ChangeLogSet;
 import hudson.scm.RepositoryBrowser;
 import hudson.util.StreamTaskListener;
@@ -178,4 +180,48 @@ public class MercurialSCMTest extends MercurialTestCase {
         final List<Descriptor<RepositoryBrowser<?>>> browserDescriptors = ms.getDescriptor().getBrowserDescriptors();
         assertTrue("Could not find BitBucket in " + browserDescriptors, browserDescriptors.contains(browser.getDescriptor()));
     }
+
+    @Bug(4271)
+    public void testParameterizedBuildsBranch() throws Exception {
+        hg(repo, "init");
+        touchAndCommit(repo, "trunk");
+        hg(repo, "update", "null");
+        hg(repo, "branch", "b");
+        touchAndCommit(repo, "variant");
+        FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "${BRANCH}", null, null, false, false));
+        // This is not how a real parameterized build runs, but using ParametersDefinitionProperty just looks untestable:
+        String log = buildAndCheck(p, "variant", new ParametersAction(new StringParameterValue("BRANCH", "b")));
+        assertTrue(log, log.contains("--rev b"));
+        assertFalse(log, log.contains("--rev ${BRANCH}"));
+        touchAndCommit(repo, "further-variant");
+        assertTrue(p.pollSCMChanges(new StreamTaskListener(System.out)));
+        buildAndCheck(p, "further-variant", new ParametersAction(new StringParameterValue("BRANCH", "b")));
+    }
+
+    /* XXX the following will pass, but canUpdate is not going to work without further changes:
+    public void testParameterizedBuildsSource() throws Exception {
+        p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation, "${REPO}", null, null, null, false, false));
+        buildAndCheck(p, "trunk", new ParametersAction(new StringParameterValue("REPO", repo.getPath())));
+        String hgrc = p.getSomeWorkspace().child(".hg/hgrc").readToString();
+        assertTrue(hgrc.contains(repo.getPath()));
+    }
+     */
+
+    /* XXX not yet supported; not sure how to expand var in MercurialSCM.createChangeLogParser:
+    public void testParameterizedBuildsModules() throws Exception {
+        hg(repo, "init");
+        touchAndCommit(repo, "trunk", "dir1/f", "dir2/f");
+        FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, "${MODULES}", null, false, false));
+        buildAndCheck(p, "dir1/f", new ParametersAction(new StringParameterValue("MODULES", "dir2")));
+        hg(repo, "update", "default");
+        touchAndCommit(repo, "dir1/g");
+        assertFalse(p.pollSCMChanges(new StreamTaskListener(System.out)));
+        touchAndCommit(repo, "dir2/g");
+        assertTrue(p.pollSCMChanges(new StreamTaskListener(System.out)));
+    }
+     */
+
 }

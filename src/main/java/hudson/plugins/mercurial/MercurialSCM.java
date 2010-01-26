@@ -2,6 +2,7 @@ package hudson.plugins.mercurial;
 
 import edu.umd.cs.findbugs.annotations.SuppressWarnings;
 import hudson.AbortException;
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
@@ -157,6 +158,10 @@ public class MercurialSCM extends SCM implements Serializable {
         return branch == null ? "default" : branch;
     }
 
+    private String getBranch(EnvVars env) {
+        return branch == null ? "default" : env.expand(branch);
+    }
+
     @Override
     @SuppressWarnings("DLS_DEAD_LOCAL_STORE")
     public HgBrowser getBrowser() {
@@ -222,6 +227,8 @@ public class MercurialSCM extends SCM implements Serializable {
     @Override
     public boolean pollChanges(AbstractProject project, Launcher launcher, FilePath workspace, TaskListener listener)
             throws IOException, InterruptedException {
+        EnvVars env = project.getLastBuild().getEnvironment(listener);
+
         PrintStream output = listener.getLogger();
 
         // Mercurial requires the style file to be in a file..
@@ -234,7 +241,7 @@ public class MercurialSCM extends SCM implements Serializable {
             ArgumentListBuilder cmd = findHgExe(_project.getLastBuild(), listener, false);
             cmd.add(forest ? "fincoming" : "incoming", "--style", tmpFile.getRemote());
             cmd.add("--no-merges");
-            cmd.add("--rev", getBranch());
+            cmd.add("--rev", getBranch(env));
             joinWithTimeout(
                     launcher.launch().cmds(cmd).stdout(new ForkOutputStream(baos, output)).pwd(workspace).start(),
                     /* #4528: not in JDK 5: 1, TimeUnit.HOURS*/60 * 60, TimeUnit.SECONDS, listener);
@@ -366,9 +373,11 @@ public class MercurialSCM extends SCM implements Serializable {
      */
     private boolean update(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile)
             throws InterruptedException, IOException {
+        EnvVars env = build.getEnvironment(listener);
+
         if(clean) {
             if (launcher.launch().cmds(findHgExe(build, listener, true).add(forest ? "fupdate" : "update", "--clean", "."))
-                .envs(build.getEnvironment(listener)).stdout(listener)
+                .envs(env).stdout(listener)
                 .pwd(workspace).join() != 0) {
                 listener.error("Failed to clobber local modifications");
                 return false;
@@ -378,14 +387,14 @@ public class MercurialSCM extends SCM implements Serializable {
                 while (trees.hasMoreTokens()) {
                     String tree = trees.nextToken();
                     if (launcher.launch().cmds(findHgExe(build, listener, true).add("--config", "extensions.purge=", "clean", "--all")).
-                            envs(build.getEnvironment(listener)).stdout(listener).pwd(tree.equals(".") ? workspace : workspace.child(tree)).join() != 0) {
+                            envs(env).stdout(listener).pwd(tree.equals(".") ? workspace : workspace.child(tree)).join() != 0) {
                         listener.error("Failed to clean unversioned files in " + tree);
                         return false;
                     }
                 }
             } else {
                 if (launcher.launch().cmds(findHgExe(build, listener, true).add("--config", "extensions.purge=", "clean", "--all")).
-                        envs(build.getEnvironment(listener)).stdout(listener).pwd(workspace).join() != 0) {
+                        envs(env).stdout(listener).pwd(workspace).join() != 0) {
                     listener.error("Failed to clean unversioned files");
                     return false;
                 }
@@ -411,7 +420,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
             args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
 
-            args.add("--rev", getBranch());
+            args.add("--rev", getBranch(env));
 
             ByteArrayOutputStream errorLog = new ByteArrayOutputStream();
 
@@ -419,7 +428,7 @@ public class MercurialSCM extends SCM implements Serializable {
             // convert it back to UTF-8
             WriterOutputStream o = new WriterOutputStream(new OutputStreamWriter(os, "UTF-8"));
             try {
-                r = launcher.launch().cmds(args).envs(build.getEnvironment(listener))
+                r = launcher.launch().cmds(args).envs(env)
                         .stdout(new ForkOutputStream(o,errorLog)).pwd(workspace).join();
             } finally {
                 o.flush(); // make sure to commit all output
@@ -445,19 +454,19 @@ public class MercurialSCM extends SCM implements Serializable {
             try {
                 ArgumentListBuilder args = findHgExe(build, listener, true);
                 if (forest) {
-                    args.add("fpull", "--rev", getBranch());
+                    args.add("fpull", "--rev", getBranch(env));
                 } else {
                     args.add("unbundle", "hg.bundle");
                 }
                 if(launcher.launch()
                     .cmds(args)
-                    .envs(build.getEnvironment(listener)).stdout(listener).pwd(workspace).join()!=0) {
+                    .envs(env).stdout(listener).pwd(workspace).join()!=0) {
                     listener.error("Failed to pull");
                     return false;
                 }
                 if(launcher.launch()
-                    .cmds(findHgExe(build, listener, true).add(forest ? "fupdate" : "update", "--clean", "--rev", getBranch()))
-                    .envs(build.getEnvironment(listener)).stdout(listener).pwd(workspace).join()!=0) {
+                    .cmds(findHgExe(build, listener, true).add(forest ? "fupdate" : "update", "--clean", "--rev", getBranch(env)))
+                    .envs(env).stdout(listener).pwd(workspace).join()!=0) {
                     listener.error("Failed to update");
                     return false;
                 }
@@ -509,12 +518,13 @@ public class MercurialSCM extends SCM implements Serializable {
             return false;
         }
 
+        EnvVars env = build.getEnvironment(listener);
         ArgumentListBuilder args = findHgExe(build, listener, true);
         args.add(forest ? "fclone" : "clone");
-        args.add("--rev", getBranch());
+        args.add("--rev", getBranch(env));
         args.add(source,workspace.getRemote());
         try {
-            if(launcher.launch().cmds(args).envs(build.getEnvironment(listener)).stdout(listener).join()!=0) {
+            if(launcher.launch().cmds(args).envs(env).stdout(listener).join()!=0) {
                 listener.error("Failed to clone "+source);
                 return false;
             }

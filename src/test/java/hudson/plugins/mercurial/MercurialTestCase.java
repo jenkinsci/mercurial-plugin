@@ -2,6 +2,8 @@ package hudson.plugins.mercurial;
 
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.model.Action;
+import hudson.model.Cause.UserCause;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Hudson;
@@ -36,13 +38,16 @@ public abstract class MercurialTestCase extends HudsonTestCase {
         hg(repo, "commit", "--message", "added " + Arrays.toString(names));
     }
 
-    protected void buildAndCheck(FreeStyleProject p, String name) throws Exception {
-        FreeStyleBuild b = assertBuildStatusSuccess(p.scheduleBuild2(0).get());
+    protected String buildAndCheck(FreeStyleProject p, String name, Action... actions) throws Exception {
+        FreeStyleBuild b = assertBuildStatusSuccess(p.scheduleBuild2(0, new UserCause(), actions).get());
 //        for (String line : b.getLog(Integer.MAX_VALUE)) {
 //            System.err.println(">> " + line);
 //        }
         assertTrue(b.getWorkspace().child(name).exists());
         assertNotNull(b.getAction(MercurialTagAction.class));
+        @SuppressWarnings("deprecation")
+        String log = b.getLog();
+        return log;
     }
 
 }
