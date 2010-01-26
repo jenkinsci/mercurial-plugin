@@ -243,8 +243,7 @@ public class MercurialSCM extends SCM implements Serializable {
             tmpFile.delete();
         }
 
-        if (LOGGER.isLoggable(FINE))
-            LOGGER.fine("Changed file names="+changedFileNames);
+        LOGGER.log(FINE, "Changed file names: {0}", changedFileNames);
 
         if (changedFileNames.isEmpty()) {
             output.println("No changes");
@@ -252,8 +251,7 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         Set<String> depchanges = dependentChanges(changedFileNames);
-        if (LOGGER.isLoggable(FINE))
-            LOGGER.fine("Dependent changed file names="+depchanges);
+        LOGGER.log(FINE, "Dependent changed file names: {0}", depchanges);
 
         if (depchanges.isEmpty()) {
             output.println("Non-dependent changes detected");
