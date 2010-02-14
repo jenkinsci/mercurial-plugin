@@ -2,6 +2,7 @@ package hudson.plugins.mercurial;
 
 import hudson.model.AbstractBuild;
 import hudson.model.Action;
+import hudson.scm.SCMRevisionState;
 
 /**
  * Action contributed to {@link AbstractBuild} from Mercurial.
@@ -11,7 +12,7 @@ import hudson.model.Action;
  *
  * @author Kohsuke Kawaguchi
  */
-public class MercurialTagAction implements Action {
+public class MercurialTagAction extends SCMRevisionState {
     // TODO: have this extends AbstractScmTagAction and offer after-the-fact tagging operation
     // for now, we just remember the mercurial revision that was built in a given build
 
@@ -24,15 +25,10 @@ public class MercurialTagAction implements Action {
         this.id = id;
     }
 
-    public String getIconFileName() {
-        return null;
-    }
-
-    public String getDisplayName() {
-        return null;
-    }
-
-    public String getUrlName() {
-        return null;
+    /**
+     * Mercurial often uses a short ID form that consists of 12 letters.
+     */
+    public String getShortId() {
+        return id.substring(0,12);
     }
 }

@@ -19,10 +19,13 @@ import hudson.plugins.mercurial.browser.HgBrowser;
 import hudson.plugins.mercurial.browser.HgWeb;
 import hudson.remoting.VirtualChannel;
 import hudson.scm.ChangeLogParser;
+import hudson.scm.PollingResult;
+import hudson.scm.PollingResult.Change;
 import hudson.scm.RepositoryBrowser;
 import hudson.scm.RepositoryBrowsers;
 import hudson.scm.SCM;
 import hudson.scm.SCMDescriptor;
+import hudson.scm.SCMRevisionState;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.ForkOutputStream;
 
@@ -222,11 +225,17 @@ public class MercurialSCM extends SCM implements Serializable {
         return new ArgumentListBuilder(getDescriptor().getHgExe());
     }
 
-    private static final String FILES_STYLE = "changeset = 'files:{files}\\n'\n" + "file = '{file}:'";
+    @Override
+    public SCMRevisionState calcRevisionsFromBuild(AbstractBuild<?, ?> build, Launcher launcher, TaskListener listener) throws IOException, InterruptedException {
+        // tag action is added during checkout, so this shouldn't be called, but just in case.
+        return createTagAction(build,launcher,build.getWorkspace(),listener);
+    }
+
+    private static final String FILES_STYLE = "changeset = 'id:{node}\\nfiles:{files}\\n'\n" + "file = '{file}:'";
 
     @Override
-    public boolean pollChanges(AbstractProject project, Launcher launcher, FilePath workspace, TaskListener listener)
-            throws IOException, InterruptedException {
+    protected PollingResult compareRemoteRevisionWith(AbstractProject<?, ?> project, Launcher launcher, FilePath workspace, TaskListener listener, SCMRevisionState _baseline) throws IOException, InterruptedException {
+        MercurialTagAction baseline = (MercurialTagAction)_baseline;
         EnvVars env = project.getLastBuild().getEnvironment(listener);
 
         PrintStream output = listener.getLogger();
@@ -245,16 +254,21 @@ public class MercurialSCM extends SCM implements Serializable {
             joinWithTimeout(
                     launcher.launch().cmds(cmd).stdout(new ForkOutputStream(baos, output)).pwd(workspace).start(),
                     /* #4528: not in JDK 5: 1, TimeUnit.HOURS*/60 * 60, TimeUnit.SECONDS, listener);
-            parseIncomingOutput(baos, changedFileNames);
+
+            MercurialTagAction cur = parseIncomingOutput(baos, baseline, changedFileNames);
+            return new PollingResult(baseline,cur,computeDegreeOfChanges(changedFileNames,output));
         } finally {
             tmpFile.delete();
         }
 
+    }
+
+    private Change computeDegreeOfChanges(Set<String> changedFileNames, PrintStream output) {
         LOGGER.log(FINE, "Changed file names: {0}", changedFileNames);
 
         if (changedFileNames.isEmpty()) {
             output.println("No changes");
-            return false;
+            return Change.NONE;
         }
 
         Set<String> depchanges = dependentChanges(changedFileNames);
@@ -262,11 +276,11 @@ public class MercurialSCM extends SCM implements Serializable {
 
         if (depchanges.isEmpty()) {
             output.println("Non-dependent changes detected");
-            return false;
+            return Change.INSIGNIFICANT;
         }
 
         output.println("Dependent changes detected");
-        return true;
+        return Change.SIGNIFICANT;
     }
 
     // XXX maybe useful enough to make a convenience method on Proc?
@@ -319,7 +333,8 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private static Pattern FILES_LINE = Pattern.compile("files:(.*)");
 
-    private void parseIncomingOutput(ByteArrayOutputStream output, Set<String> result) throws IOException {
+    private MercurialTagAction parseIncomingOutput(ByteArrayOutputStream output, MercurialTagAction baseline,  Set<String> result) throws IOException {
+        String headId = null; // the tip of the remote revision
         BufferedReader in = new BufferedReader(new InputStreamReader(
                 new ByteArrayInputStream(output.toByteArray())));
         String line;
@@ -332,7 +347,18 @@ public class MercurialSCM extends SCM implements Serializable {
                     }
                 }
             }
+            if (line.startsWith("id:")) {
+                String id = line.substring(3);
+                if (headId==null)   headId = id;
+
+                if (id.equals(baseline.id))
+                    break; // no need to go beyond this line
+            }
         }
+
+        if (headId==null)   // no new revisions found
+            return baseline;
+        return new MercurialTagAction(headId);
     }
 
     @Override
@@ -478,22 +504,22 @@ public class MercurialSCM extends SCM implements Serializable {
 
         hgBundle.delete(); // do not leave it in workspace
 
-        addTagActionToBuild(build, launcher, workspace, listener);
+        build.addAction(createTagAction(build, launcher, workspace, listener));
 
         return true;
     }
 
-    private void addTagActionToBuild(AbstractBuild<?, ?> build, Launcher launcher, FilePath workspace, BuildListener listener)
+    private MercurialTagAction createTagAction(AbstractBuild<?, ?> build, Launcher launcher, FilePath workspace, TaskListener listener)
             throws IOException, InterruptedException {
         String id = runHgAndCaptureOutput(build, launcher, workspace, listener, "log", "--rev", ".", "--template", "{node}");
         if (!REVISIONID_PATTERN.matcher(id).matches()) {
             listener.error("Expected to get an id but got " + id + " instead.");
             throw new AbortException();
         }
-        build.addAction(new MercurialTagAction(id));
+        return new MercurialTagAction(id);
     }
 
-    private String runHgAndCaptureOutput(AbstractBuild build, Launcher launcher, FilePath workspace, BuildListener listener, String... commands)
+    private String runHgAndCaptureOutput(AbstractBuild build, Launcher launcher, FilePath workspace, TaskListener listener, String... commands)
             throws IOException, InterruptedException {
         ByteArrayOutputStream rev = new ByteArrayOutputStream();
         ArgumentListBuilder args = findHgExe(build, listener, false).add(commands);
@@ -533,7 +559,7 @@ public class MercurialSCM extends SCM implements Serializable {
             return false;
         }
 
-        addTagActionToBuild(build, launcher, workspace, listener);
+        build.addAction(createTagAction(build, launcher, workspace, listener));
 
         return createEmptyChangeLog(changelogFile, listener, "changelog");
     }
