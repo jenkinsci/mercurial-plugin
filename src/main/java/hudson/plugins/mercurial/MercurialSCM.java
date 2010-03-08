@@ -226,7 +226,8 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     @Override
-    public SCMRevisionState calcRevisionsFromBuild(AbstractBuild<?, ?> build, Launcher launcher, TaskListener listener) throws IOException, InterruptedException {
+    public SCMRevisionState calcRevisionsFromBuild(AbstractBuild<?, ?> build, Launcher launcher, TaskListener listener)
+            throws IOException, InterruptedException {
         // tag action is added during checkout, so this shouldn't be called, but just in case.
         return createTagAction(build,launcher,build.getWorkspace(),listener);
     }
@@ -234,7 +235,8 @@ public class MercurialSCM extends SCM implements Serializable {
     private static final String FILES_STYLE = "changeset = 'id:{node}\\nfiles:{files}\\n'\n" + "file = '{file}:'";
 
     @Override
-    protected PollingResult compareRemoteRevisionWith(AbstractProject<?, ?> project, Launcher launcher, FilePath workspace, TaskListener listener, SCMRevisionState _baseline) throws IOException, InterruptedException {
+    protected PollingResult compareRemoteRevisionWith(AbstractProject<?, ?> project, Launcher launcher, FilePath workspace,
+            TaskListener listener, SCMRevisionState _baseline) throws IOException, InterruptedException {
         MercurialTagAction baseline = (MercurialTagAction)_baseline;
         EnvVars env = project.getLastBuild().getEnvironment(listener);
 
