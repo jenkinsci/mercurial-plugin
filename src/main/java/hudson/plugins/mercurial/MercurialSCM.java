@@ -268,10 +268,8 @@ public class MercurialSCM extends SCM implements Serializable {
     private Change computeDegreeOfChanges(Set<String> changedFileNames, PrintStream output) {
         LOGGER.log(FINE, "Changed file names: {0}", changedFileNames);
 
-        if (changedFileNames.isEmpty()) {
-            output.println("No changes");
+        if (changedFileNames.isEmpty())
             return Change.NONE;
-        }
 
         Set<String> depchanges = dependentChanges(changedFileNames);
         LOGGER.log(FINE, "Dependent changed file names: {0}", depchanges);
