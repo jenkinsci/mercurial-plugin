@@ -242,6 +242,8 @@ public class MercurialSCM extends SCM implements Serializable {
 
         PrintStream output = listener.getLogger();
 
+        // XXX do canUpdate check similar to in checkout, and possibly return INCOMPARABLE
+
         // Mercurial requires the style file to be in a file..
         Set<String> changedFileNames = new HashSet<String>();
         FilePath tmpFile = workspace.createTextTempFile("tmp", "style", FILES_STYLE);
