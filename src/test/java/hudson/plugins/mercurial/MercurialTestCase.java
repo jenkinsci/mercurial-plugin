@@ -25,7 +25,7 @@ public abstract class MercurialTestCase extends HudsonTestCase {
     }
 
     protected void hg(File repo, String... args) throws Exception {
-        assertEquals(0, launcher.launch().cmds(new File("hg"), args).pwd(repo).stdout(listener).join());
+        assertEquals(0, MercurialSCM.launch(launcher).cmds(new File("hg"), args).pwd(repo).stdout(listener).join());
     }
 
     protected void touchAndCommit(File repo, String... names) throws Exception {

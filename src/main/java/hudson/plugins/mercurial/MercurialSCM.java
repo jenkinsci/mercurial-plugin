@@ -9,6 +9,7 @@ import hudson.Launcher;
 import hudson.Proc;
 import hudson.Util;
 import hudson.FilePath.FileCallable;
+import hudson.Launcher.ProcStarter;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
@@ -42,6 +43,7 @@ import java.io.PrintStream;
 import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.List;
@@ -225,6 +227,10 @@ public class MercurialSCM extends SCM implements Serializable {
         return new ArgumentListBuilder(getDescriptor().getHgExe());
     }
 
+    static ProcStarter launch(Launcher launcher) {
+        return launcher.launch().envs(Collections.singletonMap("HGPLAIN", "true"));
+    }
+
     @Override
     public SCMRevisionState calcRevisionsFromBuild(AbstractBuild<?, ?> build, Launcher launcher, TaskListener listener)
             throws IOException, InterruptedException {
@@ -256,7 +262,7 @@ public class MercurialSCM extends SCM implements Serializable {
             cmd.add("--no-merges");
             cmd.add("--rev", getBranch(env));
             joinWithTimeout(
-                    launcher.launch().cmds(cmd).stdout(new ForkOutputStream(baos, output)).pwd(workspace).start(),
+                    launch(launcher).cmds(cmd).stdout(new ForkOutputStream(baos, output)).pwd(workspace).start(),
                     /* #4528: not in JDK 5: 1, TimeUnit.HOURS*/60 * 60, TimeUnit.SECONDS, listener);
 
             MercurialTagAction cur = parseIncomingOutput(baos, baseline, changedFileNames);
@@ -404,7 +410,7 @@ public class MercurialSCM extends SCM implements Serializable {
         EnvVars env = build.getEnvironment(listener);
 
         if(clean) {
-            if (launcher.launch().cmds(findHgExe(build, listener, true).add(forest ? "fupdate" : "update", "--clean", "."))
+            if (launch(launcher).cmds(findHgExe(build, listener, true).add(forest ? "fupdate" : "update", "--clean", "."))
                 .envs(env).stdout(listener)
                 .pwd(workspace).join() != 0) {
                 listener.error("Failed to clobber local modifications");
@@ -414,14 +420,14 @@ public class MercurialSCM extends SCM implements Serializable {
                 StringTokenizer trees = new StringTokenizer(runHgAndCaptureOutput(build, launcher, workspace, listener, "ftrees", "--convert"));
                 while (trees.hasMoreTokens()) {
                     String tree = trees.nextToken();
-                    if (launcher.launch().cmds(findHgExe(build, listener, true).add("--config", "extensions.purge=", "clean", "--all")).
+                    if (launch(launcher).cmds(findHgExe(build, listener, true).add("--config", "extensions.purge=", "clean", "--all")).
                             envs(env).stdout(listener).pwd(tree.equals(".") ? workspace : workspace.child(tree)).join() != 0) {
                         listener.error("Failed to clean unversioned files in " + tree);
                         return false;
                     }
                 }
             } else {
-                if (launcher.launch().cmds(findHgExe(build, listener, true).add("--config", "extensions.purge=", "clean", "--all")).
+                if (launch(launcher).cmds(findHgExe(build, listener, true).add("--config", "extensions.purge=", "clean", "--all")).
                         envs(env).stdout(listener).pwd(workspace).join() != 0) {
                     listener.error("Failed to clean unversioned files");
                     return false;
@@ -456,7 +462,7 @@ public class MercurialSCM extends SCM implements Serializable {
             // convert it back to UTF-8
             WriterOutputStream o = new WriterOutputStream(new OutputStreamWriter(os, "UTF-8"));
             try {
-                r = launcher.launch().cmds(args).envs(env)
+                r = launch(launcher).cmds(args).envs(env)
                         .stdout(new ForkOutputStream(o,errorLog)).pwd(workspace).join();
             } finally {
                 o.flush(); // make sure to commit all output
@@ -486,13 +492,13 @@ public class MercurialSCM extends SCM implements Serializable {
                 } else {
                     args.add("unbundle", "hg.bundle");
                 }
-                if(launcher.launch()
+                if(launch(launcher)
                     .cmds(args)
                     .envs(env).stdout(listener).pwd(workspace).join()!=0) {
                     listener.error("Failed to pull");
                     return false;
                 }
-                if(launcher.launch()
+                if(launch(launcher)
                     .cmds(findHgExe(build, listener, true).add(forest ? "fupdate" : "update", "--clean", "--rev", getBranch(env)))
                     .envs(env).stdout(listener).pwd(workspace).join()!=0) {
                     listener.error("Failed to update");
@@ -525,7 +531,7 @@ public class MercurialSCM extends SCM implements Serializable {
             throws IOException, InterruptedException {
         ByteArrayOutputStream rev = new ByteArrayOutputStream();
         ArgumentListBuilder args = findHgExe(build, listener, false).add(commands);
-        if (launcher.launch().cmds(args).pwd(workspace).stdout(rev).join() == 0) {
+        if (launch(launcher).cmds(args).pwd(workspace).stdout(rev).join() == 0) {
             return rev.toString();
         } else {
             listener.error("Failed to run " + args.toStringWithQuote());
@@ -552,7 +558,7 @@ public class MercurialSCM extends SCM implements Serializable {
         args.add("--rev", getBranch(env));
         args.add(source,workspace.getRemote());
         try {
-            if(launcher.launch().cmds(args).envs(env).stdout(listener).join()!=0) {
+            if(launch(launcher).cmds(args).envs(env).stdout(listener).join()!=0) {
                 listener.error("Failed to clone "+source);
                 return false;
             }
