@@ -1,7 +1,6 @@
 package hudson.plugins.mercurial;
 
 import hudson.model.AbstractBuild;
-import hudson.model.Action;
 import hudson.scm.SCMRevisionState;
 
 /**

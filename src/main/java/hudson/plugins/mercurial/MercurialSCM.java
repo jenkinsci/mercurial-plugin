@@ -110,8 +110,9 @@ public class MercurialSCM extends SCM implements Serializable {
         this.forest = forest;
         parseModules();
         branch = Util.fixEmpty(branch);
-        if(branch!=null && branch.equals("default"))
+        if (branch != null && branch.equals("default")) {
             branch = null;
+        }
         this.branch = branch;
         this.browser = browser;
     }
@@ -195,7 +196,7 @@ public class MercurialSCM extends SCM implements Serializable {
         return forest;
     }
 
-    private ArgumentListBuilder findHgExe(AbstractBuild build, TaskListener listener, boolean allowDebug) throws IOException, InterruptedException {
+    private ArgumentListBuilder findHgExe(AbstractBuild<?,?> build, TaskListener listener, boolean allowDebug) throws IOException, InterruptedException {
         for (MercurialInstallation inst : MercurialInstallation.allInstallations()) {
             if (inst.getName().equals(installation)) {
                 // XXX what about forEnvironment?
@@ -276,8 +277,9 @@ public class MercurialSCM extends SCM implements Serializable {
     private Change computeDegreeOfChanges(Set<String> changedFileNames, PrintStream output) {
         LOGGER.log(FINE, "Changed file names: {0}", changedFileNames);
 
-        if (changedFileNames.isEmpty())
+        if (changedFileNames.isEmpty()) {
             return Change.NONE;
+        }
 
         Set<String> depchanges = dependentChanges(changedFileNames);
         LOGGER.log(FINE, "Dependent changed file names: {0}", depchanges);
@@ -357,15 +359,19 @@ public class MercurialSCM extends SCM implements Serializable {
             }
             if (line.startsWith("id:")) {
                 String id = line.substring(3);
-                if (headId==null)   headId = id;
+                if (headId == null) {
+                    headId = id;
+                }
 
-                if (id.equals(baseline.id))
+                if (id.equals(baseline.id)) {
                     break; // no need to go beyond this line
+                }
             }
         }
 
-        if (headId==null)   // no new revisions found
-            return baseline;
+        if (headId==null) {
+            return baseline; // no new revisions found
+        }
         return new MercurialTagAction(headId);
     }
 
@@ -374,20 +380,31 @@ public class MercurialSCM extends SCM implements Serializable {
             throws IOException, InterruptedException {
         boolean canUpdate = workspace.act(new FileCallable<Boolean>() {
             public Boolean invoke(File ws, VirtualChannel channel) throws IOException {
-                if(!HgRc.getHgRcFile(ws).exists())
+                if (!HgRc.getHgRcFile(ws).exists()) {
                     return false;
+                }
                 HgRc hgrc = new HgRc(ws);
                 return canUpdate(hgrc);
             }
 
             private boolean canUpdate(HgRc ini) {
                 String upstream = ini.getSection("paths").get("default");
-                if(upstream==null)  return false;
+                if (upstream == null) {
+                    return false;
+                }
 
-                if(upstream.equals(source)) return true;
-                if((upstream+'/').equals(source))   return true;
-                if(upstream.equals(source + '/')) return true;
-                if (source.startsWith("file:/") && new File(upstream).toURI().toString().equals(source)) return true;
+                if (upstream.equals(source)) {
+                    return true;
+                }
+                if ((upstream + '/').equals(source)) {
+                    return true;
+                }
+                if (upstream.equals(source + '/')) {
+                    return true;
+                }
+                if (source.startsWith("file:/") && new File(upstream).toURI().toString().equals(source)) {
+                    return true;
+                }
                 listener.error(
                         "Workspace reports paths.default as " + upstream +
                         "\nwhich looks different than " + source +
@@ -396,10 +413,11 @@ public class MercurialSCM extends SCM implements Serializable {
             }
         });
 
-        if(canUpdate)
-            return update(build,launcher,workspace,listener,changelogFile);
-        else
-            return clone(build,launcher,workspace,listener,changelogFile);
+        if (canUpdate) {
+            return update(build, launcher, workspace, listener, changelogFile);
+        } else {
+            return clone(build, launcher, workspace, listener, changelogFile);
+        }
     }
 
     /**
@@ -482,7 +500,7 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         // pull
-        if (r == 0 && (hgBundle.exists() || forest))
+        if (r == 0 && (hgBundle.exists() || forest)) {
             // if incoming didn't fetch anything, it will return 1. That was for 0.9.3.
             // in 0.9.4 apparently it returns 0.
             try {
@@ -509,6 +527,7 @@ public class MercurialSCM extends SCM implements Serializable {
                 e.printStackTrace(listener.getLogger());
                 return false;
             }
+        }
 
         hgBundle.delete(); // do not leave it in workspace
 
@@ -527,7 +546,7 @@ public class MercurialSCM extends SCM implements Serializable {
         return new MercurialTagAction(id);
     }
 
-    private String runHgAndCaptureOutput(AbstractBuild build, Launcher launcher, FilePath workspace, TaskListener listener, String... commands)
+    private String runHgAndCaptureOutput(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, TaskListener listener, String... commands)
             throws IOException, InterruptedException {
         ByteArrayOutputStream rev = new ByteArrayOutputStream();
         ArgumentListBuilder args = findHgExe(build, listener, false).add(commands);
@@ -575,8 +594,9 @@ public class MercurialSCM extends SCM implements Serializable {
     @Override
     public void buildEnvVars(AbstractBuild build, Map<String, String> env) {
         MercurialTagAction a = build.getAction(MercurialTagAction.class);
-        if (a!=null)
-            env.put("MERCURIAL_REVISION",a.id);
+        if (a != null) {
+            env.put("MERCURIAL_REVISION", a.id);
+        }
     }
 
     @Override
@@ -597,7 +617,6 @@ public class MercurialSCM extends SCM implements Serializable {
     public static final class DescriptorImpl extends SCMDescriptor<MercurialSCM> {
 
         private String hgExe;
-        private transient String version;
 
         public DescriptorImpl() {
             super(HgBrowser.class);
@@ -608,7 +627,7 @@ public class MercurialSCM extends SCM implements Serializable {
          * {@inheritDoc}
          * 
          * Due to compatibility issues with older version we implement this ourselves instead of relying
-         * on the parent method. Koshuke implemented a fix for this in the core (r21961), so we may drop
+         * on the parent method. Kohsuke implemented a fix for this in the core (r21961), so we may drop
          * this function after 1.325 is released.
          * 
          * @todo: remove this function after 1.325 is released.
@@ -629,7 +648,9 @@ public class MercurialSCM extends SCM implements Serializable {
          * Path to mercurial executable.
          */
         public String getHgExe() {
-            if(hgExe==null) return "hg";
+            if (hgExe == null) {
+                return "hg";
+            }
             return hgExe;
         }
 
@@ -641,7 +662,6 @@ public class MercurialSCM extends SCM implements Serializable {
         @Override
         public boolean configure(StaplerRequest req, JSONObject json) throws FormException {
             hgExe = req.getParameter("mercurial.hgExe");
-            version = null;
             save();
             return true;
         }
