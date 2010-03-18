@@ -50,7 +50,7 @@ class Cacher {
             Launcher masterLauncher = node == master ? launcher : master.createLauncher(listener);
             // XXX use equivalent of findHgExe from MercurialSCM rather than hardcoding hg command
             if (masterCache.isDirectory()) {
-                if (MercurialSCM.launch(masterLauncher).cmds("hg", "--repository", masterCacheS, "pull").stdout(listener).join() != 0) {
+                if (MercurialSCM.launch(masterLauncher).pwd(masterCache).cmds("hg", "pull").stdout(listener).join() != 0) {
                     listener.error("Failed to update " + masterCache);
                     return null;
                 }
