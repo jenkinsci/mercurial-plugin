@@ -19,8 +19,6 @@ import org.kohsuke.stapler.export.Exported;
  * <p>
  * The object should be treated like an immutable object.
  * The setters are only provided for digester.
- *
- * @author Kohsuke Kawaguchi
  */
 public class MercurialChangeSet extends ChangeLogSet.Entry {
     private String node;

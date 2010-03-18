@@ -5,8 +5,6 @@ import hudson.scm.ChangeLogSet.AffectedFile;
 
 /**
  * Implementation of {@link AffectedFile} for Mercurial.
- * 
- * @author mfriedenhagen
  */
 public final class MercurialAffectedFile implements AffectedFile {
 

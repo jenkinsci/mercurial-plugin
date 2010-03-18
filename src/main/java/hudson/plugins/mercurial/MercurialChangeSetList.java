@@ -9,7 +9,6 @@ import java.util.Iterator;
 
 /**
  * List of changeset that went into a particular build.
- * @author Kohsuke Kawaguchi
  */
 public class MercurialChangeSetList extends ChangeLogSet<MercurialChangeSet> {
     private final List<MercurialChangeSet> changeSets;

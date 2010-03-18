@@ -1,30 +1,18 @@
 package hudson.plugins.mercurial;
 
 import hudson.FilePath;
-import hudson.plugins.mercurial.browser.BitBucket;
-import hudson.plugins.mercurial.browser.HgBrowser;
-import hudson.plugins.mercurial.browser.HgWeb;
-import hudson.model.Descriptor;
 import hudson.model.FreeStyleProject;
 import hudson.model.ParametersAction;
 import hudson.model.StringParameterValue;
 import hudson.scm.ChangeLogSet;
-import hudson.scm.RepositoryBrowser;
 import hudson.util.StreamTaskListener;
 import java.io.File;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import org.jvnet.hudson.test.Bug;
-import org.jvnet.hudson.test.recipes.LocalData;
 
-/**
- * @author Kohsuke Kawaguchi, Jesse Glick
- */
 public class MercurialSCMTest extends MercurialTestCase {
 
     private File repo;

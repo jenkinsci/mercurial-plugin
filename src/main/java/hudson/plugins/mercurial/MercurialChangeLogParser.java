@@ -17,8 +17,6 @@ import java.util.Set;
  * Parses the changelog.xml.
  *
  * See {@link MercurialChangeSet#CHANGELOG_TEMPLATE} for the format.
- * 
- * @author Kohsuke Kawaguchi
  */
 public class MercurialChangeLogParser extends ChangeLogParser {
 

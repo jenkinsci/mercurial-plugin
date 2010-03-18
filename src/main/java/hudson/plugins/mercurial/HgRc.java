@@ -15,8 +15,6 @@ import java.util.regex.Matcher;
 
 /**
  * Parses the <tt>.hgrc</tt> file.
- *
- * @author Kohsuke Kawaguchi
  */
 final class HgRc {
     private final Map<String,Section> sections = new TreeMap<String,Section>();

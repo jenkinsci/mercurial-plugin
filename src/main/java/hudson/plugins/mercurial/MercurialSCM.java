@@ -67,8 +67,6 @@ import org.kohsuke.stapler.framework.io.WriterOutputStream;
 
 /**
  * Mercurial SCM.
- * 
- * @author Kohsuke Kawaguchi
  */
 public class MercurialSCM extends SCM implements Serializable {
 

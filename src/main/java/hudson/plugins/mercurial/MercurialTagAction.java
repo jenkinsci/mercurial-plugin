@@ -8,8 +8,6 @@ import hudson.scm.SCMRevisionState;
  *
  * <p>
  * Currently it just remembers the revision ID, but we want to extend this to cover tagging.
- *
- * @author Kohsuke Kawaguchi
  */
 public class MercurialTagAction extends SCMRevisionState {
     // TODO: have this extends AbstractScmTagAction and offer after-the-fact tagging operation
