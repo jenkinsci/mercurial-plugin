@@ -18,12 +18,12 @@ public class HgBrowserTest {
     public final void getFileLink() throws IOException {
         new HgBrowser("http://abc/").getFileLink("");
     }
-    
+
     @Test(expected=UnsupportedOperationException.class)
     public final void testGetDiffLink() throws IOException {
         new HgBrowser("http://abc/").getDiffLink("");
     }
-    
+
     @Test
     public final void testGetUrl() throws MalformedURLException {
         assertEquals("http://abc/", new HgBrowser("http://abc").getUrl().toExternalForm());
