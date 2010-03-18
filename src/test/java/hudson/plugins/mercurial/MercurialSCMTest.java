@@ -45,7 +45,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         buildAndCheck(p,"b");   // this tests the update op
     }
 
-    @Bug(4281)    
+    @Bug(4281)
     public void testBranches() throws Exception {
         hg(repo, "init");
         touchAndCommit(repo, "init");
@@ -147,7 +147,7 @@ public class MercurialSCMTest extends MercurialTestCase {
     /**
      * With an introduction of HgBrowser base class, a care has to be taken to load existing dataset.
      *
-     * This test verifies that. 
+     * This test verifies that.
      */
     @LocalData
     public void testRepositoryBrowserCompatibility() throws Exception {
@@ -156,7 +156,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         assertTrue(ms.getBrowser() instanceof HgWeb);
         assertEqualBeans(new HgWeb("http://www.yahoo.com/"),ms.getBrowser(),"url");
     }
-    
+
     @Bug(4510)
     @LocalData
     public void testPickingUpAlternativeBrowser() throws MalformedURLException, Exception {
@@ -167,7 +167,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         assertTrue("class:" + browser.getClass(), browser instanceof BitBucket);
         assertEqualBeans(new BitBucket("http://bitbucket.org/"),browser,"url");
     }
-    
+
     @Bug(4514)
     @LocalData
     public void testBrowsersAvailableInDropDown() throws MalformedURLException, Exception {
@@ -176,7 +176,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         final HgBrowser browser = ms.getBrowser();
         assertEquals("wrong url", new URL("http://bitbucket.org/"), browser.getUrl());
         assertTrue("class:" + browser.getClass(), browser instanceof BitBucket);
-        assertEqualBeans(new BitBucket("http://bitbucket.org/"),browser,"url");        
+        assertEqualBeans(new BitBucket("http://bitbucket.org/"),browser,"url");
         final List<Descriptor<RepositoryBrowser<?>>> browserDescriptors = ms.getDescriptor().getBrowserDescriptors();
         assertTrue("Could not find BitBucket in " + browserDescriptors, browserDescriptors.contains(browser.getDescriptor()));
     }
