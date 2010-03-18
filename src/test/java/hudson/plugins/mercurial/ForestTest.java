@@ -14,7 +14,7 @@ public class ForestTest extends MercurialTestCase {
         super.setUp();
         String downloadForest = ForestTest.class.getResource("forest.py").toString(); // copied from 9e722e8d001d
         Hudson.getInstance().getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(
-                new MercurialInstallation("forested", "", "hg", downloadForest, false, Collections.<ToolProperty<?>>emptyList()));
+                new MercurialInstallation("forested", "", "hg", downloadForest, false, false, Collections.<ToolProperty<?>>emptyList()));
         toprepo = createTmpDir();
         hg(toprepo, "init");
         subrepo = new File(toprepo, "sub");

@@ -8,6 +8,9 @@
   <f:entry title="${%Executable}" field="executable">
     <f:textbox default="INSTALLATION/bin/hg"/>
   </f:entry>
+  <f:entry field="useCaches" title="${%Use Repository Caches}">
+    <f:checkbox/>
+  </f:entry>
   <f:entry field="debug" title="${%Debug Flag}">
     <f:checkbox/>
   </f:entry>

@@ -262,6 +262,10 @@ public class MercurialSCM extends SCM implements Serializable {
             cmd.add(forest ? "fincoming" : "incoming", "--style", tmpFile.getRemote());
             cmd.add("--no-merges");
             cmd.add("--rev", getBranch(env));
+            String cachedSource = cachedSource(launcher, listener);
+            if (cachedSource != null) {
+                cmd.add(cachedSource);
+            }
             joinWithTimeout(
                     launch(launcher).cmds(cmd).stdout(new ForkOutputStream(baos, output)).pwd(workspace).start(),
                     /* #4528: not in JDK 5: 1, TimeUnit.HOURS*/60 * 60, TimeUnit.SECONDS, listener);
@@ -474,6 +478,11 @@ public class MercurialSCM extends SCM implements Serializable {
 
             args.add("--rev", getBranch(env));
 
+            String cachedSource = cachedSource(launcher, listener);
+            if (cachedSource != null) {
+                args.add(cachedSource);
+            }
+
             ByteArrayOutputStream errorLog = new ByteArrayOutputStream();
 
             // mercurial produces text in the platform default encoding, so we need to
@@ -516,6 +525,7 @@ public class MercurialSCM extends SCM implements Serializable {
                     listener.error("Failed to pull");
                     return false;
                 }
+                // XXX if cachedSource != null, and using Hg 1.4.3+, consider: hg relink
                 if(launch(launcher)
                     .cmds(findHgExe(build, listener, true).add(forest ? "fupdate" : "update", "--clean", "--rev", getBranch(env)))
                     .envs(env).stdout(listener).pwd(workspace).join()!=0) {
@@ -575,7 +585,13 @@ public class MercurialSCM extends SCM implements Serializable {
         ArgumentListBuilder args = findHgExe(build, listener, true);
         args.add(forest ? "fclone" : "clone");
         args.add("--rev", getBranch(env));
-        args.add(source,workspace.getRemote());
+        String cachedSource = cachedSource(launcher, listener);
+        if (cachedSource != null) {
+            args.add(cachedSource);
+        } else {
+            args.add(source);
+        }
+        args.add(workspace.getRemote());
         try {
             if(launch(launcher).cmds(args).envs(env).stdout(listener).join()!=0) {
                 listener.error("Failed to clone "+source);
@@ -584,6 +600,18 @@ public class MercurialSCM extends SCM implements Serializable {
         } catch (IOException e) {
             e.printStackTrace(listener.error("Failed to clone "+source));
             return false;
+        }
+
+        if (cachedSource != null) {
+            FilePath hgrc = workspace.child(".hg/hgrc");
+            if (hgrc.exists()) {
+                String hgrcText = hgrc.readToString();
+                if (!hgrcText.contains(cachedSource)) {
+                    listener.error(".hg/hgrc did not contain " + cachedSource + " as expected:\n" + hgrcText);
+                    return false;
+                }
+                hgrc.write(hgrcText.replace(cachedSource, source), null);
+            }
         }
 
         build.addAction(createTagAction(build, launcher, workspace, listener));
@@ -611,6 +639,33 @@ public class MercurialSCM extends SCM implements Serializable {
 
     public String getModules() {
         return modules;
+    }
+
+    private String cachedSource(Launcher launcher, TaskListener listener) {
+        if (source.matches("(file:|[/\\\\]).+")) {
+            // Never try to cache local repos.
+            return null;
+        }
+        if (forest) {
+            // Caching forests not supported yet - too complicated.
+            return null;
+        }
+        boolean useCaches = false;
+        for (MercurialInstallation inst : MercurialInstallation.allInstallations()) {
+            if (inst.getName().equals(installation)) {
+                useCaches = inst.isUseCaches();
+                break;
+            }
+        }
+        if (!useCaches) {
+            return null;
+        }
+        try {
+            return Cacher.repositoryCache(source, launcher, listener);
+        } catch (Exception x) {
+            x.printStackTrace(listener.error("Failed to use repository cache for " + source));
+            return null;
+        }
     }
 
     @Extension
