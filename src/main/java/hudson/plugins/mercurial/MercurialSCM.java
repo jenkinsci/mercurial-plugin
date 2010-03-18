@@ -641,9 +641,9 @@ public class MercurialSCM extends SCM implements Serializable {
         return modules;
     }
 
+    static boolean CACHE_LOCAL_REPOS = false;
     private String cachedSource(Launcher launcher, TaskListener listener) {
-        if (source.matches("(file:|[/\\\\]).+")) {
-            // Never try to cache local repos.
+        if (!CACHE_LOCAL_REPOS && source.matches("(file:|[/\\\\]).+")) {
             return null;
         }
         if (forest) {

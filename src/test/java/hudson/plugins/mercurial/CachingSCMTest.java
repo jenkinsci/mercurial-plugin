@@ -11,6 +11,7 @@ public class CachingSCMTest extends MercurialSCMTest {
         hgInstallation = "caching";
         Hudson.getInstance().getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(
                 new MercurialInstallation("caching", "", "hg", null, false, true, Collections.<ToolProperty<?>>emptyList()));
+        MercurialSCM.CACHE_LOCAL_REPOS = true;
     }
 
 }
