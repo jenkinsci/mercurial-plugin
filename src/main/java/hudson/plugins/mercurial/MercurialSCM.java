@@ -470,6 +470,7 @@ public class MercurialSCM extends SCM implements Serializable {
         FileOutputStream os = new FileOutputStream(changelogFile);
         os.write("<changesets>\n".getBytes());
         int r;
+        String cachedSource;
         try {
             ArgumentListBuilder args = findHgExe(build, listener, false);
             args.add(forest ? "fincoming" : "incoming", "--quiet");
@@ -481,7 +482,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
             args.add("--rev", getBranch(env));
 
-            String cachedSource = cachedSource(build.getBuiltOn(), launcher, listener);
+            cachedSource = cachedSource(build.getBuiltOn(), launcher, listener);
             if (cachedSource != null) {
                 args.add(cachedSource);
             }
@@ -528,7 +529,11 @@ public class MercurialSCM extends SCM implements Serializable {
                     listener.error("Failed to pull");
                     return false;
                 }
-                // XXX if cachedSource != null, and using Hg 1.4.3+, consider (say every 100 builds): hg relink cachedSource
+                if (cachedSource != null && build.getNumber() % 100 == 0) {
+                    // Periodically recreate hardlinks to the cache to save disk space.
+                    launch(launcher).cmds(findHgExe(build, listener, true).add("--config", "extensions.relink=", "relink", cachedSource)).
+                            envs(env).stdout(listener).pwd(workspace).join(); // ignore failures
+                }
                 if(launch(launcher)
                     .cmds(findHgExe(build, listener, true).add(forest ? "fupdate" : "update", "--clean", "--rev", getBranch(env)))
                     .envs(env).stdout(listener).pwd(workspace).join()!=0) {
@@ -606,7 +611,6 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         if (cachedSource != null) {
-            // XXX if using Hg 1.4.3+, consider: hg relink
             FilePath hgrc = workspace.child(".hg/hgrc");
             if (hgrc.exists()) {
                 String hgrcText = hgrc.readToString();
@@ -616,6 +620,9 @@ public class MercurialSCM extends SCM implements Serializable {
                 }
                 hgrc.write(hgrcText.replace(cachedSource, source), null);
             }
+            // Passing --rev disables hardlinks, so we need to recreate them:
+            launch(launcher).cmds(findHgExe(build, listener, true).add("--config", "extensions.relink=", "relink", cachedSource)).
+                    envs(env).stdout(listener).pwd(workspace).join(); // ignore failures
         }
 
         build.addAction(createTagAction(build, launcher, workspace, listener));
