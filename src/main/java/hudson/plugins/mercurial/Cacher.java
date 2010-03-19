@@ -1,14 +1,20 @@
 package hudson.plugins.mercurial;
 
+import hudson.AbortException;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.Hudson;
 import hudson.model.Node;
 import hudson.model.TaskListener;
-import java.io.File;
+import hudson.util.ArgumentListBuilder;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.WeakHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -43,9 +49,8 @@ class Cacher {
             // Always update master cache first.
             Node master = Hudson.getInstance();
             FilePath masterCaches = master.getRootPath().child("hgcache");
-            masterCaches.mkdirs();
-            File masterCache = new File(masterCaches.getRemote(), hashSource);
-            String masterCacheS = masterCache.getAbsolutePath();
+            FilePath masterCache = masterCaches.child(hashSource);
+            String masterCacheS = masterCache.getRemote();
             Launcher masterLauncher = node == master ? launcher : master.createLauncher(listener);
             // do we need to pass in EnvVars from a build too?
             if (masterCache.isDirectory()) {
@@ -55,6 +60,7 @@ class Cacher {
                     return null;
                 }
             } else {
+                masterCaches.mkdirs();
                 if (MercurialSCM.launch(masterLauncher).cmds(config.findHgExe(master, listener, true).
                         add("clone", "--noupdate", remote, masterCacheS)).stdout(listener).join() != 0) {
                     listener.error("Failed to clone " + remote);
@@ -65,10 +71,103 @@ class Cacher {
                 return masterCacheS;
             }
             // Not on master, so need to create/update local cache as well.
-            listener.error("XXX caching on slaves not yet implemented");
-            return null;
+            FilePath localCaches = node.getRootPath().child("hgcache");
+            FilePath localCache = localCaches.child(hashSource);
+            FilePath masterTransfer = masterCache.child("xfer.hg");
+            FilePath localTransfer = localCache.child("xfer.hg");
+            try {
+                if (localCache.isDirectory()) {
+                    // Need to transfer just newly available changesets.
+                    Set<String> masterHeads = headsOf(masterCache, config, master, masterLauncher, listener);
+                    Set<String> localHeads = headsOf(localCache, config, node, launcher, listener);
+                    if (localHeads.equals(masterHeads)) {
+                        listener.getLogger().println("Local cache is up to date.");
+                    } else {
+                        // If there are some local heads not in master, they must be ancestors of new heads.
+                        // If there are some master heads not in local, they could be descendants of old heads,
+                        // or they could be new branches.
+                        // Issue1910: in Hg 1.4.3 and earlier, passing --base $h for h in localHeads will fail
+                        // to actually exclude those head sets, but not a big deal. (Hg 1.5 fixes that but leaves
+                        // a major bug that if no csets are selected, the whole repo will be bundled; fortunately
+                        // this case should be caught by equality check above.)
+                        ArgumentListBuilder args = config.findHgExe(master, listener, true).add("bundle");
+                        for (String head : localHeads) {
+                            args.add("--base", head);
+                        }
+                        args.add("xfer.hg");
+                        if (MercurialSCM.launch(masterLauncher).cmds(args).pwd(masterCache).stdout(listener).join() != 0) {
+                            listener.error("Failed to send outgoing changes");
+                            return null;
+                        }
+                    }
+                } else {
+                    // Need to transfer entire repo.
+                    if (MercurialSCM.launch(masterLauncher).cmds(config.findHgExe(master, listener, true).
+                            add("bundle", "--all", "xfer.hg")).pwd(masterCache).stdout(listener).join() != 0) {
+                        listener.error("Failed to bundle repo");
+                        return null;
+                    }
+                    localCaches.mkdirs();
+                    if (MercurialSCM.launch(launcher).cmds(config.findHgExe(node, listener, true).
+                            add("init", localCache.getRemote())).stdout(listener).join() != 0) {
+                        listener.error("Failed to create local cache");
+                        return null;
+                    }
+                }
+                if (masterTransfer.exists()) {
+                    masterTransfer.copyTo(localTransfer);
+                    if (MercurialSCM.launch(launcher).cmds(config.findHgExe(node, listener, true).
+                            add("unbundle", "xfer.hg")).pwd(localCache).stdout(listener).join() != 0) {
+                        listener.error("Failed to unbundle " + localTransfer);
+                        return null;
+                    }
+                }
+            } finally {
+                masterTransfer.delete();
+                localTransfer.delete();
+            }
+            return localCache.getRemote();
         } finally {
             lock.unlock();
+        }
+    }
+
+    private static final Map<Node,Map<List<String>,Boolean>> supportsHg15Syntax = new WeakHashMap<Node,Map<List<String>,Boolean>>();
+    private static Set<String> headsOf(FilePath repo, MercurialSCM config, Node node, Launcher launcher, TaskListener listener)
+            throws IOException, InterruptedException {
+        // Unfortunately Hg 1.5 completely changes the meaning of the heads command (Issue1893).
+        // To avoid printing an error message for every build & poll, we try to remember whether each Hg configuration was 1.5+.
+        List<String> hgConfig = config.findHgExe(node, listener, false).toList();
+        Map<List<String>,Boolean> supportsHg15SyntaxForNode = supportsHg15Syntax.get(node);
+        if (supportsHg15SyntaxForNode == null) {
+            supportsHg15SyntaxForNode = new HashMap<List<String>,Boolean>();
+            supportsHg15Syntax.put(node, supportsHg15SyntaxForNode);
+        }
+        Boolean using15Syntax = supportsHg15SyntaxForNode.get(hgConfig);
+        String output;
+        if (using15Syntax == null) {
+            try {
+                output = runHeadsCommand(repo, config, node, launcher, listener, true);
+                supportsHg15SyntaxForNode.put(hgConfig, true);
+            } catch (AbortException x) {
+                output = runHeadsCommand(repo, config, node, launcher, listener, false);
+                supportsHg15SyntaxForNode.put(hgConfig, false);
+            }
+        } else if (using15Syntax) {
+            output = runHeadsCommand(repo, config, node, launcher, listener, true);
+        } else {
+            output = runHeadsCommand(repo, config, node, launcher, listener, false);
+        }
+        Set<String> heads = new LinkedHashSet<String>(Arrays.asList(output.split("\n")));
+        heads.remove("");
+        return heads;
+    }
+    private static String runHeadsCommand(FilePath repo, MercurialSCM config, Node node, Launcher launcher, TaskListener listener, boolean usingHg15Syntax)
+            throws IOException, InterruptedException {
+        if (usingHg15Syntax) {
+            return config.runHgAndCaptureOutput(node, launcher, repo, listener, "heads", "--template", "{node}\\n", "--topo", "--closed");
+        } else {
+            return config.runHgAndCaptureOutput(node, launcher, repo, listener, "heads", "--template", "{node}\\n");
         }
     }
 

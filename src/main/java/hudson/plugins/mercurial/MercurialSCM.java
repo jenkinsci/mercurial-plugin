@@ -442,7 +442,7 @@ public class MercurialSCM extends SCM implements Serializable {
                 return false;
             }
             if (forest) {
-                StringTokenizer trees = new StringTokenizer(runHgAndCaptureOutput(build, launcher, workspace, listener, "ftrees", "--convert"));
+                StringTokenizer trees = new StringTokenizer(runHgAndCaptureOutput(build.getBuiltOn(), launcher, workspace, listener, "ftrees", "--convert"));
                 while (trees.hasMoreTokens()) {
                     String tree = trees.nextToken();
                     if (launch(launcher).cmds(findHgExe(build, listener, true).add("--config", "extensions.purge=", "clean", "--all")).
@@ -528,7 +528,7 @@ public class MercurialSCM extends SCM implements Serializable {
                     listener.error("Failed to pull");
                     return false;
                 }
-                // XXX if cachedSource != null, and using Hg 1.4.3+, consider: hg relink
+                // XXX if cachedSource != null, and using Hg 1.4.3+, consider (say every 100 builds): hg relink cachedSource
                 if(launch(launcher)
                     .cmds(findHgExe(build, listener, true).add(forest ? "fupdate" : "update", "--clean", "--rev", getBranch(env)))
                     .envs(env).stdout(listener).pwd(workspace).join()!=0) {
@@ -551,7 +551,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private MercurialTagAction createTagAction(AbstractBuild<?, ?> build, Launcher launcher, FilePath workspace, TaskListener listener)
             throws IOException, InterruptedException {
-        String id = runHgAndCaptureOutput(build, launcher, workspace, listener, "log", "--rev", ".", "--template", "{node}");
+        String id = runHgAndCaptureOutput(build.getBuiltOn(), launcher, workspace, listener, "log", "--rev", ".", "--template", "{node}");
         if (!REVISIONID_PATTERN.matcher(id).matches()) {
             listener.error("Expected to get an id but got " + id + " instead.");
             throw new AbortException();
@@ -559,11 +559,11 @@ public class MercurialSCM extends SCM implements Serializable {
         return new MercurialTagAction(id);
     }
 
-    private String runHgAndCaptureOutput(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, TaskListener listener, String... commands)
+    String runHgAndCaptureOutput(Node node, Launcher launcher, FilePath repository, TaskListener listener, String... commands)
             throws IOException, InterruptedException {
         ByteArrayOutputStream rev = new ByteArrayOutputStream();
-        ArgumentListBuilder args = findHgExe(build, listener, false).add(commands);
-        if (launch(launcher).cmds(args).pwd(workspace).stdout(rev).join() == 0) {
+        ArgumentListBuilder args = findHgExe(node, listener, false).add(commands);
+        if (launch(launcher).cmds(args).pwd(repository).stdout(rev).join() == 0) {
             return rev.toString();
         } else {
             listener.error("Failed to run " + args.toStringWithQuote());
@@ -606,6 +606,7 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         if (cachedSource != null) {
+            // XXX if using Hg 1.4.3+, consider: hg relink
             FilePath hgrc = workspace.child(".hg/hgrc");
             if (hgrc.exists()) {
                 String hgrcText = hgrc.readToString();
