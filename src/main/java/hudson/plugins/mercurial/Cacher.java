@@ -2,7 +2,6 @@ package hudson.plugins.mercurial;
 
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.model.Computer;
 import hudson.model.Hudson;
 import hudson.model.Node;
 import hudson.model.TaskListener;
@@ -21,8 +20,8 @@ class Cacher {
 
     private static final Map<String,ReentrantLock> locks = new HashMap<String,ReentrantLock>();
 
-    static String repositoryCache(String remote, Launcher launcher, TaskListener listener) throws IOException, InterruptedException {
-        Node master = Hudson.getInstance();
+    static String repositoryCache(MercurialSCM config, Node node, String remote, Launcher launcher, TaskListener listener)
+            throws IOException, InterruptedException {
         String hashSource = hashSource(remote);
         ReentrantLock lock;
         synchronized (locks) {
@@ -42,20 +41,22 @@ class Cacher {
                 listener.getLogger().println("...acquired cache lock.");
             }
             // Always update master cache first.
+            Node master = Hudson.getInstance();
             FilePath masterCaches = master.getRootPath().child("hgcache");
             masterCaches.mkdirs();
             File masterCache = new File(masterCaches.getRemote(), hashSource);
             String masterCacheS = masterCache.getAbsolutePath();
-            Node node = Computer.currentComputer().getNode();
             Launcher masterLauncher = node == master ? launcher : master.createLauncher(listener);
-            // XXX use equivalent of findHgExe from MercurialSCM rather than hardcoding hg command
+            // do we need to pass in EnvVars from a build too?
             if (masterCache.isDirectory()) {
-                if (MercurialSCM.launch(masterLauncher).pwd(masterCache).cmds("hg", "pull").stdout(listener).join() != 0) {
+                if (MercurialSCM.launch(masterLauncher).cmds(config.findHgExe(master, listener, true).
+                        add("pull")).pwd(masterCache).stdout(listener).join() != 0) {
                     listener.error("Failed to update " + masterCache);
                     return null;
                 }
             } else {
-                if (MercurialSCM.launch(masterLauncher).cmds("hg", "clone", "--noupdate", remote, masterCacheS).stdout(listener).join() != 0) {
+                if (MercurialSCM.launch(masterLauncher).cmds(config.findHgExe(master, listener, true).
+                        add("clone", "--noupdate", remote, masterCacheS)).stdout(listener).join() != 0) {
                     listener.error("Failed to clone " + remote);
                     return null;
                 }

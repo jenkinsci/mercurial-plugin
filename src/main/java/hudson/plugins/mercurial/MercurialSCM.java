@@ -13,8 +13,8 @@ import hudson.Launcher.ProcStarter;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
-import hudson.model.Computer;
 import hudson.model.Descriptor;
+import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.plugins.mercurial.browser.HgBrowser;
 import hudson.plugins.mercurial.browser.HgWeb;
@@ -195,16 +195,20 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     private ArgumentListBuilder findHgExe(AbstractBuild<?,?> build, TaskListener listener, boolean allowDebug) throws IOException, InterruptedException {
+        return findHgExe(build.getBuiltOn(), listener, allowDebug);
+    }
+
+    ArgumentListBuilder findHgExe(Node node, TaskListener listener, boolean allowDebug) throws IOException, InterruptedException {
         for (MercurialInstallation inst : MercurialInstallation.allInstallations()) {
             if (inst.getName().equals(installation)) {
                 // XXX what about forEnvironment?
                 ArgumentListBuilder b = new ArgumentListBuilder(inst.executableWithSubstitution(
-                        inst.forNode(Computer.currentComputer().getNode(), listener).getHome()));
+                        inst.forNode(node, listener).getHome()));
                 if (forest) {
                     String downloadForest = inst.getDownloadForest();
                     if (downloadForest != null) {
                         // Uniquify path so if user chooses a different URL it will be downloaded again.
-                        FilePath forestPy = build.getBuiltOn().getRootPath().child(String.format("forest-%08X.py", downloadForest.hashCode()));
+                        FilePath forestPy = node.getRootPath().child(String.format("forest-%08X.py", downloadForest.hashCode()));
                         if (!forestPy.exists()) {
                             listener.getLogger().println("Downloading: " + downloadForest);
                             InputStream is = new URL(downloadForest).openStream();
@@ -256,11 +260,12 @@ public class MercurialSCM extends SCM implements Serializable {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             // Get the list of changed files.
             AbstractProject<?,?> _project = project; // javac considers project.getLastBuild() to be a Run
-            ArgumentListBuilder cmd = findHgExe(_project.getLastBuild(), listener, false);
+            Node node = _project.getLastBuiltOn(); // HUDSON-5984: ugly but matches what AbstractProject.poll uses
+            ArgumentListBuilder cmd = findHgExe(node, listener, false);
             cmd.add(forest ? "fincoming" : "incoming", "--style", tmpFile.getRemote());
             cmd.add("--no-merges");
             cmd.add("--rev", getBranch(env));
-            String cachedSource = cachedSource(launcher, listener);
+            String cachedSource = cachedSource(node, launcher, listener);
             if (cachedSource != null) {
                 cmd.add(cachedSource);
             }
@@ -476,7 +481,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
             args.add("--rev", getBranch(env));
 
-            String cachedSource = cachedSource(launcher, listener);
+            String cachedSource = cachedSource(build.getBuiltOn(), launcher, listener);
             if (cachedSource != null) {
                 args.add(cachedSource);
             }
@@ -583,7 +588,7 @@ public class MercurialSCM extends SCM implements Serializable {
         ArgumentListBuilder args = findHgExe(build, listener, true);
         args.add(forest ? "fclone" : "clone");
         args.add("--rev", getBranch(env));
-        String cachedSource = cachedSource(launcher, listener);
+        String cachedSource = cachedSource(build.getBuiltOn(), launcher, listener);
         if (cachedSource != null) {
             args.add(cachedSource);
         } else {
@@ -640,7 +645,7 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     static boolean CACHE_LOCAL_REPOS = false;
-    private String cachedSource(Launcher launcher, TaskListener listener) {
+    private String cachedSource(Node node, Launcher launcher, TaskListener listener) {
         if (!CACHE_LOCAL_REPOS && source.matches("(file:|[/\\\\]).+")) {
             return null;
         }
@@ -659,7 +664,7 @@ public class MercurialSCM extends SCM implements Serializable {
             return null;
         }
         try {
-            return Cacher.repositoryCache(source, launcher, listener);
+            return Cacher.repositoryCache(this, node, source, launcher, listener);
         } catch (Exception x) {
             x.printStackTrace(listener.error("Failed to use repository cache for " + source));
             return null;
