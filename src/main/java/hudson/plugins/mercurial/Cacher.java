@@ -8,6 +8,8 @@ import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.util.ArgumentListBuilder;
 import java.io.IOException;
+import java.math.BigInteger;
+import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -54,6 +56,7 @@ class Cacher {
             Launcher masterLauncher = node == master ? launcher : master.createLauncher(listener);
             // do we need to pass in EnvVars from a build too?
             if (masterCache.isDirectory()) {
+                // XXX use joinWithTimeout since this stuff could be called from polling jobs
                 if (MercurialSCM.launch(masterLauncher).cmds(config.findHgExe(master, listener, true).
                         add("pull")).pwd(masterCache).stdout(listener).join() != 0) {
                     listener.error("Failed to update " + masterCache);
@@ -176,7 +179,13 @@ class Cacher {
             source += "/";
         }
         Matcher m = Pattern.compile(".+[/]([^/]+)[/]?").matcher(source);
-        return String.format("%08X%s", source.hashCode(), m.matches() ? "-" + m.group(1) : "");
+        BigInteger hash;
+        try {
+            hash = new BigInteger(1, MessageDigest.getInstance("SHA-1").digest(source.getBytes("UTF-8")));
+        } catch (Exception x) {
+            throw new AssertionError(x);
+        }
+        return String.format("%040X%s", hash, m.matches() ? "-" + m.group(1) : "");
     }
 
 }

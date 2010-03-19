@@ -9,10 +9,10 @@ public class CacherTest extends TestCase {
     }
 
     public void testHashSource() throws Exception {
-        assertEquals("CCC9A13E-core-main", Cacher.hashSource("http://hg.netbeans.org/core-main/"));
-        assertEquals("CCC9A13E-core-main", Cacher.hashSource("http://hg.netbeans.org/core-main"));
-        assertEquals("EDA2F178-project", Cacher.hashSource("ssh://dude@math.utexas.edu/some/project/"));
-        assertEquals("783CAF55-project", Cacher.hashSource("ssh://dudette@math.utexas.edu/some/project/"));
+        assertEquals("5439A9B4063BB8F4885037E71B5079E1913DB6CA-core-main", Cacher.hashSource("http://hg.netbeans.org/core-main/"));
+        assertEquals("5439A9B4063BB8F4885037E71B5079E1913DB6CA-core-main", Cacher.hashSource("http://hg.netbeans.org/core-main"));
+        assertEquals("5731708C5EEAF9F1320B57D5F6A21E85EA5ADF2D-project", Cacher.hashSource("ssh://dude@math.utexas.edu/some/project/"));
+        assertEquals("210ED9E2610F74A473985D8D9EF4483D5D30265E-project", Cacher.hashSource("ssh://dudette@math.utexas.edu/some/project/"));
     }
 
 }
