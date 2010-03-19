@@ -28,7 +28,7 @@ class Cacher {
 
     private static final Map<String,ReentrantLock> locks = new HashMap<String,ReentrantLock>();
 
-    static String repositoryCache(MercurialSCM config, Node node, String remote, Launcher launcher, TaskListener listener)
+    static String repositoryCache(MercurialSCM config, Node node, String remote, Launcher launcher, TaskListener listener, boolean fromPolling)
             throws IOException, InterruptedException {
         String hashSource = hashSource(remote);
         ReentrantLock lock;
@@ -56,16 +56,15 @@ class Cacher {
             Launcher masterLauncher = node == master ? launcher : master.createLauncher(listener);
             // do we need to pass in EnvVars from a build too?
             if (masterCache.isDirectory()) {
-                // XXX use joinWithTimeout since this stuff could be called from polling jobs
-                if (MercurialSCM.launch(masterLauncher).cmds(config.findHgExe(master, listener, true).
-                        add("pull")).pwd(masterCache).stdout(listener).join() != 0) {
+                if (MercurialSCM.joinWithPossibleTimeout(MercurialSCM.launch(masterLauncher).cmds(config.findHgExe(master, listener, true).
+                        add("pull")).pwd(masterCache).stdout(listener), fromPolling, listener) != 0) {
                     listener.error("Failed to update " + masterCache);
                     return null;
                 }
             } else {
                 masterCaches.mkdirs();
-                if (MercurialSCM.launch(masterLauncher).cmds(config.findHgExe(master, listener, true).
-                        add("clone", "--noupdate", remote, masterCacheS)).stdout(listener).join() != 0) {
+                if (MercurialSCM.joinWithPossibleTimeout(MercurialSCM.launch(masterLauncher).cmds(config.findHgExe(master, listener, true).
+                        add("clone", "--noupdate", remote, masterCacheS)).stdout(listener), fromPolling, listener) != 0) {
                     listener.error("Failed to clone " + remote);
                     return null;
                 }
@@ -81,8 +80,8 @@ class Cacher {
             try {
                 if (localCache.isDirectory()) {
                     // Need to transfer just newly available changesets.
-                    Set<String> masterHeads = headsOf(masterCache, config, master, masterLauncher, listener);
-                    Set<String> localHeads = headsOf(localCache, config, node, launcher, listener);
+                    Set<String> masterHeads = headsOf(masterCache, config, master, masterLauncher, listener, fromPolling);
+                    Set<String> localHeads = headsOf(localCache, config, node, launcher, listener, fromPolling);
                     if (localHeads.equals(masterHeads)) {
                         listener.getLogger().println("Local cache is up to date.");
                     } else {
@@ -98,29 +97,30 @@ class Cacher {
                             args.add("--base", head);
                         }
                         args.add("xfer.hg");
-                        if (MercurialSCM.launch(masterLauncher).cmds(args).pwd(masterCache).stdout(listener).join() != 0) {
+                        if (MercurialSCM.joinWithPossibleTimeout(MercurialSCM.launch(masterLauncher).cmds(args).
+                                pwd(masterCache).stdout(listener), fromPolling, listener) != 0) {
                             listener.error("Failed to send outgoing changes");
                             return null;
                         }
                     }
                 } else {
                     // Need to transfer entire repo.
-                    if (MercurialSCM.launch(masterLauncher).cmds(config.findHgExe(master, listener, true).
-                            add("bundle", "--all", "xfer.hg")).pwd(masterCache).stdout(listener).join() != 0) {
+                    if (MercurialSCM.joinWithPossibleTimeout(MercurialSCM.launch(masterLauncher).cmds(config.findHgExe(master, listener, true).
+                            add("bundle", "--all", "xfer.hg")).pwd(masterCache).stdout(listener), fromPolling, listener) != 0) {
                         listener.error("Failed to bundle repo");
                         return null;
                     }
                     localCaches.mkdirs();
-                    if (MercurialSCM.launch(launcher).cmds(config.findHgExe(node, listener, true).
-                            add("init", localCache.getRemote())).stdout(listener).join() != 0) {
+                    if (MercurialSCM.joinWithPossibleTimeout(MercurialSCM.launch(launcher).cmds(config.findHgExe(node, listener, true).
+                            add("init", localCache.getRemote())).stdout(listener), fromPolling, listener) != 0) {
                         listener.error("Failed to create local cache");
                         return null;
                     }
                 }
                 if (masterTransfer.exists()) {
                     masterTransfer.copyTo(localTransfer);
-                    if (MercurialSCM.launch(launcher).cmds(config.findHgExe(node, listener, true).
-                            add("unbundle", "xfer.hg")).pwd(localCache).stdout(listener).join() != 0) {
+                    if (MercurialSCM.joinWithPossibleTimeout(MercurialSCM.launch(launcher).cmds(config.findHgExe(node, listener, true).
+                            add("unbundle", "xfer.hg")).pwd(localCache).stdout(listener), fromPolling, listener) != 0) {
                         listener.error("Failed to unbundle " + localTransfer);
                         return null;
                     }
@@ -136,7 +136,7 @@ class Cacher {
     }
 
     private static final Map<Node,Map<List<String>,Boolean>> supportsHg15Syntax = new WeakHashMap<Node,Map<List<String>,Boolean>>();
-    private static Set<String> headsOf(FilePath repo, MercurialSCM config, Node node, Launcher launcher, TaskListener listener)
+    private static Set<String> headsOf(FilePath repo, MercurialSCM config, Node node, Launcher launcher, TaskListener listener, boolean fromPolling)
             throws IOException, InterruptedException {
         // Unfortunately Hg 1.5 completely changes the meaning of the heads command (Issue1893).
         // To avoid printing an error message for every build & poll, we try to remember whether each Hg configuration was 1.5+.
@@ -150,27 +150,27 @@ class Cacher {
         String output;
         if (using15Syntax == null) {
             try {
-                output = runHeadsCommand(repo, config, node, launcher, listener, true);
+                output = runHeadsCommand(repo, config, node, launcher, listener, fromPolling, true);
                 supportsHg15SyntaxForNode.put(hgConfig, true);
             } catch (AbortException x) {
-                output = runHeadsCommand(repo, config, node, launcher, listener, false);
+                output = runHeadsCommand(repo, config, node, launcher, listener, fromPolling, false);
                 supportsHg15SyntaxForNode.put(hgConfig, false);
             }
         } else if (using15Syntax) {
-            output = runHeadsCommand(repo, config, node, launcher, listener, true);
+            output = runHeadsCommand(repo, config, node, launcher, listener, fromPolling, true);
         } else {
-            output = runHeadsCommand(repo, config, node, launcher, listener, false);
+            output = runHeadsCommand(repo, config, node, launcher, listener, fromPolling, false);
         }
         Set<String> heads = new LinkedHashSet<String>(Arrays.asList(output.split("\n")));
         heads.remove("");
         return heads;
     }
-    private static String runHeadsCommand(FilePath repo, MercurialSCM config, Node node, Launcher launcher, TaskListener listener, boolean usingHg15Syntax)
-            throws IOException, InterruptedException {
+    private static String runHeadsCommand(FilePath repo, MercurialSCM config, Node node, Launcher launcher, TaskListener listener,
+            boolean fromPolling, boolean usingHg15Syntax) throws IOException, InterruptedException {
         if (usingHg15Syntax) {
-            return config.runHgAndCaptureOutput(node, launcher, repo, listener, "heads", "--template", "{node}\\n", "--topo", "--closed");
+            return config.runHgAndCaptureOutput(node, launcher, repo, listener, fromPolling, "heads", "--template", "{node}\\n", "--topo", "--closed");
         } else {
-            return config.runHgAndCaptureOutput(node, launcher, repo, listener, "heads", "--template", "{node}\\n");
+            return config.runHgAndCaptureOutput(node, launcher, repo, listener, fromPolling, "heads", "--template", "{node}\\n");
         }
     }
 

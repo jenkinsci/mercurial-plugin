@@ -265,20 +265,23 @@ public class MercurialSCM extends SCM implements Serializable {
             cmd.add(forest ? "fincoming" : "incoming", "--style", tmpFile.getRemote());
             cmd.add("--no-merges");
             cmd.add("--rev", getBranch(env));
-            String cachedSource = cachedSource(node, launcher, listener);
+            String cachedSource = cachedSource(node, launcher, listener, true);
             if (cachedSource != null) {
                 cmd.add(cachedSource);
             }
-            joinWithTimeout(
-                    launch(launcher).cmds(cmd).stdout(new ForkOutputStream(baos, output)).pwd(workspace).start(),
-                    /* #4528: not in JDK 5: 1, TimeUnit.HOURS*/60 * 60, TimeUnit.SECONDS, listener);
+            joinWithPossibleTimeout(
+                    launch(launcher).cmds(cmd).stdout(new ForkOutputStream(baos, output)).pwd(workspace),
+                    true, listener);
 
             MercurialTagAction cur = parseIncomingOutput(baos, baseline, changedFileNames);
             return new PollingResult(baseline,cur,computeDegreeOfChanges(changedFileNames,output));
         } finally {
             tmpFile.delete();
         }
+    }
 
+    static int joinWithPossibleTimeout(ProcStarter proc, boolean useTimeout, final TaskListener listener) throws IOException, InterruptedException {
+        return useTimeout ? joinWithTimeout(proc.start(), /* #4528: not in JDK 5: 1, TimeUnit.HOURS*/60 * 60, TimeUnit.SECONDS, listener) : proc.join();
     }
 
     private Change computeDegreeOfChanges(Set<String> changedFileNames, PrintStream output) {
@@ -302,7 +305,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
     // XXX maybe useful enough to make a convenience method on Proc?
     private static final ExecutorService executor = Executors.newCachedThreadPool();
-    private int joinWithTimeout(final Proc proc, final long timeout, final TimeUnit unit,
+    private static int joinWithTimeout(final Proc proc, final long timeout, final TimeUnit unit,
             final TaskListener listener) throws IOException, InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         try {
@@ -442,7 +445,8 @@ public class MercurialSCM extends SCM implements Serializable {
                 return false;
             }
             if (forest) {
-                StringTokenizer trees = new StringTokenizer(runHgAndCaptureOutput(build.getBuiltOn(), launcher, workspace, listener, "ftrees", "--convert"));
+                StringTokenizer trees = new StringTokenizer(runHgAndCaptureOutput(
+                        build.getBuiltOn(), launcher, workspace, listener, false, "ftrees", "--convert"));
                 while (trees.hasMoreTokens()) {
                     String tree = trees.nextToken();
                     if (launch(launcher).cmds(findHgExe(build, listener, true).add("--config", "extensions.purge=", "clean", "--all")).
@@ -482,7 +486,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
             args.add("--rev", getBranch(env));
 
-            cachedSource = cachedSource(build.getBuiltOn(), launcher, listener);
+            cachedSource = cachedSource(build.getBuiltOn(), launcher, listener, false);
             if (cachedSource != null) {
                 args.add(cachedSource);
             }
@@ -556,7 +560,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private MercurialTagAction createTagAction(AbstractBuild<?, ?> build, Launcher launcher, FilePath workspace, TaskListener listener)
             throws IOException, InterruptedException {
-        String id = runHgAndCaptureOutput(build.getBuiltOn(), launcher, workspace, listener, "log", "--rev", ".", "--template", "{node}");
+        String id = runHgAndCaptureOutput(build.getBuiltOn(), launcher, workspace, listener, false, "log", "--rev", ".", "--template", "{node}");
         if (!REVISIONID_PATTERN.matcher(id).matches()) {
             listener.error("Expected to get an id but got " + id + " instead.");
             throw new AbortException();
@@ -564,11 +568,11 @@ public class MercurialSCM extends SCM implements Serializable {
         return new MercurialTagAction(id);
     }
 
-    String runHgAndCaptureOutput(Node node, Launcher launcher, FilePath repository, TaskListener listener, String... commands)
+    String runHgAndCaptureOutput(Node node, Launcher launcher, FilePath repository, TaskListener listener, boolean fromPolling, String... commands)
             throws IOException, InterruptedException {
         ByteArrayOutputStream rev = new ByteArrayOutputStream();
         ArgumentListBuilder args = findHgExe(node, listener, false).add(commands);
-        if (launch(launcher).cmds(args).pwd(repository).stdout(rev).join() == 0) {
+        if (joinWithPossibleTimeout(launch(launcher).cmds(args).pwd(repository).stdout(rev), fromPolling, listener) == 0) {
             return rev.toString();
         } else {
             listener.error("Failed to run " + args.toStringWithQuote());
@@ -593,7 +597,7 @@ public class MercurialSCM extends SCM implements Serializable {
         ArgumentListBuilder args = findHgExe(build, listener, true);
         args.add(forest ? "fclone" : "clone");
         args.add("--rev", getBranch(env));
-        String cachedSource = cachedSource(build.getBuiltOn(), launcher, listener);
+        String cachedSource = cachedSource(build.getBuiltOn(), launcher, listener, false);
         if (cachedSource != null) {
             args.add(cachedSource);
         } else {
@@ -653,7 +657,7 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     static boolean CACHE_LOCAL_REPOS = false;
-    private String cachedSource(Node node, Launcher launcher, TaskListener listener) {
+    private String cachedSource(Node node, Launcher launcher, TaskListener listener, boolean fromPolling) {
         if (!CACHE_LOCAL_REPOS && source.matches("(file:|[/\\\\]).+")) {
             return null;
         }
@@ -672,7 +676,7 @@ public class MercurialSCM extends SCM implements Serializable {
             return null;
         }
         try {
-            return Cacher.repositoryCache(this, node, source, launcher, listener);
+            return Cacher.repositoryCache(this, node, source, launcher, listener, fromPolling);
         } catch (Exception x) {
             x.printStackTrace(listener.error("Failed to use repository cache for " + source));
             return null;
