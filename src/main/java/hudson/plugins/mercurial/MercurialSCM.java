@@ -676,7 +676,7 @@ public class MercurialSCM extends SCM implements Serializable {
             return null;
         }
         try {
-            return Cacher.repositoryCache(this, node, source, launcher, listener, fromPolling);
+            return Cache.fromURL(source).repositoryCache(this, node, launcher, listener, fromPolling).getRemote();
         } catch (Exception x) {
             x.printStackTrace(listener.error("Failed to use repository cache for " + source));
             return null;
