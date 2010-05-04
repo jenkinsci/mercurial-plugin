@@ -24,17 +24,26 @@
 package hudson.plugins.mercurial;
 
 import hudson.AbortException;
+import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Launcher.ProcStarter;
+import hudson.model.AbstractBuild;
 import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.util.ArgumentListBuilder;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.WeakHashMap;
+import java.util.regex.Pattern;
 
 /**
  * Encapsulates the invocation of "hg".
@@ -42,19 +51,37 @@ import java.util.List;
  * <p>
  * This reduces the amount of code in the main logic.
  *
+ * TODO: perhaps a subtype 'Repository' with a repository location field would be good.
+ *
  * @author Kohsuke Kawaguchi
  */
 public class HgExe {
     private final ArgumentListBuilder base;
-    private final Launcher launcher;
+    /**
+     * Environment variables to invoke hg with.
+     */
+    private final EnvVars env;
+    public final Launcher launcher;
+    public final Node node;
+    public final TaskListener listener;
+    private final Capability capability;
 
-    public HgExe(MercurialSCM scm, Launcher launcher, Node node, TaskListener listener) throws IOException, InterruptedException {
+    public HgExe(MercurialSCM scm, Launcher launcher, AbstractBuild build, TaskListener listener, EnvVars env) throws IOException, InterruptedException {
+        this(scm,launcher,build.getBuiltOn(),listener,env);
+    }
+
+    public HgExe(MercurialSCM scm, Launcher launcher, Node node, TaskListener listener, EnvVars env) throws IOException, InterruptedException {
         base = scm.findHgExe(node, listener, true);
+        this.node = node;
+        this.env = env;
         this.launcher = launcher;
+        this.listener = listener;
+        this.capability = Capability.get(this);
     }
 
     private ProcStarter l(ArgumentListBuilder args) {
-        return MercurialSCM.launch(launcher).cmds(args);
+        // set the default stdout
+        return MercurialSCM.launch(launcher).cmds(args).stdout(listener);
     }
 
     private ArgumentListBuilder seed() {
@@ -62,7 +89,7 @@ public class HgExe {
     }
 
     public ProcStarter pull() {
-        return l(seed().add("pull"));
+        return run("pull");
     }
 
     public ProcStarter clone(String... args) {
@@ -70,7 +97,7 @@ public class HgExe {
     }
 
     public ProcStarter bundleAll(String file) {
-        return l(seed().add("bundle","--all",file));
+        return run("bundle","--all",file);
     }
 
     public ProcStarter bundle(Collection<String> bases, String file) {
@@ -83,11 +110,69 @@ public class HgExe {
     }
 
     public ProcStarter init(FilePath path) {
-        return l(seed().add("init",path.getRemote()));
+        return run("init",path.getRemote());
     }
 
     public ProcStarter unbundle(String bundleFile) {
-        return l(seed().add("unbundle",bundleFile));
+        return run("unbundle",bundleFile);
+    }
+
+    public ProcStarter cleanAll() {
+        return run("--config", "extensions.purge=", "clean", "--all");        
+    }
+
+    /**
+     * Runs arbitrary command.
+     */
+    public ProcStarter run(String... args) {
+        return l(seed().add(args));
+    }
+
+    public ProcStarter run(ArgumentListBuilder args) {
+        return l(seed().add(args.toCommandArray()));
+    }
+
+    /**
+     * Obtains the heads of the repository.
+     */
+    public Set<String> heads(FilePath repo, boolean useTimeout) throws IOException, InterruptedException {
+        if (capability.headsIn15 == null) {
+            try {
+                Set<String> output = heads(repo, useTimeout, true);
+                capability.headsIn15 = true;
+                return output;
+            } catch (AbortException x) {
+                Set<String> output = heads(repo, useTimeout, false);
+                capability.headsIn15 = false;
+                return output;
+            }
+        } else {
+            return heads(repo, useTimeout, capability.headsIn15);
+        }
+    }
+
+    private Set<String> heads(FilePath repo, boolean useTimeout, boolean usingHg15Syntax) throws IOException, InterruptedException {
+        ArgumentListBuilder args = new ArgumentListBuilder("heads", "--template", "{node}\\n");
+        if(usingHg15Syntax)
+            args.add("--topo", "--closed");
+        String output = popen(repo,listener,useTimeout,args);
+
+        Set<String> heads = new LinkedHashSet<String>(Arrays.asList(output.split("\n")));
+        heads.remove("");
+        return heads;
+
+    }
+
+    /**
+     * Gets the revision ID of the tip of the workspace.
+     */
+    public String tip(FilePath repository) throws IOException, InterruptedException {
+        String id = popen(repository, listener, false, new ArgumentListBuilder("log", "--rev", ".", "--template", "{node}"));
+        if (!REVISIONID_PATTERN.matcher(id).matches()) {
+            listener.error("Expected to get an id but got " + id + " instead.");
+            throw new AbortException();
+        }
+        return id;
     }
 
     public List<String> toArgList() {
@@ -97,12 +182,12 @@ public class HgExe {
     /**
      * Runs the command and captures the output.
      */
-    public String popen(FilePath repository, TaskListener listener, boolean fromPolling, ArgumentListBuilder args)
+    public String popen(FilePath repository, TaskListener listener, boolean useTimeout, ArgumentListBuilder args)
             throws IOException, InterruptedException {
-        args = seed().add(args.toList());
+        args = seed().add(args.toCommandArray());
 
         ByteArrayOutputStream rev = new ByteArrayOutputStream();
-        if (MercurialSCM.joinWithPossibleTimeout(l(args).pwd(repository).stdout(rev), fromPolling, listener) == 0) {
+        if (MercurialSCM.joinWithPossibleTimeout(l(args).pwd(repository).stdout(rev), useTimeout, listener) == 0) {
             return rev.toString();
         } else {
             listener.error("Failed to run " + args.toStringWithQuote());
@@ -111,4 +196,34 @@ public class HgExe {
         }
     }
 
+    /**
+     * Capability of a particular hg invocation configuration (and location) on a specific node. Cached.
+     */
+    private static final class Capability {
+        /**
+         * Whether this supports 1.5-style "heads --topo ..." syntax.
+         */
+        volatile Boolean headsIn15;
+
+        private static final Map<Node, Map<List<String>, Capability>> MAP = new WeakHashMap<Node,Map<List<String>,Capability>>();
+
+        synchronized static Capability get(HgExe hg) {
+            Map<List<String>,Capability> m = MAP.get(hg.node);
+            if (m == null) {
+                m = new HashMap<List<String>,Capability>();
+                MAP.put(hg.node, m);
+            }
+
+            List<String> hgConfig = hg.toArgList();
+            Capability cap = m.get(hgConfig);
+            if (cap==null)
+                m.put(hgConfig,cap = new Capability());
+            return cap;
+        }
+    }
+
+    /**
+     * Pattern that matches revision ID.
+     */
+    private static final Pattern REVISIONID_PATTERN = Pattern.compile("[0-9a-f]{40}");
 }

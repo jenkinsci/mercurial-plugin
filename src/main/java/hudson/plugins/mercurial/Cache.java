@@ -1,23 +1,18 @@
 package hudson.plugins.mercurial;
 
-import hudson.AbortException;
+import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.Hudson;
 import hudson.model.Node;
 import hudson.model.TaskListener;
-import hudson.util.ArgumentListBuilder;
 
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.WeakHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -92,17 +87,17 @@ class Cache {
             Launcher masterLauncher = node == master ? launcher : master.createLauncher(listener);
 
             // hg invocation on master
-            HgExe masterHg = new HgExe(config,masterLauncher,master,listener);
-
             // do we need to pass in EnvVars from a build too?
+            HgExe masterHg = new HgExe(config,masterLauncher,master,listener,new EnvVars());
+
             if (masterCache.isDirectory()) {
-                if (MercurialSCM.joinWithPossibleTimeout(masterHg.pull().pwd(masterCache).stdout(listener), fromPolling, listener) != 0) {
+                if (MercurialSCM.joinWithPossibleTimeout(masterHg.pull().pwd(masterCache), fromPolling, listener) != 0) {
                     listener.error("Failed to update " + masterCache);
                     return null;
                 }
             } else {
                 masterCaches.mkdirs();
-                if (MercurialSCM.joinWithPossibleTimeout(masterHg.clone("clone", "--noupdate", remote, masterCache.getRemote()).stdout(listener), fromPolling, listener) != 0) {
+                if (MercurialSCM.joinWithPossibleTimeout(masterHg.clone("--noupdate", remote, masterCache.getRemote()), fromPolling, listener) != 0) {
                     listener.error("Failed to clone " + remote);
                     return null;
                 }
@@ -117,12 +112,12 @@ class Cache {
             FilePath localTransfer = localCache.child("xfer.hg");
             try {
                 // hg invocation on the slave
-                HgExe slaveHg = new HgExe(config,launcher,node,listener);
+                HgExe slaveHg = new HgExe(config,launcher,node,listener,new EnvVars());
 
                 if (localCache.isDirectory()) {
                     // Need to transfer just newly available changesets.
-                    Set<String> masterHeads = headsOf(masterHg, masterCache, master,  listener, fromPolling);
-                    Set<String> localHeads = headsOf(slaveHg, localCache, node, listener, fromPolling);
+                    Set<String> masterHeads = masterHg.heads(masterCache, fromPolling);
+                    Set<String> localHeads = slaveHg.heads(localCache, fromPolling);
                     if (localHeads.equals(masterHeads)) {
                         listener.getLogger().println("Local cache is up to date.");
                     } else {
@@ -134,26 +129,26 @@ class Cache {
                         // a major bug that if no csets are selected, the whole repo will be bundled; fortunately
                         // this case should be caught by equality check above.)
                         if (MercurialSCM.joinWithPossibleTimeout(masterHg.bundle(localHeads,"xfer.hg").
-                                pwd(masterCache).stdout(listener), fromPolling, listener) != 0) {
+                                pwd(masterCache), fromPolling, listener) != 0) {
                             listener.error("Failed to send outgoing changes");
                             return null;
                         }
                     }
                 } else {
                     // Need to transfer entire repo.
-                    if (MercurialSCM.joinWithPossibleTimeout(masterHg.bundleAll("xfer.hg").pwd(masterCache).stdout(listener), fromPolling, listener) != 0) {
+                    if (MercurialSCM.joinWithPossibleTimeout(masterHg.bundleAll("xfer.hg").pwd(masterCache), fromPolling, listener) != 0) {
                         listener.error("Failed to bundle repo");
                         return null;
                     }
                     localCaches.mkdirs();
-                    if (MercurialSCM.joinWithPossibleTimeout(slaveHg.init(localCache).stdout(listener), fromPolling, listener) != 0) {
+                    if (MercurialSCM.joinWithPossibleTimeout(slaveHg.init(localCache), fromPolling, listener) != 0) {
                         listener.error("Failed to create local cache");
                         return null;
                     }
                 }
                 if (masterTransfer.exists()) {
                     masterTransfer.copyTo(localTransfer);
-                    if (MercurialSCM.joinWithPossibleTimeout(slaveHg.unbundle("xfer.log").pwd(localCache).stdout(listener), fromPolling, listener) != 0) {
+                    if (MercurialSCM.joinWithPossibleTimeout(slaveHg.unbundle("xfer.log").pwd(localCache), fromPolling, listener) != 0) {
                         listener.error("Failed to unbundle " + localTransfer);
                         return null;
                     }
@@ -168,43 +163,6 @@ class Cache {
         }
     }
 
-    private static final Map<Node,Map<List<String>,Boolean>> supportsHg15Syntax = new WeakHashMap<Node,Map<List<String>,Boolean>>();
-    private static Set<String> headsOf(HgExe hg, FilePath repo, Node node, TaskListener listener, boolean fromPolling)
-            throws IOException, InterruptedException {
-        // Unfortunately Hg 1.5 completely changes the meaning of the heads command (Issue1893).
-        // To avoid printing an error message for every build & poll, we try to remember whether each Hg configuration was 1.5+.
-        List<String> hgConfig = hg.toArgList();
-        Map<List<String>,Boolean> supportsHg15SyntaxForNode = supportsHg15Syntax.get(node);
-        if (supportsHg15SyntaxForNode == null) {
-            supportsHg15SyntaxForNode = new HashMap<List<String>,Boolean>();
-            supportsHg15Syntax.put(node, supportsHg15SyntaxForNode);
-        }
-        Boolean using15Syntax = supportsHg15SyntaxForNode.get(hgConfig);
-        String output;
-        if (using15Syntax == null) {
-            try {
-                output = runHeadsCommand(hg, repo, listener, fromPolling, true);
-                supportsHg15SyntaxForNode.put(hgConfig, true);
-            } catch (AbortException x) {
-                output = runHeadsCommand(hg, repo, listener, fromPolling, false);
-                supportsHg15SyntaxForNode.put(hgConfig, false);
-            }
-        } else {
-            output = runHeadsCommand(hg, repo, listener, fromPolling, using15Syntax);
-        }
-        Set<String> heads = new LinkedHashSet<String>(Arrays.asList(output.split("\n")));
-        heads.remove("");
-        return heads;
-    }
-    
-    private static String runHeadsCommand(HgExe hg, FilePath repo, TaskListener listener,
-                                          boolean fromPolling, boolean usingHg15Syntax) throws IOException, InterruptedException {
-
-        ArgumentListBuilder args = new ArgumentListBuilder("heads", "--template", "{node}\\n");
-        if(usingHg15Syntax)
-            args.add("--topo", "--closed");
-        return hg.popen(repo,listener,fromPolling,args);
-    }
 
     /**
      * Hash a URL into a string that only contains characters that are safe as directory names.
