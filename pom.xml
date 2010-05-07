@@ -85,6 +85,17 @@
   </dependencies>
   <build>
       <plugins>
+         <plugin>
+              <groupId>org.codehaus.mojo</groupId>
+              <artifactId>cobertura-maven-plugin</artifactId>
+              <configuration>
+                <instrumentation>
+                    <excludes>
+                        <exclude>hudson/plugins/mercurial/browser/*$DescriptorImpl.class</exclude>
+                    </excludes>
+                </instrumentation>
+              </configuration>
+          </plugin>
           <plugin>
               <groupId>org.codehaus.mojo</groupId>
               <artifactId>animal-sniffer-maven-plugin</artifactId>
