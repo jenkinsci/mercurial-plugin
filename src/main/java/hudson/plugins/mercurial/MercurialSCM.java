@@ -78,7 +78,7 @@ public class MercurialSCM extends SCM implements Serializable {
      * Source repository URL from which we pull.
      */
     private final String source;
-    
+
     /**
      * Prefixes of files within the repository which we're dependent on.
      * Storing as member variable so as to only parse the dependencies string once.
@@ -87,9 +87,9 @@ public class MercurialSCM extends SCM implements Serializable {
     private transient Set<String> _modules;
     // Same thing, but not parsed for jelly.
     private final String modules;
-    
+
     /**
-     * In-repository branch to follow. Null indicates "default". 
+     * In-repository branch to follow. Null indicates "default".
      */
     private final String branch;
 
@@ -322,7 +322,11 @@ public class MercurialSCM extends SCM implements Serializable {
                                     unit.toString().toLowerCase(Locale.ENGLISH));
                             proc.kill();
                         }
-                    } catch (Exception x) {
+                    } catch (InterruptedException x) {
+                        listener.error(x.toString());
+                    } catch (IOException x) {
+                        listener.error(x.toString());
+                    } catch (RuntimeException x) {
                         listener.error(x.toString());
                     }
                 }
@@ -472,48 +476,51 @@ public class MercurialSCM extends SCM implements Serializable {
         hgBundle.delete();
 
         // calc changelog and create bundle
-        FileOutputStream os = new FileOutputStream(changelogFile);
-        os.write("<changesets>\n".getBytes());
+        final FileOutputStream os = new FileOutputStream(changelogFile);
         int r;
-        String cachedSource;
+        final String cachedSource;
         try {
-            ArgumentListBuilder args = findHgExe(build, listener, false);
-            args.add(forest ? "fincoming" : "incoming", "--quiet");
-            if (!forest) {
-                args.add("--bundle", "hg.bundle");
-            }
-
-            args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
-
-            args.add("--rev", getBranch(env));
-
-            cachedSource = cachedSource(build.getBuiltOn(), launcher, listener, false);
-            if (cachedSource != null) {
-                args.add(cachedSource);
-            }
-
-            ByteArrayOutputStream errorLog = new ByteArrayOutputStream();
-
-            // mercurial produces text in the platform default encoding, so we need to
-            // convert it back to UTF-8
-            WriterOutputStream o = new WriterOutputStream(new OutputStreamWriter(os, "UTF-8"));
             try {
-                r = launch(launcher).cmds(args).envs(env)
-                        .stdout(new ForkOutputStream(o,errorLog)).pwd(workspace).join();
-            } finally {
-                o.flush(); // make sure to commit all output
-            }
-            if(r!=0 && r!=1) {// 0.9.4 returns 1 for no changes
-                Util.copyStream(new ByteArrayInputStream(errorLog.toByteArray()),listener.getLogger());
-                listener.error("Failed to determine incoming changes");
+                os.write("<changesets>\n".getBytes());
+                ArgumentListBuilder args = findHgExe(build, listener, false);
+                args.add(forest ? "fincoming" : "incoming", "--quiet");
+                if (!forest) {
+                    args.add("--bundle", "hg.bundle");
+                }
+
+                args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
+
+                args.add("--rev", getBranch(env));
+
+                cachedSource = cachedSource(build.getBuiltOn(), launcher, listener, false);
+                if (cachedSource != null) {
+                    args.add(cachedSource);
+                }
+
+                ByteArrayOutputStream errorLog = new ByteArrayOutputStream();
+
+                // mercurial produces text in the platform default encoding, so we need to
+                // convert it back to UTF-8
+                WriterOutputStream o = new WriterOutputStream(new OutputStreamWriter(os, "UTF-8"));
+                try {
+                    r = launch(launcher).cmds(args).envs(env)
+                            .stdout(new ForkOutputStream(o,errorLog)).pwd(workspace).join();
+                } finally {
+                    o.flush(); // make sure to commit all output
+                }
+                if(r!=0 && r!=1) {// 0.9.4 returns 1 for no changes
+                    Util.copyStream(new ByteArrayInputStream(errorLog.toByteArray()),listener.getLogger());
+                    listener.error("Failed to determine incoming changes");
+                    return false;
+                }
+            } catch (IOException e) {
+                listener.error("Failed to pull");
+                e.printStackTrace(listener.getLogger());
                 return false;
+            } finally {
+                os.write("</changesets>".getBytes());
             }
-        } catch (IOException e) {
-            listener.error("Failed to pull");
-            e.printStackTrace(listener.getLogger());
-            return false;
         } finally {
-            os.write("</changesets>".getBytes());
             os.close();
         }
 
@@ -667,16 +674,16 @@ public class MercurialSCM extends SCM implements Serializable {
             super(HgBrowser.class);
             load();
         }
-        
+
         /**
          * {@inheritDoc}
-         * 
+         *
          * Due to compatibility issues with older version we implement this ourselves instead of relying
          * on the parent method. Kohsuke implemented a fix for this in the core (r21961), so we may drop
          * this function after 1.325 is released.
-         * 
+         *
          * @todo: remove this function after 1.325 is released.
-         * 
+         *
          * @see <a href="https://hudson.dev.java.net/issues/show_bug.cgi?id=4514">#4514</a>
          * @see <a href="http://fisheye4.atlassian.com/changelog/hudson/trunk/hudson?cs=21961">core fix</a>
          */
@@ -684,7 +691,7 @@ public class MercurialSCM extends SCM implements Serializable {
         public List<Descriptor<RepositoryBrowser<?>>> getBrowserDescriptors() {
             return RepositoryBrowsers.filter(HgBrowser.class);
         }
-        
+
         public String getDisplayName() {
             return "Mercurial";
         }
