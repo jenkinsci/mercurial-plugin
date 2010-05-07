@@ -97,8 +97,8 @@
                       </goals>
                       <configuration>
                           <signature>
-                              <groupId>org.jvnet.animal-sniffer</groupId>
-                              <artifactId>java1.5</artifactId>
+                              <groupId>org.codehaus.mojo.signature</groupId>
+                              <artifactId>java15</artifactId>
                               <version>1.0</version>
                           </signature>
                       </configuration>
