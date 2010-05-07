@@ -91,6 +91,7 @@
               <version>1.2</version>
               <executions>
                   <execution>
+                      <phase>package</phase>
                       <goals>
                           <goal>check</goal>
                       </goals>
@@ -103,13 +104,6 @@
                       </configuration>
                   </execution>
               </executions>
-              <dependencies>
-                <dependency>
-                    <groupId>cobertura</groupId>
-                    <artifactId>cobertura</artifactId>
-                    <version>1.8</version>
-                </dependency>
-              </dependencies>
           </plugin>
       </plugins>
   </build>
