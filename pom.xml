@@ -86,8 +86,8 @@
   <build>
       <plugins>
           <plugin>
-              <groupId>org.jvnet</groupId>
-              <artifactId>animal-sniffer</artifactId>
+              <groupId>org.codehaus.mojo</groupId>
+              <artifactId>animal-sniffer-maven-plugin</artifactId>
               <version>1.5</version>
               <executions>
                   <execution>
