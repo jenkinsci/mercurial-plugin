@@ -88,7 +88,7 @@
           <plugin>
               <groupId>org.jvnet</groupId>
               <artifactId>animal-sniffer</artifactId>
-              <version>1.2</version>
+              <version>1.5</version>
               <executions>
                   <execution>
                       <phase>package</phase>
