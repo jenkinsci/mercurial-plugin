@@ -30,6 +30,48 @@
           <artifactId>annotations</artifactId>
           <version>1.0.0</version>
       </dependency>
+      <dependency>
+          <groupId>commons-io</groupId>
+          <artifactId>commons-io</artifactId>
+          <version>1.4</version>
+          <scope>provided</scope>
+      </dependency>
+      <dependency>
+          <groupId>commons-beanutils</groupId>
+          <artifactId>commons-beanutils</artifactId>
+          <version>1.8.0</version>
+          <scope>provided</scope>
+      </dependency>
+      <dependency>
+          <groupId>commons-digester</groupId>
+          <artifactId>commons-digester</artifactId>
+          <version>1.7</version>
+          <scope>provided</scope>
+      </dependency>
+      <dependency>
+          <groupId>org.kohsuke.stapler</groupId>
+          <artifactId>json-lib</artifactId>
+          <version>2.1-rev6</version>
+          <scope>provided</scope>
+      </dependency>
+      <dependency>
+          <groupId>org.kohsuke.stapler</groupId>
+          <artifactId>stapler</artifactId>
+          <version>1.137</version>
+          <scope>provided</scope>
+      </dependency>
+      <dependency>
+          <groupId>xml-apis</groupId>
+          <artifactId>xml-apis</artifactId>
+          <version>1.0.b2</version>
+          <scope>provided</scope>
+      </dependency>
+      <dependency>
+          <groupId>org.jvnet.hudson.main</groupId>
+          <artifactId>remoting</artifactId>
+          <version>${parent.version}</version>
+          <scope>provided</scope>
+      </dependency>
   </dependencies>
   <build>
       <plugins>
