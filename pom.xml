@@ -100,6 +100,9 @@
                               <artifactId>java1.5</artifactId>
                               <version>1.0</version>
                           </signature>
+                          <ignores>
+                            <ignore>net.sourceforge.cobertura.coveragedata.TouchCollector</ignore>
+                          </ignores>
                       </configuration>
                   </execution>
               </executions>
