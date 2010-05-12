@@ -3,7 +3,6 @@
 -->
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
   <j:set var="browser" value="${it.build.parent.scm.effectiveBrowser}"/>
-
   <h2>Summary</h2>
   <ol>
     <j:forEach var="cs" items="${it.logs}">
@@ -25,8 +24,6 @@
           </div>
         </td>
       </tr>
-
-      <j:if test="${!cs.merge}">
         <j:forEach var="k" items="${cs.editTypes}">
           <j:forEach var="p" items="${cs.getPaths(k)}">
             <tr>
@@ -47,7 +44,6 @@
             </tr>
           </j:forEach>
         </j:forEach>
-      </j:if>
     </j:forEach>
   </table>
 </j:jelly>

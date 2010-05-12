@@ -149,6 +149,29 @@ public class MercurialSCMTest extends MercurialTestCase {
         buildAndCheck(p, "further-variant", new ParametersAction(new StringParameterValue("BRANCH", "b")));
     }
 
+    @Bug(6517)
+    public void testFileListOmittedForMerges() throws Exception {
+        FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null, null, false, false));
+        hg(repo, "init");
+        touchAndCommit(repo, "f1");
+        p.scheduleBuild2(0).get();
+        hg(repo, "up", "null");
+        touchAndCommit(repo, "f2");
+        hg(repo, "merge");
+        hg(repo, "commit", "--message", "merge");
+        Iterator<? extends ChangeLogSet.Entry> it = p.scheduleBuild2(0).get().getChangeSet().iterator();
+        assertTrue(it.hasNext());
+        ChangeLogSet.Entry entry = it.next();
+        assertTrue(((MercurialChangeSet) entry).isMerge());
+        assertEquals(Collections.emptySet(), new HashSet<String>(entry.getAffectedPaths()));
+        assertTrue(it.hasNext());
+        entry = it.next();
+        assertFalse(((MercurialChangeSet) entry).isMerge());
+        assertEquals(Collections.singleton("f2"), new HashSet<String>(entry.getAffectedPaths()));
+        assertFalse(it.hasNext());
+    }
+
     /* XXX the following will pass, but canUpdate is not going to work without further changes:
     public void testParameterizedBuildsSource() throws Exception {
         p = createFreeStyleProject();
