@@ -5,7 +5,6 @@ import hudson.model.FreeStyleProject;
 import hudson.model.ParametersAction;
 import hudson.model.StringParameterValue;
 import hudson.scm.ChangeLogSet;
-import hudson.util.StreamTaskListener;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
@@ -49,21 +48,21 @@ public class MercurialSCMTest extends MercurialTestCase {
         hg(repo, "update", "--clean", "default");
         touchAndCommit(repo, "default-2");
         // Changes in default should be ignored.
-        assertFalse(p.pollSCMChanges(new StreamTaskListener(System.out)));
+        assertFalse(pollSCMChanges(p));
         hg(repo, "update", "--clean", "b");
         touchAndCommit(repo, "b-2");
         // But changes in b should be pulled.
-        assertTrue(p.pollSCMChanges(new StreamTaskListener(System.out)));
+        assertTrue(pollSCMChanges(p));
         buildAndCheck(p, "b-2");
         // Switch to default branch with an existing workspace.
         p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null, null, false, false));
         // Should now consider preexisting changesets in default to be poll triggers.
-        assertTrue(p.pollSCMChanges(new StreamTaskListener(System.out)));
+        assertTrue(pollSCMChanges(p));
         // Should switch working copy to default branch.
         buildAndCheck(p, "default-2");
         touchAndCommit(repo, "b-3");
         // Changes in other branch should be ignored.
-        assertFalse(p.pollSCMChanges(new StreamTaskListener(System.out)));
+        assertFalse(pollSCMChanges(p));
     }
 
     @Bug(1099)
@@ -74,10 +73,10 @@ public class MercurialSCMTest extends MercurialTestCase {
         touchAndCommit(repo, "dir1/f");
         buildAndCheck(p, "dir1/f");
         touchAndCommit(repo, "dir2/f");
-        assertTrue(p.pollSCMChanges(new StreamTaskListener(System.out)));
+        assertTrue(pollSCMChanges(p));
         buildAndCheck(p, "dir2/f");
         touchAndCommit(repo, "dir3/f");
-        assertFalse(p.pollSCMChanges(new StreamTaskListener(System.out)));
+        assertFalse(pollSCMChanges(p));
         // No support for partial checkouts yet, so workspace will contain everything.
         buildAndCheck(p, "dir3/f");
         // HUDSON-4972: do not pay attention to merges
@@ -88,7 +87,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         hg(repo, "merge");
         new FilePath(repo).child("dir2/f").write("stuff", "UTF-8");
         hg(repo, "commit", "--message", "merged");
-        assertFalse(p.pollSCMChanges(new StreamTaskListener(System.out)));
+        assertFalse(pollSCMChanges(p));
         buildAndCheck(p, "dir4/f");
     }
 
@@ -146,7 +145,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         assertTrue(log, log.contains("--rev b"));
         assertFalse(log, log.contains("--rev ${BRANCH}"));
         touchAndCommit(repo, "further-variant");
-        assertTrue(p.pollSCMChanges(new StreamTaskListener(System.out)));
+        assertTrue(pollSCMChanges(p));
         buildAndCheck(p, "further-variant", new ParametersAction(new StringParameterValue("BRANCH", "b")));
     }
 
@@ -169,9 +168,9 @@ public class MercurialSCMTest extends MercurialTestCase {
         buildAndCheck(p, "dir1/f", new ParametersAction(new StringParameterValue("MODULES", "dir2")));
         hg(repo, "update", "default");
         touchAndCommit(repo, "dir1/g");
-        assertFalse(p.pollSCMChanges(new StreamTaskListener(System.out)));
+        assertFalse(pollSCMChanges(p));
         touchAndCommit(repo, "dir2/g");
-        assertTrue(p.pollSCMChanges(new StreamTaskListener(System.out)));
+        assertTrue(pollSCMChanges(p));
     }
      */
 

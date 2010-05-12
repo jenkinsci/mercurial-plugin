@@ -10,6 +10,7 @@ import hudson.model.Hudson;
 import hudson.model.TaskListener;
 import hudson.util.StreamTaskListener;
 import java.io.File;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import org.jvnet.hudson.test.HudsonTestCase;
 
@@ -20,7 +21,7 @@ public abstract class MercurialTestCase extends HudsonTestCase {
 
     protected @Override void setUp() throws Exception {
         super.setUp();
-        listener = new StreamTaskListener(System.out);
+        listener = new StreamTaskListener(System.out, Charset.defaultCharset());
         launcher = Hudson.getInstance().createLauncher(listener);
     }
 
@@ -48,6 +49,10 @@ public abstract class MercurialTestCase extends HudsonTestCase {
         @SuppressWarnings("deprecation")
         String log = b.getLog();
         return log;
+    }
+
+    protected boolean pollSCMChanges(FreeStyleProject p) {
+        return p.poll(new StreamTaskListener(System.out, Charset.defaultCharset())).hasChanges();
     }
 
 }
