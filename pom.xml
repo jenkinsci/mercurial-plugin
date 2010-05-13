@@ -7,7 +7,7 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>mercurial</artifactId>
-  <version>1.29-SNAPSHOT</version>
+  <version>1.29</version>
   <packaging>hpi</packaging>
   <name>Hudson Mercurial plugin</name>
   <description>Integrates Hudson to Mercurial SCM</description>
@@ -224,4 +224,10 @@
           </plugin>
       </plugins>
   </reporting>
+
+  <scm>
+    <connection>scm:svn:https://guest@svn.dev.java.net/svn/hudson/tags/mercurial-1.29</connection>
+    <developerConnection>scm:svn:https://svn.dev.java.net/svn/hudson/tags/mercurial-1.29</developerConnection>
+    <url>https://hudson.dev.java.net/source/browse/hudson/tags/mercurial-1.29</url>
+  </scm>
 </project>
