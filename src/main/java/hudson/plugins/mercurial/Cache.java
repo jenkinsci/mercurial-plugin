@@ -148,7 +148,7 @@ class Cache {
                 }
                 if (masterTransfer.exists()) {
                     masterTransfer.copyTo(localTransfer);
-                    if (MercurialSCM.joinWithPossibleTimeout(slaveHg.unbundle("xfer.log").pwd(localCache), fromPolling, listener) != 0) {
+                    if (MercurialSCM.joinWithPossibleTimeout(slaveHg.unbundle("xfer.hg").pwd(localCache), fromPolling, listener) != 0) {
                         listener.error("Failed to unbundle " + localTransfer);
                         return null;
                     }
