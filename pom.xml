@@ -123,6 +123,7 @@
           <plugin>
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-project-info-reports-plugin</artifactId>
+              <version>2.1.2</version>
               <!--
                   Avoid hanging site generation waiting for 'http://snapshots.maven.codehaus.org/maven2' see
                   http://jira.codehaus.org/browse/MPIR-137
