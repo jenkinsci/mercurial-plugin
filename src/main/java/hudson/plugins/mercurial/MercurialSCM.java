@@ -270,6 +270,7 @@ public class MercurialSCM extends SCM implements Serializable {
             cmd.add(forest ? "fincoming" : "incoming", "--style", tmpFile.getRemote());
             cmd.add("--no-merges");
             cmd.add("--rev", getBranch(env));
+            cmd.add("--newest-first");
             String cachedSource = cachedSource(node, launcher, listener, true);
             if (cachedSource != null) {
                 cmd.add(cachedSource);
@@ -383,7 +384,10 @@ public class MercurialSCM extends SCM implements Serializable {
                 }
 
                 if (id.equals(baseline.id)) {
-                    break; // no need to go beyond this line
+                    // Trim the baseline changeset and earlier.
+                    // HUDSON-6337 uses --newest-first to try to order them;
+                    // --prune would be better but incoming does not support it.
+                    break;
                 }
             }
         }

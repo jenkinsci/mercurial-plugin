@@ -28,4 +28,9 @@ public class MercurialTagAction extends SCMRevisionState {
     public String getShortId() {
         return id.substring(0,12);
     }
+
+    public @Override String toString() {
+        return "MercurialTagAction:" + id;
+    }
+
 }

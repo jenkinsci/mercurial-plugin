@@ -91,6 +91,21 @@ public class MercurialSCMTest extends MercurialTestCase {
         buildAndCheck(p, "dir4/f");
     }
 
+    @Bug(6337)
+    public void testPollingLimitedToModules2() throws Exception {
+        FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, "dir1", null, false, false));
+        hg(repo, "init");
+        touchAndCommit(repo, "starter");
+        pollSCMChanges(p);
+        buildAndCheck(p, "starter");
+        touchAndCommit(repo, "dir2/f");
+        assertFalse(pollSCMChanges(p));
+        touchAndCommit(repo, "dir1/f");
+        assertTrue(pollSCMChanges(p));
+        buildAndCheck(p, "dir1/f");
+    }
+
     @Bug(4702)
     public void testChangelogLimitedToModules() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
