@@ -310,7 +310,7 @@ public class MercurialSCM extends SCM implements Serializable {
         return Change.SIGNIFICANT;
     }
 
-    // XXX maybe useful enough to make a convenience method on Proc?
+    // XXX use version from hudson-main 1.363 when available
     private static final ExecutorService executor = Executors.newCachedThreadPool();
     private static int joinWithTimeout(final Proc proc, final long timeout, final TimeUnit unit,
             final TaskListener listener) throws IOException, InterruptedException {
