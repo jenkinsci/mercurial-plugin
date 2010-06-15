@@ -81,7 +81,7 @@ public class HgExe {
 
     private ProcStarter l(ArgumentListBuilder args) {
         // set the default stdout
-        return MercurialSCM.launch(launcher).cmds(args).stdout(listener);
+        return MercurialSCM.launch(launcher).cmds(args).stdout(listener).envs(env);
     }
 
     private ArgumentListBuilder seed() {
