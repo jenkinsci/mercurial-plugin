@@ -664,7 +664,12 @@ public class MercurialSCM extends SCM implements Serializable {
         }
         try {
             FilePath cache = Cache.fromURL(source).repositoryCache(this, node, launcher, listener, fromPolling);
-            return cache != null ? cache.getRemote() : null;
+            if (cache != null) {
+                return cache.getRemote();
+            } else {
+                listener.error("Failed to use repository cache for " + source);
+                return null;
+            }
         } catch (Exception x) {
             x.printStackTrace(listener.error("Failed to use repository cache for " + source));
             return null;
