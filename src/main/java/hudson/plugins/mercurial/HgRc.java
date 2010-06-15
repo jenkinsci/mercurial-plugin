@@ -1,5 +1,6 @@
 package hudson.plugins.mercurial;
 
+import edu.umd.cs.findbugs.annotations.SuppressWarnings;
 import org.apache.commons.io.IOUtils;
 
 import java.io.BufferedReader;
@@ -30,6 +31,7 @@ final class HgRc {
         return new FileReader(hgrc);
     }
 
+    @SuppressWarnings("SBSC_USE_STRINGBUFFER_CONCATENATION")
     HgRc(Reader input, File hgrc) throws IOException {
         try {
             BufferedReader r = new BufferedReader(input);
