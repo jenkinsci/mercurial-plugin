@@ -1,5 +1,6 @@
 package hudson.plugins.mercurial;
 
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.SuppressWarnings;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -643,7 +644,7 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     static boolean CACHE_LOCAL_REPOS = false;
-    private String cachedSource(Node node, Launcher launcher, TaskListener listener, boolean fromPolling) {
+    private @CheckForNull String cachedSource(Node node, Launcher launcher, TaskListener listener, boolean fromPolling) {
         if (!CACHE_LOCAL_REPOS && source.matches("(file:|[/\\\\]).+")) {
             return null;
         }
@@ -662,7 +663,8 @@ public class MercurialSCM extends SCM implements Serializable {
             return null;
         }
         try {
-            return Cache.fromURL(source).repositoryCache(this, node, launcher, listener, fromPolling).getRemote();
+            FilePath cache = Cache.fromURL(source).repositoryCache(this, node, launcher, listener, fromPolling);
+            return cache != null ? cache.getRemote() : null;
         } catch (Exception x) {
             x.printStackTrace(listener.error("Failed to use repository cache for " + source));
             return null;
