@@ -18,7 +18,7 @@ public class ForestTest extends MercurialTestCase {
         toprepo = createTmpDir();
         hg(toprepo, "init");
         subrepo = new File(toprepo, "sub");
-        subrepo.mkdir();
+        assertTrue(subrepo.mkdir());
         hg(subrepo, "init");
     }
 
