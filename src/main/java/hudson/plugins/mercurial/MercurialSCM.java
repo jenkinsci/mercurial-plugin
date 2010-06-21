@@ -6,7 +6,6 @@ import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.Proc;
 import hudson.Util;
 import hudson.FilePath.FileCallable;
 import hudson.Launcher.ProcStarter;
@@ -45,14 +44,10 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Locale;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import static java.util.logging.Level.FINE;
@@ -288,7 +283,7 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     static int joinWithPossibleTimeout(ProcStarter proc, boolean useTimeout, final TaskListener listener) throws IOException, InterruptedException {
-        return useTimeout ? joinWithTimeout(proc.start(), /* #4528: not in JDK 5: 1, TimeUnit.HOURS*/60 * 60, TimeUnit.SECONDS, listener) : proc.join();
+        return useTimeout ? proc.start().joinWithTimeout(/* #4528: not in JDK 5: 1, TimeUnit.HOURS*/60 * 60, TimeUnit.SECONDS, listener) : proc.join();
     }
 
     private Change computeDegreeOfChanges(Set<String> changedFileNames, PrintStream output) {
@@ -308,35 +303,6 @@ public class MercurialSCM extends SCM implements Serializable {
 
         output.println("Dependent changes detected");
         return Change.SIGNIFICANT;
-    }
-
-    // XXX use version from hudson-main 1.363 when available
-    private static final ExecutorService executor = Executors.newCachedThreadPool();
-    private static int joinWithTimeout(final Proc proc, final long timeout, final TimeUnit unit,
-            final TaskListener listener) throws IOException, InterruptedException {
-        final CountDownLatch latch = new CountDownLatch(1);
-        try {
-            executor.submit(new Runnable() {
-                public void run() {
-                    try {
-                        if (!latch.await(timeout, unit)) {
-                            listener.error("Timeout after " + timeout + " " +
-                                    unit.toString().toLowerCase(Locale.ENGLISH));
-                            proc.kill();
-                        }
-                    } catch (InterruptedException x) {
-                        listener.error(x.toString());
-                    } catch (IOException x) {
-                        listener.error(x.toString());
-                    } catch (RuntimeException x) {
-                        listener.error(x.toString());
-                    }
-                }
-            });
-            return proc.join();
-        } finally {
-            latch.countDown();
-        }
     }
 
     /**
@@ -400,7 +366,7 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     @Override
-    public boolean checkout(AbstractBuild build, Launcher launcher, FilePath workspace, final BuildListener listener, File changelogFile)
+    public boolean checkout(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, final BuildListener listener, File changelogFile)
             throws IOException, InterruptedException {
         boolean canUpdate = workspace.act(new FileCallable<Boolean>() {
             public Boolean invoke(File ws, VirtualChannel channel) throws IOException {
@@ -622,7 +588,7 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     @Override
-    public void buildEnvVars(AbstractBuild build, Map<String, String> env) {
+    public void buildEnvVars(AbstractBuild<?,?> build, Map<String, String> env) {
         MercurialTagAction a = build.getAction(MercurialTagAction.class);
         if (a != null) {
             env.put("MERCURIAL_REVISION", a.id);
