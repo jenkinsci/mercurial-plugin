@@ -11,7 +11,9 @@ import hudson.model.TaskListener;
 import hudson.util.StreamTaskListener;
 import java.io.File;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import org.jvnet.hudson.test.HudsonTestCase;
 
 public abstract class MercurialTestCase extends HudsonTestCase {
@@ -25,8 +27,13 @@ public abstract class MercurialTestCase extends HudsonTestCase {
         launcher = Hudson.getInstance().createLauncher(listener);
     }
 
-    protected void hg(File repo, String... args) throws Exception {
-        assertEquals(0, MercurialSCM.launch(launcher).cmds(new File("hg"), args).pwd(repo).stdout(listener).join());
+    protected final void hg(File repo, String... args) throws Exception {
+        List<String> cmds = new ArrayList<String>();
+        cmds.add("hg");
+        cmds.add("--config");
+        cmds.add("ui.username=nobody@nowhere.net");
+        cmds.addAll(Arrays.asList(args));
+        assertEquals(0, MercurialSCM.launch(launcher).cmds(cmds).pwd(repo).stdout(listener).join());
     }
 
     protected void touchAndCommit(File repo, String... names) throws Exception {
