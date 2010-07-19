@@ -14,6 +14,8 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import org.jvnet.hudson.test.HudsonTestCase;
 
 public abstract class MercurialTestCase extends HudsonTestCase {
@@ -51,7 +53,13 @@ public abstract class MercurialTestCase extends HudsonTestCase {
 //        for (String line : b.getLog(Integer.MAX_VALUE)) {
 //            System.err.println(">> " + line);
 //        }
-        assertTrue(b.getWorkspace().child(name).exists());
+        if (!b.getWorkspace().child(name).exists()) {
+            Set<String> children = new TreeSet<String>();
+            for (FilePath child : b.getWorkspace().list()) {
+                children.add(child.getName());
+            }
+            fail("Could not find " + name + " among " + children);
+        }
         assertNotNull(b.getAction(MercurialTagAction.class));
         @SuppressWarnings("deprecation")
         String log = b.getLog();
