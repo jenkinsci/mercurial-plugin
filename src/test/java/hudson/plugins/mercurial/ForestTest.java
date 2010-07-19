@@ -31,11 +31,13 @@ public class ForestTest extends MercurialTestCase {
         FilePath ws = p.getSomeWorkspace();
         ws.child("junk").touch(0);
         ws.child("sub/trash").touch(0);
+        /* XXX currently broken: http://bitbucket.org/pmezard/hgforest-crew/issue/9/fpull-broken-on-16
         buildAndCheck(p, "a");
         assertFalse(ws.child("junk").exists());
         assertFalse(ws.child("sub/trash").exists());
         touchAndCommit(subrepo, "more");
         buildAndCheck(p, "sub/more");
+         */
     }
 
 }
