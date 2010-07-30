@@ -23,7 +23,7 @@ public class MercurialSCMTest extends MercurialTestCase {
 
     public void testBasicOps() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
-        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null, null, false, false));
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null, null, null, false, false));
 
         hg(repo, "init");
         touchAndCommit(repo, "a");
@@ -43,7 +43,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         touchAndCommit(repo, "b-1");
         FreeStyleProject p = createFreeStyleProject();
         // Clone off b.
-        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "b", null, null, false, false));
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "b", null, null, null, false, false));
         buildAndCheck(p, "b-1");
         hg(repo, "update", "--clean", "default");
         touchAndCommit(repo, "default-2");
@@ -55,7 +55,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         assertTrue(pollSCMChanges(p));
         buildAndCheck(p, "b-2");
         // Switch to default branch with an existing workspace.
-        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null, null, false, false));
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null, null, null, false, false));
         // Should now consider preexisting changesets in default to be poll triggers.
         assertTrue(pollSCMChanges(p));
         // Should switch working copy to default branch.
@@ -68,7 +68,7 @@ public class MercurialSCMTest extends MercurialTestCase {
     @Bug(1099)
     public void testPollingLimitedToModules() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
-        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, "dir1 dir2", null, false, false));
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, "dir1 dir2", null, null, false, false));
         hg(repo, "init");
         touchAndCommit(repo, "dir1/f");
         buildAndCheck(p, "dir1/f");
@@ -94,7 +94,7 @@ public class MercurialSCMTest extends MercurialTestCase {
     @Bug(6337)
     public void testPollingLimitedToModules2() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
-        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, "dir1", null, false, false));
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, "dir1", null, null, false, false));
         hg(repo, "init");
         touchAndCommit(repo, "starter");
         pollSCMChanges(p);
@@ -110,7 +110,7 @@ public class MercurialSCMTest extends MercurialTestCase {
     public void testChangelogLimitedToModules() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
         // Control case: no modules specified.
-        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null, null, false, false));
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null, null, null, false, false));
         hg(repo, "init");
         touchAndCommit(repo, "dir1/f1");
         p.scheduleBuild2(0).get();
@@ -120,7 +120,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         ChangeLogSet.Entry entry = it.next();
         assertEquals(Collections.singleton("dir2/f1"), new HashSet<String>(entry.getAffectedPaths()));
         assertFalse(it.hasNext());
-        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, "dir1 extra", null, false, false));
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, "dir1 extra", null, null, false, false));
         // dir2/f2 change should be ignored.
         touchAndCommit(repo, "dir1/f2");
         touchAndCommit(repo, "dir2/f2");
@@ -154,7 +154,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         hg(repo, "branch", "b");
         touchAndCommit(repo, "variant");
         FreeStyleProject p = createFreeStyleProject();
-        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "${BRANCH}", null, null, false, false));
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "${BRANCH}", null, null, null, false, false));
         // This is not how a real parameterized build runs, but using ParametersDefinitionProperty just looks untestable:
         String log = buildAndCheck(p, "variant", new ParametersAction(new StringParameterValue("BRANCH", "b")));
         assertTrue(log, log.contains("--rev b"));
@@ -167,7 +167,7 @@ public class MercurialSCMTest extends MercurialTestCase {
     @Bug(6517)
     public void testFileListOmittedForMerges() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
-        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null, null, false, false));
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null, null, null, false, false));
         hg(repo, "init");
         touchAndCommit(repo, "f1");
         p.scheduleBuild2(0).get();
@@ -184,6 +184,23 @@ public class MercurialSCMTest extends MercurialTestCase {
         entry = it.next();
         assertFalse(((MercurialChangeSet) entry).isMerge());
         assertEquals(Collections.singleton("f2"), new HashSet<String>(entry.getAffectedPaths()));
+        assertFalse(it.hasNext());
+    }
+
+    @Bug(3602)
+    public void testSubdirectoryCheckout() throws Exception {
+        FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null, "repo", null, false, false));
+        hg(repo, "init");
+        touchAndCommit(repo, "f1");
+        buildAndCheck(p, "repo/f1");
+        touchAndCommit(repo, "f2");
+        buildAndCheck(p, "repo/f2");
+        touchAndCommit(repo, "f3");
+        Iterator<? extends ChangeLogSet.Entry> it = p.scheduleBuild2(0).get().getChangeSet().iterator();
+        assertTrue(it.hasNext());
+        ChangeLogSet.Entry entry = it.next();
+        assertEquals(Collections.singleton("f3"), new HashSet<String>(entry.getAffectedPaths()));
         assertFalse(it.hasNext());
     }
 

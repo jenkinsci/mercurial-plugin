@@ -26,7 +26,7 @@ public class ForestTest extends MercurialTestCase {
         touchAndCommit(toprepo, "a");
         touchAndCommit(subrepo, "b");
         FreeStyleProject p = createFreeStyleProject();
-        p.setScm(new MercurialSCM("forested" ,toprepo.getPath(), null, null, null, true, true));
+        p.setScm(new MercurialSCM("forested" ,toprepo.getPath(), null, null, null, null, true, true));
         buildAndCheck(p, "sub/b");
         FilePath ws = p.getSomeWorkspace();
         ws.child("junk").touch(0);

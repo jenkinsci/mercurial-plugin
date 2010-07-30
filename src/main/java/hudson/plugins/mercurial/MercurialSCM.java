@@ -89,16 +89,20 @@ public class MercurialSCM extends SCM implements Serializable {
      */
     private final String branch;
 
+    /** Slash-separated subdirectory of the workspace in which the repository will be kept; null for top level. */
+    private final String subdir;
+
     private final boolean clean;
     private final boolean forest;
 
     private HgBrowser browser;
 
     @DataBoundConstructor
-    public MercurialSCM(String installation, String source, String branch, String modules, HgBrowser browser, boolean clean, boolean forest) {
+    public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean, boolean forest) {
         this.installation = installation;
         this.source = source;
         this.modules = Util.fixNull(modules);
+        this.subdir = Util.fixEmptyAndTrim(subdir);
         this.clean = clean;
         this.forest = forest;
         parseModules();
@@ -159,6 +163,14 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private String getBranch(EnvVars env) {
         return branch == null ? "default" : env.expand(branch);
+    }
+
+    public String getSubdir() {
+        return subdir;
+    }
+
+    private FilePath workspace2Repo(FilePath workspace) {
+        return subdir != null ? workspace.child(subdir) : workspace;
     }
 
     @Override
@@ -239,7 +251,7 @@ public class MercurialSCM extends SCM implements Serializable {
             throws IOException, InterruptedException {
         // tag action is added during checkout, so this shouldn't be called, but just in case.
         HgExe hg = new HgExe(this, launcher, build, listener, build.getEnvironment(listener));
-        return new MercurialTagAction(hg.tip(build.getWorkspace()));
+        return new MercurialTagAction(hg.tip(workspace2Repo(build.getWorkspace())));
     }
 
     private static final String FILES_STYLE = "changeset = 'id:{node}\\nfiles:{files}\\n'\n" + "file = '{file}:'";
@@ -272,7 +284,7 @@ public class MercurialSCM extends SCM implements Serializable {
                 cmd.add(cachedSource);
             }
             joinWithPossibleTimeout(
-                    launch(launcher).cmds(cmd).stdout(new ForkOutputStream(baos, output)).pwd(workspace),
+                    launch(launcher).cmds(cmd).stdout(new ForkOutputStream(baos, output)).pwd(workspace2Repo(workspace)),
                     true, listener);
 
             MercurialTagAction cur = parseIncomingOutput(baos, baseline, changedFileNames);
@@ -368,7 +380,7 @@ public class MercurialSCM extends SCM implements Serializable {
     @Override
     public boolean checkout(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, final BuildListener listener, File changelogFile)
             throws IOException, InterruptedException {
-        boolean canUpdate = workspace.act(new FileCallable<Boolean>() {
+        boolean canUpdate = workspace2Repo(workspace).act(new FileCallable<Boolean>() {
             public Boolean invoke(File ws, VirtualChannel channel) throws IOException {
                 if (!HgRc.getHgRcFile(ws).exists()) {
                     return false;
@@ -404,9 +416,9 @@ public class MercurialSCM extends SCM implements Serializable {
         });
 
         if (canUpdate) {
-            return update(build, launcher, workspace, listener, changelogFile);
+            return update(build, launcher, workspace2Repo(workspace), listener, changelogFile);
         } else {
-            return clone(build, launcher, workspace, listener, changelogFile);
+            return clone(build, launcher, workspace2Repo(workspace), listener, changelogFile);
         }
     }
 
