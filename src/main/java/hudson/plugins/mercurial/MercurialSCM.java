@@ -175,7 +175,7 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     /**
-     * True if we want clean check out each time. This means deleting everything in the workspace
+     * True if we want clean check out each time. This means deleting everything in the repository checkout
      * (except <tt>.hg</tt>)
      */
     public boolean isClean() {
@@ -183,7 +183,7 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     /**
-     * True if we want consider workspace a forest
+     * True if we want consider repository a forest
      */
     public boolean isForest() {
         return forest;
@@ -411,35 +411,35 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     /**
-     * Updates the current workspace.
+     * Updates the current repository.
      */
-    private boolean update(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile)
+    private boolean update(AbstractBuild<?,?> build, Launcher launcher, FilePath repository, BuildListener listener, File changelogFile)
             throws InterruptedException, IOException {
         EnvVars env = build.getEnvironment(listener);
 
         HgExe hg = new HgExe(this, launcher, build, listener, env);
         if(clean) {
-            if (hg.run(forest ? "fupdate" : "update", "--clean", ".").pwd(workspace).join() != 0) {
+            if (hg.run(forest ? "fupdate" : "update", "--clean", ".").pwd(repository).join() != 0) {
                 listener.error("Failed to clobber local modifications");
                 return false;
             }
             if (forest) {
-                StringTokenizer trees = new StringTokenizer(hg.popen(workspace, listener, false, new ArgumentListBuilder("ftrees", "--convert")));
+                StringTokenizer trees = new StringTokenizer(hg.popen(repository, listener, false, new ArgumentListBuilder("ftrees", "--convert")));
                 while (trees.hasMoreTokens()) {
                     String tree = trees.nextToken();
-                    if (hg.cleanAll().pwd(tree.equals(".") ? workspace : workspace.child(tree)).join() != 0) {
+                    if (hg.cleanAll().pwd(tree.equals(".") ? repository : repository.child(tree)).join() != 0) {
                         listener.error("Failed to clean unversioned files in " + tree);
                         return false;
                     }
                 }
             } else {
-                if (hg.cleanAll().pwd(workspace).join() != 0) {
+                if (hg.cleanAll().pwd(repository).join() != 0) {
                     listener.error("Failed to clean unversioned files");
                     return false;
                 }
             }
         }
-        FilePath hgBundle = new FilePath(workspace, "hg.bundle");
+        FilePath hgBundle = new FilePath(repository, "hg.bundle");
 
         // delete the file prior to "hg incoming",
         // as one user reported that it causes a failure.
@@ -475,7 +475,7 @@ public class MercurialSCM extends SCM implements Serializable {
                 WriterOutputStream o = new WriterOutputStream(new OutputStreamWriter(os, "UTF-8"));
                 try {
                     r = launch(launcher).cmds(args).envs(env)
-                            .stdout(new ForkOutputStream(o,errorLog)).pwd(workspace).join();
+                            .stdout(new ForkOutputStream(o,errorLog)).pwd(repository).join();
                 } finally {
                     o.flush(); // make sure to commit all output
                 }
@@ -506,15 +506,15 @@ public class MercurialSCM extends SCM implements Serializable {
                 } else {
                     ps = hg.run("unbundle", "hg.bundle");
                 }
-                if(ps.pwd(workspace).join()!=0) {
+                if(ps.pwd(repository).join()!=0) {
                     listener.error("Failed to pull");
                     return false;
                 }
                 if (cachedSource != null && build.getNumber() % 100 == 0) {
                     // Periodically recreate hardlinks to the cache to save disk space.
-                    hg.run("--config", "extensions.relink=", "relink", cachedSource).pwd(workspace).join(); // ignore failures
+                    hg.run("--config", "extensions.relink=", "relink", cachedSource).pwd(repository).join(); // ignore failures
                 }
-                if(hg.run(forest ? "fupdate" : "update", "--clean", "--rev", getBranch(env)).pwd(workspace).join()!=0) {
+                if(hg.run(forest ? "fupdate" : "update", "--clean", "--rev", getBranch(env)).pwd(repository).join()!=0) {
                     listener.error("Failed to update");
                     return false;
                 }
@@ -527,7 +527,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
         hgBundle.delete(); // do not leave it in workspace
 
-        build.addAction(new MercurialTagAction(hg.tip(workspace)));
+        build.addAction(new MercurialTagAction(hg.tip(repository)));
 
         return true;
     }
@@ -535,12 +535,12 @@ public class MercurialSCM extends SCM implements Serializable {
     /**
      * Start from scratch and clone the whole repository.
      */
-    private boolean clone(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, BuildListener listener, File changelogFile)
+    private boolean clone(AbstractBuild<?,?> build, Launcher launcher, FilePath repository, BuildListener listener, File changelogFile)
             throws InterruptedException, IOException {
         try {
-            workspace.deleteRecursive();
+            repository.deleteRecursive();
         } catch (IOException e) {
-            e.printStackTrace(listener.error("Failed to clean the workspace"));
+            e.printStackTrace(listener.error("Failed to clean the repository checkout"));
             return false;
         }
 
@@ -556,7 +556,7 @@ public class MercurialSCM extends SCM implements Serializable {
         } else {
             args.add(source);
         }
-        args.add(workspace.getRemote());
+        args.add(repository.getRemote());
         try {
             if(hg.run(args).join()!=0) {
                 listener.error("Failed to clone "+source);
@@ -568,7 +568,7 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         if (cachedSource != null) {
-            FilePath hgrc = workspace.child(".hg/hgrc");
+            FilePath hgrc = repository.child(".hg/hgrc");
             if (hgrc.exists()) {
                 String hgrcText = hgrc.readToString();
                 if (!hgrcText.contains(cachedSource)) {
@@ -579,10 +579,10 @@ public class MercurialSCM extends SCM implements Serializable {
             }
             // Passing --rev disables hardlinks, so we need to recreate them:
             hg.run("--config", "extensions.relink=", "relink", cachedSource)
-                    .pwd(workspace).join(); // ignore failures
+                    .pwd(repository).join(); // ignore failures
         }
 
-        build.addAction(new MercurialTagAction(hg.tip(workspace)));
+        build.addAction(new MercurialTagAction(hg.tip(repository)));
 
         return createEmptyChangeLog(changelogFile, listener, "changelog");
     }
