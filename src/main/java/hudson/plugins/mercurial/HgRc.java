@@ -20,11 +20,11 @@ import java.util.regex.Matcher;
 final class HgRc {
     private final Map<String,Section> sections = new TreeMap<String,Section>();
 
-    public HgRc(File workspace) throws IOException {
-        this(load(workspace), getHgRcFile(workspace));
+    public HgRc(File repository) throws IOException {
+        this(load(repository), getHgRcFile(repository));
     }
-    private static Reader load(File workspace) throws IOException {
-        File hgrc = getHgRcFile(workspace);
+    private static Reader load(File repository) throws IOException {
+        File hgrc = getHgRcFile(repository);
         if(!hgrc.exists())
             throw new IOException("No such file: "+hgrc);
         // TODO: what is the encoding of hgrc?
@@ -91,8 +91,8 @@ final class HgRc {
         }
     }
 
-    public static File getHgRcFile(File workspace) {
-        return new File(workspace,".hg/hgrc");
+    public static File getHgRcFile(File repository) {
+        return new File(repository,".hg/hgrc");
     }
 
     private Section createSection(String name) {
