@@ -15,12 +15,12 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
 /**
- * Mercurial web interface served using Fisheye.
+ * Mercurial web interface served using FishEye.
  */
-public class Fisheye extends HgBrowser {	    
+public class FishEye extends HgBrowser {
     
 	@DataBoundConstructor
-	public Fisheye(String url) throws MalformedURLException {
+	public FishEye(String url) throws MalformedURLException {
 	    super(url);
 	}
 	
@@ -76,8 +76,8 @@ public class Fisheye extends HgBrowser {
             return "fisheye";
         }
 
-        public @Override Fisheye newInstance(StaplerRequest req, JSONObject json) throws FormException {
-            return req.bindParameters(Fisheye.class,"fisheye.");
+        public @Override FishEye newInstance(StaplerRequest req, JSONObject json) throws FormException {
+            return req.bindParameters(FishEye.class,"fisheye.");
         }
     }
 
