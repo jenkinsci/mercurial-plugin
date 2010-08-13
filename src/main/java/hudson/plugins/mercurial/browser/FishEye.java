@@ -39,7 +39,7 @@ public class FishEye extends HgBrowser {
 	    {
 	        url = url.substring(0, url.length() - 1);
 	    }
-	    // http://deadlock.netbeans.org/fisheye/browse/netbeans?cs=0a43e7e89449d1ca8a9da37e1cc644a620d48e71
+	    // http://www.example.org/changelog/hg?cs=0a43e7e89449d1ca8a9da37e1cc644a620d48e71
 		return new URL(url + "?cs=" + changeSet.getNode());
 	}
 
@@ -52,7 +52,7 @@ public class FishEye extends HgBrowser {
     @Override
 	public URL getFileLink(String path) throws MalformedURLException {
         checkCurrentIsNotNull();
-        // http://deadlock.netbeans.org/fisheye/browse/netbeans/samplefile.txt#0a43e7e89449d1ca8a9da37e1cc644a620d48e71
+        // http://www.example.org/browse/hg/samplefile.txt#0a43e7e89449d1ca8a9da37e1cc644a620d48e71
         return new URL(getUrl(), path + "#" + current.getNode());
     }
     
@@ -66,7 +66,7 @@ public class FishEye extends HgBrowser {
     public URL getDiffLink(String path) throws MalformedURLException {
         checkCurrentIsNotNull();
             
-        // http://deadlock.netbeans.org/fisheye/browse/netbeans/samplefile.txt?r1=0a43e7e89449d1ca8a9da37e1cc644a620d48e71&r2=
+        // http://www.example.org/browse/hg/samplefile.txt?r1=0a43e7e89449d1ca8a9da37e1cc644a620d48e71&r2=
         return new URL(getUrl(), path + "?r1=" + current.getNode() + "&r2=");
     }
 	
