@@ -75,7 +75,7 @@ class Cache {
             throws IOException, InterruptedException {
         boolean wasLocked = lock.isLocked();
         if (wasLocked) {
-            listener.getLogger().println("Waiting for lock on hgcache/" + hash + "...");
+            listener.getLogger().println("Waiting for lock on hgcache/" + hash + " " + lock + "...");
         }
 
         lock.lockInterruptibly();
