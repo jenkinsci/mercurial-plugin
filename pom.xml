@@ -41,15 +41,27 @@
           <version>1.0.0</version>
       </dependency>
       <dependency>
+          <groupId>commons-collections</groupId>
+          <artifactId>commons-collections</artifactId>
+          <version>3.2.1</version>
+          <scope>test</scope>
+      </dependency>
+      <dependency>
           <groupId>commons-io</groupId>
           <artifactId>commons-io</artifactId>
           <version>1.4</version>
           <scope>provided</scope>
       </dependency>
       <dependency>
+          <groupId>commons-beanutils</groupId>
+          <artifactId>commons-beanutils</artifactId>
+          <version>1.8.3</version>
+          <scope>provided</scope>
+      </dependency>
+      <dependency>
           <groupId>commons-digester</groupId>
           <artifactId>commons-digester</artifactId>
-          <version>1.7</version>
+          <version>2.1</version>
           <scope>provided</scope>
       </dependency>
       <dependency>
@@ -82,6 +94,7 @@
          <plugin>
               <groupId>org.codehaus.mojo</groupId>
               <artifactId>cobertura-maven-plugin</artifactId>
+              <version>2.4</version>
               <configuration>
                 <instrumentation>
                     <excludes>
@@ -117,19 +130,12 @@
           <plugin>
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-project-info-reports-plugin</artifactId>
-              <version>2.1.2</version>
-              <!--
-                  Avoid hanging site generation waiting for 'http://snapshots.maven.codehaus.org/maven2' see
-                  http://jira.codehaus.org/browse/MPIR-137
-              -->
-              <configuration>
-                  <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
-                  <dependencyDetailsEnabled>false</dependencyDetailsEnabled>
-              </configuration>
+              <version>2.2</version>
           </plugin>
           <plugin>
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-javadoc-plugin</artifactId>
+              <version>2.7</version>
               <configuration>
                   <show>private</show>
                   <quiet>true</quiet>
@@ -143,19 +149,22 @@
           <plugin>
               <groupId>org.codehaus.mojo</groupId>
               <artifactId>taglist-maven-plugin</artifactId>
+              <version>2.4</version>
           </plugin>
           <plugin>
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-surefire-report-plugin</artifactId>
+              <version>2.6</version>
           </plugin>
           <plugin>
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-project-info-reports-plugin</artifactId>
+              <version>2.2</version>
           </plugin>
           <plugin>
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-checkstyle-plugin</artifactId>
-              <version>2.4</version>
+              <version>2.6</version>
               <configuration>
                   <enableRulesSummary>false</enableRulesSummary>
                   <configLocation>${basedir}/src/conf/checkstyle-ruleset.xml</configLocation>
@@ -164,7 +173,7 @@
           <plugin>
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-pmd-plugin</artifactId>
-              <version>2.4</version>
+              <version>2.5</version>
               <configuration>
                   <linkXref>true</linkXref>
                   <includeTests>true</includeTests>
@@ -189,14 +198,17 @@
           <plugin>
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-javadoc-plugin</artifactId>
+              <version>2.7</version>
           </plugin>
           <plugin>
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-jxr-plugin</artifactId>
+              <version>2.2</version>
           </plugin>
           <plugin>
               <groupId>org.codehaus.mojo</groupId>
               <artifactId>cobertura-maven-plugin</artifactId>
+              <version>2.4</version>
               <configuration>
                   <formats>
                       <format>xml</format>
@@ -207,10 +219,12 @@
           <plugin>
               <groupId>org.codehaus.mojo</groupId>
               <artifactId>jdepend-maven-plugin</artifactId>
+              <version>2.0-beta-2</version>
           </plugin>
           <plugin>
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-dependency-plugin</artifactId>
+              <version>2.1</version>
           </plugin>
           <plugin>
               <groupId>com.google.testability-explorer</groupId>
