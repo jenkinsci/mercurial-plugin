@@ -250,9 +250,8 @@ public class MercurialSCM extends SCM implements Serializable {
     public SCMRevisionState calcRevisionsFromBuild(AbstractBuild<?, ?> build, Launcher launcher, TaskListener listener)
             throws IOException, InterruptedException {
         // tag action is added during checkout, so this shouldn't be called, but just in case.
-        EnvVars env = build.getEnvironment(listener);
-        HgExe hg = new HgExe(this, launcher, build, listener, env);
-        return new MercurialTagAction(hg.tip(workspace2Repo(build.getWorkspace())),getBranch(env));
+        HgExe hg = new HgExe(this, launcher, build, listener, build.getEnvironment(listener));
+        return new MercurialTagAction(hg.tip(workspace2Repo(build.getWorkspace())));
     }
 
     private static final String FILES_STYLE = "changeset = 'id:{node}\\nfiles:{files}\\n'\n" + "file = '{file}:'";
@@ -261,6 +260,7 @@ public class MercurialSCM extends SCM implements Serializable {
     protected PollingResult compareRemoteRevisionWith(AbstractProject<?, ?> project, Launcher launcher, FilePath workspace,
             TaskListener listener, SCMRevisionState _baseline) throws IOException, InterruptedException {
         MercurialTagAction baseline = (MercurialTagAction)_baseline;
+        EnvVars env = project.getLastBuild().getEnvironment(listener);
 
         PrintStream output = listener.getLogger();
 
@@ -277,7 +277,7 @@ public class MercurialSCM extends SCM implements Serializable {
             ArgumentListBuilder cmd = findHgExe(node, listener, false);
             cmd.add(forest ? "fincoming" : "incoming", "--style", tmpFile.getRemote());
             cmd.add("--no-merges");
-            cmd.add("--rev", baseline.getBranch());
+            cmd.add("--rev", getBranch(env));
             cmd.add("--newest-first");
             String cachedSource = cachedSource(node, launcher, listener, true);
             if (cachedSource != null) {
@@ -374,7 +374,7 @@ public class MercurialSCM extends SCM implements Serializable {
         if (headId==null) {
             return baseline; // no new revisions found
         }
-        return new MercurialTagAction(headId,baseline.getBranch());
+        return new MercurialTagAction(headId);
     }
 
     @Override
@@ -539,7 +539,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
         hgBundle.delete(); // do not leave it in workspace
 
-        build.addAction(new MercurialTagAction(hg.tip(repository),getBranch(env)));
+        build.addAction(new MercurialTagAction(hg.tip(repository)));
 
         return true;
     }
@@ -594,7 +594,7 @@ public class MercurialSCM extends SCM implements Serializable {
                     .pwd(repository).join(); // ignore failures
         }
 
-        build.addAction(new MercurialTagAction(hg.tip(repository),getBranch(env)));
+        build.addAction(new MercurialTagAction(hg.tip(repository)));
 
         return createEmptyChangeLog(changelogFile, listener, "changelog");
     }
