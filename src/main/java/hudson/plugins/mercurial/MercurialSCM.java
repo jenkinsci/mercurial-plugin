@@ -260,7 +260,6 @@ public class MercurialSCM extends SCM implements Serializable {
     protected PollingResult compareRemoteRevisionWith(AbstractProject<?, ?> project, Launcher launcher, FilePath workspace,
             TaskListener listener, SCMRevisionState _baseline) throws IOException, InterruptedException {
         MercurialTagAction baseline = (MercurialTagAction)_baseline;
-        EnvVars env = project.getLastBuild().getEnvironment(listener);
 
         PrintStream output = listener.getLogger();
 
@@ -277,7 +276,7 @@ public class MercurialSCM extends SCM implements Serializable {
             ArgumentListBuilder cmd = findHgExe(node, listener, false);
             cmd.add(forest ? "fincoming" : "incoming", "--style", tmpFile.getRemote());
             cmd.add("--no-merges");
-            cmd.add("--rev", getBranch(env));
+            cmd.add("--rev", getBranch());
             cmd.add("--newest-first");
             String cachedSource = cachedSource(node, launcher, listener, true);
             if (cachedSource != null) {
