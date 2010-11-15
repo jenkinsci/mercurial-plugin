@@ -27,6 +27,11 @@
           <name>Mirko Friedenhagen</name>
           <email>mfriedenhagen@dev.java.net</email>
       </developer>
+      <developer>
+        <id>kohsuke</id>
+        <name>Kohsuke Kawaguchi</name>
+        <email>kk@kohsuke.org</email>
+      </developer>
   </developers>
   <properties>
         <!--
