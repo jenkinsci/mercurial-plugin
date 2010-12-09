@@ -1,5 +1,6 @@
 package hudson.plugins.mercurial;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.AbstractBuild;
 import hudson.scm.SCMRevisionState;
 
@@ -18,7 +19,7 @@ public class MercurialTagAction extends SCMRevisionState {
      */
     public final String id;
 
-    public MercurialTagAction(String id) {
+    public MercurialTagAction(@NonNull String id) {
         this.id = id;
     }
 

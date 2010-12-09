@@ -23,6 +23,7 @@
  */
 package hudson.plugins.mercurial;
 
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.FilePath;
@@ -166,11 +167,11 @@ public class HgExe {
     /**
      * Gets the revision ID of the tip of the workspace.
      */
-    public String tip(FilePath repository) throws IOException, InterruptedException {
+    public @CheckForNull String tip(FilePath repository) throws IOException, InterruptedException {
         String id = popen(repository, listener, false, new ArgumentListBuilder("log", "--rev", ".", "--template", "{node}"));
         if (!REVISIONID_PATTERN.matcher(id).matches()) {
-            listener.error("Expected to get an id but got " + id + " instead.");
-            throw new AbortException();
+            listener.error("Expected to get an id but got '" + id + "' instead.");
+            return null; // HUDSON-7723
         }
         return id;
     }
