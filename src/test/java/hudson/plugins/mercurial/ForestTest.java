@@ -12,7 +12,7 @@ public class ForestTest extends MercurialTestCase {
     private File toprepo, subrepo;
     protected @Override void setUp() throws Exception {
         super.setUp();
-        String downloadForest = ForestTest.class.getResource("forest.py").toString(); // copied from 9e722e8d001d
+        String downloadForest = ForestTest.class.getResource("forest.py").toString(); // copied from 3647b4bed1a1
         Hudson.getInstance().getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(
                 new MercurialInstallation("forested", "", "hg", downloadForest, false, false, Collections.<ToolProperty<?>>emptyList()));
         toprepo = createTmpDir();
@@ -31,13 +31,11 @@ public class ForestTest extends MercurialTestCase {
         FilePath ws = p.getSomeWorkspace();
         ws.child("junk").touch(0);
         ws.child("sub/trash").touch(0);
-        /* XXX currently broken: http://bitbucket.org/pmezard/hgforest-crew/issue/9/fpull-broken-on-16
         buildAndCheck(p, "a");
         assertFalse(ws.child("junk").exists());
         assertFalse(ws.child("sub/trash").exists());
         touchAndCommit(subrepo, "more");
         buildAndCheck(p, "sub/more");
-         */
     }
 
 }

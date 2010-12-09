@@ -98,7 +98,13 @@ try:
     parseurl = cmdutil.parseurl
 except:
     try:
-        parseurl = hg.parseurl
+        _parseurl = hg.parseurl
+        def parseurl(url, branches=None):
+            url, revs = _parseurl(url, branches)
+            if isinstance(revs, tuple):
+                # hg >= 1.6
+                return url, revs[1]
+            return url, revs
     except:
         def parseurl(url, revs):
             """Mercurial <= 0.9.3 doesn't have this feature."""
@@ -210,6 +216,13 @@ def _localrepo_forests(self, walkhg):
 
 localrepo.localrepository.forests = _localrepo_forests
 
+def repocall(repo, *args, **kwargs):
+    if hasattr(repo, '_call'):
+        # hg >= 1.7
+        callfn = repo._call
+    else:
+        callfn = repo.do_read
+    return callfn(*args, **kwargs)
 
 def _sshrepo_forests(self, walkhg):
     """Shim this function into mercurial.sshrepo.sshrepository so
@@ -222,7 +235,7 @@ def _sshrepo_forests(self, walkhg):
         raise util.Abort(_("Remote forests cannot be cloned because the "
                            "other repository doesn't support the forest "
                            "extension."))
-    data = self.call("forests", walkhg=("", "True")[walkhg])
+    data = repocall(self, "forests", walkhg=("", "True")[walkhg])
     return data.splitlines()
 
 sshrepo.sshrepository.forests = _sshrepo_forests
@@ -274,7 +287,7 @@ def _httprepo_forests(self, walkhg):
         raise util.Abort(_("Remote forests cannot be cloned because the "
                            "other repository doesn't support the forest "
                            "extension."))
-    data = self.do_read("forests", walkhg=("", "True")[walkhg])
+    data = repocall(self, "forests", walkhg=("", "True")[walkhg])
     return data.splitlines()
 
 httprepo.httprepository.forests = _httprepo_forests
@@ -662,7 +675,7 @@ class Forest(object):
         elif 'rev' in opts:
             revs = opts['rev']
         else:
-            revs = None
+            revs = []
         die_on_numeric_revs(revs)
         for tree in self.trees:
             rpath = relpath(self.top().root, tree.root)
@@ -1234,8 +1247,9 @@ def status(ui, top, *pats, **opts):
         def __init__(self, transform, ui):
             self._transform = transform
             self._ui = ui
-        def write(self, output):
-            self._ui.write(self._transform(output))
+        def write(self, *args, **opts):
+            args = [self._transform(a) for a in args]
+            self._ui.write(*args, **opts)
         def __getattr__(self, attrname):
             return getattr(self._ui, attrname)
 
@@ -1384,7 +1398,7 @@ def update(ui, top, revision=None, **opts):
                  prehooks=[lambda tree: check_mq(tree)])
 
 
-cmdtable = None
+cmdtable = {}
 
 def uisetup(ui):
     global cmdtable
