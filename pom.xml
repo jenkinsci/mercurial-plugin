@@ -4,7 +4,6 @@
     <groupId>org.jvnet.hudson.plugins</groupId>
     <artifactId>plugin</artifactId>
     <version>1.388</version>
-    <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>mercurial</artifactId>
   <version>1.35-SNAPSHOT</version>
@@ -12,6 +11,16 @@
   <name>Hudson Mercurial plugin</name>
   <description>Integrates Hudson to Mercurial SCM</description>
   <url>http://wiki.hudson-ci.org/display/HUDSON/Mercurial+Plugin</url>
+  <scm>
+      <connection>scm:git:git://github.com/hudson/mercurial-plugin.git</connection>
+      <developerConnection>scm:git:git@github.com:hudson/mercurial-plugin.git</developerConnection>
+  </scm>
+  <distributionManagement> <!-- XXX what parent POM will make this obsolete? -->
+      <repository>
+          <id>java.net-m2-repository</id> <!-- XXX is this ID really right? -->
+          <url>http://maven.hudson-labs.org:8081/content/repositories/releases/</url>
+      </repository>
+  </distributionManagement>
   <issueManagement>
       <system>JIRA</system>
       <url>http://issues.hudson-ci.org/secure/IssueNavigator.jspa?reset=true&amp;jqlQuery=project+%3D+HUDSON+AND+status+in+%28Open%2C+%22In+Progress%22%2C+Reopened%29+AND+component+%3D+%27mercurial%27</url>
