@@ -1,7 +1,0 @@
-<div>
-  This plugin integrates <a href="http://www.selenic.com/mercurial/">Mercurial SCM</a> with Hudson.
-  It includes repository browsing support for <code>hg serve</code>/<code>hgweb</code>,
-  Google Code, and Bitbucket. Features include guaranteed clean builds, named branch
-  support, Forest extension support, module lists, Mercurial tool installation, and
-  automatic caching.
-</div>
