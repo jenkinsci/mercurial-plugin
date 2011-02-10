@@ -12,6 +12,7 @@ import hudson.Launcher.ProcStarter;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
+import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.Node;
 import hudson.model.TaskListener;
@@ -484,7 +485,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
                 // mercurial produces text in the platform default encoding, so we need to
                 // convert it back to UTF-8
-                WriterOutputStream o = new WriterOutputStream(new OutputStreamWriter(os, "UTF-8"));
+                WriterOutputStream o = new WriterOutputStream(new OutputStreamWriter(os, "UTF-8"), Computer.currentComputer().getDefaultCharset());
                 try {
                     r = launch(launcher).cmds(args).envs(env)
                             .stdout(new ForkOutputStream(o,errorLog)).pwd(repository).join();
