@@ -8,22 +8,23 @@
   <artifactId>mercurial</artifactId>
   <version>1.36-SNAPSHOT</version>
   <packaging>hpi</packaging>
-  <name>Hudson Mercurial plugin</name>
-  <description>Integrates Hudson to Mercurial SCM</description>
-  <url>http://wiki.hudson-ci.org/display/HUDSON/Mercurial+Plugin</url>
+  <name>Jenkins Mercurial plugin</name>
+  <description>Integrates Hudson/Jenkins to Mercurial SCM</description>
+  <url>http://wiki.jenkins-ci.org/display/JENKINS/Mercurial+Plugin</url>
   <scm>
-      <connection>scm:git:git://github.com/hudson/mercurial-plugin.git</connection>
-      <developerConnection>scm:git:git@github.com:hudson/mercurial-plugin.git</developerConnection>
+      <connection>scm:git:git://github.com/jenkinsci/mercurial-plugin.git</connection>
+      <developerConnection>scm:git:git@github.com:jenkinsci/mercurial-plugin.git</developerConnection>
+      <url>https://github.com/jenkinsci/mercurial-plugin</url>
   </scm>
   <distributionManagement> <!-- XXX what parent POM will make this obsolete? -->
       <repository>
           <id>java.net-m2-repository</id> <!-- XXX is this ID really right? -->
-          <url>http://maven.hudson-labs.org:8081/content/repositories/releases/</url>
+          <url>http://maven.jenkins-ci.org:8081/content/repositories/releases/</url>
       </repository>
   </distributionManagement>
   <issueManagement>
       <system>JIRA</system>
-      <url>http://issues.hudson-ci.org/secure/IssueNavigator.jspa?reset=true&amp;jqlQuery=project+%3D+HUDSON+AND+status+in+%28Open%2C+%22In+Progress%22%2C+Reopened%29+AND+component+%3D+%27mercurial%27</url>
+      <url>http://issues.jenkins-ci.org/secure/IssueNavigator.jspa?reset=true&amp;jqlQuery=project+%3D+Jenkins+AND+component+%3D+mercurial+AND+resolution+%3D+Unresolved</url>
   </issueManagement>
   <developers>
       <developer>
@@ -34,7 +35,7 @@
       <developer>
           <id>mfriedenhagen</id>
           <name>Mirko Friedenhagen</name>
-          <email>mfriedenhagen@dev.java.net</email>
+          <email>mfriedenhagen@gmail.com</email>
       </developer>
       <developer>
         <id>kohsuke</id>
@@ -93,7 +94,7 @@
       <dependency>
           <groupId>org.jvnet.hudson.main</groupId>
           <artifactId>remoting</artifactId>
-          <version>${parent.version}</version>
+          <version>${project.parent.version}</version>
           <scope>provided</scope>
       </dependency>
   </dependencies>
@@ -152,15 +153,20 @@
           </plugin>
           <plugin>
               <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-jxr-plugin</artifactId>
+              <version>2.2</version>
+          </plugin>
+          <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-javadoc-plugin</artifactId>
               <version>2.7</version>
               <configuration>
                   <show>private</show>
                   <quiet>true</quiet>
                   <links>
-                      <link>http://java.sun.com/j2se/1.5.0/docs/api/</link>
-                      <link>https://hudson.dev.java.net/nonav/javadoc/</link>
-                      <link>https://stapler.dev.java.net/nonav/javadoc/</link>
+                      <link>http://download.oracle.com/javase/1.5.0/docs/api/</link>
+                      <link>http://javadoc.jenkins-ci.org/</link>
+                      <!--link>https://stapler.dev.java.net/nonav/javadoc/</link-->
                   </links>
               </configuration>
           </plugin>
@@ -179,6 +185,7 @@
               <artifactId>maven-checkstyle-plugin</artifactId>
               <version>2.6</version>
               <configuration>
+                  <linkXRef>true</linkXRef>
                   <enableRulesSummary>false</enableRulesSummary>
                   <configLocation>${basedir}/src/conf/checkstyle-ruleset.xml</configLocation>
               </configuration>
@@ -188,7 +195,7 @@
               <artifactId>maven-pmd-plugin</artifactId>
               <version>2.5</version>
               <configuration>
-                  <linkXref>true</linkXref>
+                  <linkXRef>true</linkXRef>
                   <includeTests>true</includeTests>
                   <sourceEncoding>utf-8</sourceEncoding>
                   <minimumTokens>100</minimumTokens>
@@ -207,11 +214,6 @@
                   <relaxed>false</relaxed>
                   <excludeFilterFile>src/conf/findbugs-exclude.xml</excludeFilterFile>
               </configuration>
-          </plugin>
-          <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-jxr-plugin</artifactId>
-              <version>2.2</version>
           </plugin>
           <plugin>
               <groupId>org.codehaus.mojo</groupId>
