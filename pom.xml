@@ -1,31 +1,21 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
+
   <parent>
-    <groupId>org.jvnet.hudson.plugins</groupId>
+    <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>1.388</version>
+    <version>1.400</version>
+    <relativePath />
   </parent>
+
   <artifactId>mercurial</artifactId>
   <version>1.37-SNAPSHOT</version>
   <packaging>hpi</packaging>
+
   <name>Jenkins Mercurial plugin</name>
   <description>Integrates Hudson/Jenkins to Mercurial SCM</description>
   <url>http://wiki.jenkins-ci.org/display/JENKINS/Mercurial+Plugin</url>
-  <scm>
-      <connection>scm:git:git://github.com/jenkinsci/mercurial-plugin.git</connection>
-      <developerConnection>scm:git:git@github.com:jenkinsci/mercurial-plugin.git</developerConnection>
-      <url>https://github.com/jenkinsci/mercurial-plugin</url>
-  </scm>
-  <distributionManagement> <!-- XXX what parent POM will make this obsolete? -->
-      <repository>
-          <id>java.net-m2-repository</id> <!-- XXX is this ID really right? -->
-          <url>http://maven.jenkins-ci.org:8081/content/repositories/releases/</url>
-      </repository>
-  </distributionManagement>
-  <issueManagement>
-      <system>JIRA</system>
-      <url>http://issues.jenkins-ci.org/secure/IssueNavigator.jspa?reset=true&amp;jqlQuery=project+%3D+Jenkins+AND+component+%3D+mercurial+AND+resolution+%3D+Unresolved</url>
-  </issueManagement>
+
   <developers>
       <developer>
           <id>jglick</id>
@@ -43,12 +33,31 @@
         <email>kk@kohsuke.org</email>
       </developer>
   </developers>
+
+  <scm>
+      <connection>scm:git:git://github.com/jenkinsci/mercurial-plugin.git</connection>
+      <developerConnection>scm:git:git@github.com:jenkinsci/mercurial-plugin.git</developerConnection>
+      <url>https://github.com/jenkinsci/mercurial-plugin</url>
+  </scm>
+  <issueManagement>
+      <system>JIRA</system>
+      <url>http://issues.jenkins-ci.org/secure/IssueNavigator.jspa?reset=true&amp;jqlQuery=project+%3D+Jenkins+AND+component+%3D+mercurial+AND+resolution+%3D+Unresolved</url>
+  </issueManagement>
+
   <properties>
         <!--
             compare: http://docs.codehaus.org/display/MAVENUSER/POM+Element+for+Source+File+Encoding
         -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
+
+  <repositories>
+    <repository>
+      <id>m.g.o-public</id>
+      <url>http://maven.glassfish.org/content/groups/public/</url>
+    </repository>
+  </repositories>
+
   <dependencies>
       <dependency>
           <groupId>findbugs</groupId>
@@ -98,6 +107,7 @@
           <scope>provided</scope>
       </dependency>
   </dependencies>
+
   <build>
       <plugins>
          <plugin>
@@ -139,6 +149,7 @@
           </plugin>
       </plugins>
   </build>
+
   <reporting>
       <plugins>
           <plugin>
@@ -247,4 +258,5 @@
           </plugin>
       </plugins>
   </reporting>
+
 </project>
