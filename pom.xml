@@ -101,7 +101,7 @@
           <scope>provided</scope>
       </dependency>
       <dependency>
-          <groupId>org.jvnet.hudson.main</groupId>
+          <groupId>org.jenkins-ci.main</groupId>
           <artifactId>remoting</artifactId>
           <version>${project.parent.version}</version>
           <scope>provided</scope>
