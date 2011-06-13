@@ -6,7 +6,7 @@
     <version>1.388</version>
   </parent>
   <artifactId>mercurial</artifactId>
-  <version>1.36-SNAPSHOT</version>
+  <version>1.36</version>
   <packaging>hpi</packaging>
   <name>Jenkins Mercurial plugin</name>
   <description>Integrates Hudson/Jenkins to Mercurial SCM</description>
