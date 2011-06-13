@@ -1,0 +1,9 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler"
+         xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson"
+         xmlns:f="/lib/form" xmlns:i="jelly:fmt">
+  <t:summary icon="/plugin/mercurial/images/48x48/logo.png">
+
+    <b>Revision</b>: ${it.id}
+
+  </t:summary>
+</j:jelly>

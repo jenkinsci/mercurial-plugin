@@ -3,6 +3,8 @@ package hudson.plugins.mercurial;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.model.AbstractBuild;
 import hudson.scm.SCMRevisionState;
+import org.kohsuke.stapler.export.Exported;
+import org.kohsuke.stapler.export.ExportedBean;
 
 /**
  * Action contributed to {@link AbstractBuild} from Mercurial.
@@ -10,6 +12,7 @@ import hudson.scm.SCMRevisionState;
  * <p>  
  * Currently it just remembers the revision ID, but we want to extend this to cover tagging.
  */
+@ExportedBean(defaultVisibility = 999)
 public class MercurialTagAction extends SCMRevisionState {
     // TODO: have this extends AbstractScmTagAction and offer after-the-fact tagging operation
     // for now, we just remember the mercurial revision that was built in a given build
@@ -23,6 +26,11 @@ public class MercurialTagAction extends SCMRevisionState {
         this.id = id;
     }
 
+    @Exported(name = "mercurialNodeName")
+    public String getId() {
+        return id;
+    }
+
     /**
      * Mercurial often uses a short ID form that consists of 12 letters.
      */
@@ -34,4 +42,18 @@ public class MercurialTagAction extends SCMRevisionState {
         return "MercurialTagAction:" + id;
     }
 
+    @Override
+    public String getIconFileName() {
+        return "/plugin/mercurial/images/32x32/logo.png";
+    }
+
+    @Override
+    public String getDisplayName() {
+        return Messages.MercurialTagAction_BuildData();
+    }
+
+    @Override
+    public String getUrlName() {
+        return "mercurial";
+    }
 }
