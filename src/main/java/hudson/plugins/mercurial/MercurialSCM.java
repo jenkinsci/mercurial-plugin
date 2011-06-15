@@ -62,32 +62,32 @@ import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.framework.io.WriterOutputStream;
 
 /**
- * Mercurial SCM.
- */
+* Mercurial SCM.
+*/
 public class MercurialSCM extends SCM implements Serializable {
 
     /**
-     * Name of selected installation, if any.
-     */
+* Name of selected installation, if any.
+*/
     private final String installation;
 
     /**
-     * Source repository URL from which we pull.
-     */
+* Source repository URL from which we pull.
+*/
     private final String source;
 
     /**
-     * Prefixes of files within the repository which we're dependent on.
-     * Storing as member variable so as to only parse the dependencies string once.
-     * Will be either null (use whole repo), or nonempty list of subdir names.
-     */
+* Prefixes of files within the repository which we're dependent on.
+* Storing as member variable so as to only parse the dependencies string once.
+* Will be either null (use whole repo), or nonempty list of subdir names.
+*/
     private transient Set<String> _modules;
     // Same thing, but not parsed for jelly.
     private final String modules;
 
     /**
-     * In-repository branch to follow. Null indicates "default".
-     */
+* In-repository branch to follow. Null indicates "default".
+*/
     private final String branch;
 
     /** Slash-separated subdirectory of the workspace in which the repository will be kept; null for top level. */
@@ -148,16 +148,16 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     /**
-     * Gets the source repository path.
-     * Either URL or local file path.
-     */
+* Gets the source repository path.
+* Either URL or local file path.
+*/
     public String getSource() {
         return source;
     }
 
     /**
-     * In-repository branch to follow. Never null.
-     */
+* In-repository branch to follow. Never null.
+*/
     public String getBranch() {
         return branch == null ? "default" : branch;
     }
@@ -188,16 +188,16 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     /**
-     * True if we want clean check out each time. This means deleting everything in the repository checkout
-     * (except <tt>.hg</tt>)
-     */
+* True if we want clean check out each time. This means deleting everything in the repository checkout
+* (except <tt>.hg</tt>)
+*/
     public boolean isClean() {
         return clean;
     }
 
     /**
-     * True if we want consider repository a forest
-     */
+* True if we want consider repository a forest
+*/
     public boolean isForest() {
         return forest;
     }
@@ -207,10 +207,10 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     /**
-     * @param allowDebug
-     *      If the caller intends to parse the stdout from Mercurial, pass in false to indicate
-     *      that the optional --debug option shall never be activated.
-     */
+* @param allowDebug
+* If the caller intends to parse the stdout from Mercurial, pass in false to indicate
+* that the optional --debug option shall never be activated.
+*/
     ArgumentListBuilder findHgExe(Node node, TaskListener listener, boolean allowDebug) throws IOException, InterruptedException {
         for (MercurialInstallation inst : MercurialInstallation.allInstallations()) {
             if (inst.getName().equals(installation)) {
@@ -319,8 +319,8 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     /**
-     * Filter out the given file name list by picking up changes that are in the modules we care about.
-     */
+* Filter out the given file name list by picking up changes that are in the modules we care about.
+*/
     private Set<String> dependentChanges(Set<String> changedFileNames) {
         if (_modules == null) {
             // Old project created before this feature was added.
@@ -343,7 +343,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private static Pattern FILES_LINE = Pattern.compile("files:(.*)");
 
-    private MercurialTagAction parseIncomingOutput(ByteArrayOutputStream output, MercurialTagAction baseline,  Set<String> result) throws IOException {
+    private MercurialTagAction parseIncomingOutput(ByteArrayOutputStream output, MercurialTagAction baseline, Set<String> result) throws IOException {
         String headId = null; // the tip of the remote revision
         BufferedReader in = new BufferedReader(new InputStreamReader(
                 new ByteArrayInputStream(output.toByteArray())));
@@ -424,17 +424,57 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     /**
-     * Updates the current repository.
-     */
+* Updates the current repository.
+*/
     private boolean update(AbstractBuild<?,?> build, Launcher launcher, FilePath repository, BuildListener listener, File changelogFile)
             throws InterruptedException, IOException {
+
         EnvVars env = build.getEnvironment(listener);
 
         HgExe hg = new HgExe(this, launcher, build, listener, env);
         if(clean) {
-            if (hg.run(forest ? "fupdate" : "update", "--clean", ".").pwd(repository).join() != 0) {
-                listener.error("Failed to clobber local modifications");
-                return false;
+            if (forest) {
+                if(hg.run("fupdate").pwd(repository).join() != 0)
+                {
+                    listener.error("Failed to clobber local modifications");
+                    return false;
+                }
+            }
+            else
+            {
+                if (hg.run("update", "--clean", ".").pwd(repository).join() != 0) {
+                    // Remove corrupted repository
+                    try {
+                        repository.deleteContents();
+                    } catch (IOException e) {
+                        e.printStackTrace(listener.error("Failed to clean the repository checkout"));
+                        return false;
+                    }
+
+                    // Build clone command string
+                    ArgumentListBuilder args = new ArgumentListBuilder();
+                    args.add("clone");
+                    args.add("--rev", getBranch(env));
+                    String cachedSource = cachedSource(build.getBuiltOn(), launcher, listener, false);
+
+                    if (cachedSource != null) {
+                        args.add(cachedSource);
+                    } else {
+                        args.add(source);
+                    }
+                    args.add(repository.getRemote());
+
+                    // Cloning...
+                    try {
+                        if(hg.run(args).join()!=0) {
+                            listener.error("Failed to clone "+source);
+                            return false;
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace(listener.error("Failed to clone "+source));
+                        return false;
+                    }
+                }
             }
             if (forest) {
                 StringTokenizer trees = new StringTokenizer(hg.popen(repository, listener, false, new ArgumentListBuilder("ftrees", "--convert")));
@@ -549,8 +589,8 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     /**
-     * Start from scratch and clone the whole repository.
-     */
+* Start from scratch and clone the whole repository.
+*/
     private boolean clone(AbstractBuild<?,?> build, Launcher launcher, FilePath repository, BuildListener listener, File changelogFile)
             throws InterruptedException, IOException {
         try {
@@ -672,17 +712,17 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         /**
-         * {@inheritDoc}
-         *
-         * Due to compatibility issues with older version we implement this ourselves instead of relying
-         * on the parent method. Kohsuke implemented a fix for this in the core (r21961), so we may drop
-         * this function after 1.325 is released.
-         *
-         * @todo: remove this function after 1.325 is released.
-         *
-         * @see <a href="https://hudson.dev.java.net/issues/show_bug.cgi?id=4514">#4514</a>
-         * @see <a href="http://fisheye4.atlassian.com/changelog/hudson/trunk/hudson?cs=21961">core fix</a>
-         */
+* {@inheritDoc}
+*
+* Due to compatibility issues with older version we implement this ourselves instead of relying
+* on the parent method. Kohsuke implemented a fix for this in the core (r21961), so we may drop
+* this function after 1.325 is released.
+*
+* @todo: remove this function after 1.325 is released.
+*
+* @see <a href="https://hudson.dev.java.net/issues/show_bug.cgi?id=4514">#4514</a>
+* @see <a href="http://fisheye4.atlassian.com/changelog/hudson/trunk/hudson?cs=21961">core fix</a>
+*/
         @Override
         public List<Descriptor<RepositoryBrowser<?>>> getBrowserDescriptors() {
             return RepositoryBrowsers.filter(HgBrowser.class);
@@ -693,8 +733,8 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         /**
-         * Path to mercurial executable.
-         */
+* Path to mercurial executable.
+*/
         public String getHgExe() {
             if (hgExe == null) {
                 return "hg";
