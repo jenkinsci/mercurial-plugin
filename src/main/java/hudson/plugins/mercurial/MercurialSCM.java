@@ -90,6 +90,11 @@ public class MercurialSCM extends SCM implements Serializable {
      */
     private final String branch;
 
+    /**
+     * In-repository bookmark to follow. Null indicates no bookmark.
+     */
+    private final String bookmark;
+
     /** Slash-separated subdirectory of the workspace in which the repository will be kept; null for top level. */
     private final String subdir;
 
@@ -99,7 +104,7 @@ public class MercurialSCM extends SCM implements Serializable {
     private HgBrowser browser;
 
     @DataBoundConstructor
-    public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean, boolean forest) {
+    public MercurialSCM(String installation, String source, String branch, String bookmark, String modules, String subdir, HgBrowser browser, boolean clean, boolean forest) {
         this.installation = installation;
         this.source = source;
         this.modules = Util.fixNull(modules);
@@ -112,6 +117,7 @@ public class MercurialSCM extends SCM implements Serializable {
             branch = null;
         }
         this.branch = branch;
+        this.bookmark = Util.fixEmpty(bookmark);
         this.browser = browser;
     }
 
@@ -164,6 +170,14 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private String getBranch(EnvVars env) {
         return branch == null ? "default" : env.expand(branch);
+    }
+
+    public String getBookmark() {
+    	return bookmark;
+    }
+
+    private String getBookmark(EnvVars env) {
+        return bookmark == null ? null : env.expand(bookmark);
     }
 
     public String getSubdir() {
@@ -278,7 +292,7 @@ public class MercurialSCM extends SCM implements Serializable {
             ArgumentListBuilder cmd = findHgExe(node, listener, false);
             cmd.add(forest ? "fincoming" : "incoming", "--style", tmpFile.getRemote());
             cmd.add("--no-merges");
-            cmd.add("--rev", getBranch());
+            cmd.add("--branch", getBranch());
             cmd.add("--newest-first");
             String cachedSource = cachedSource(node, launcher, listener, true);
             if (cachedSource != null) {
@@ -474,7 +488,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
                 args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
 
-                args.add("--rev", getBranch(env));
+                args.add("--branch", getBranch(env));
 
                 cachedSource = cachedSource(build.getBuiltOn(), launcher, listener, false);
                 if (cachedSource != null) {
@@ -515,7 +529,7 @@ public class MercurialSCM extends SCM implements Serializable {
             try {
                 ProcStarter ps;
                 if (forest) {
-                    ps = hg.run("fpull", "--rev", getBranch(env));
+                    ps = hg.run("fpull", "--branch", getBranch(env));
                 } else {
                     ps = hg.run("unbundle", "hg.bundle");
                 }
@@ -527,7 +541,14 @@ public class MercurialSCM extends SCM implements Serializable {
                     // Periodically recreate hardlinks to the cache to save disk space.
                     hg.run("--config", "extensions.relink=", "relink", cachedSource).pwd(repository).join(); // ignore failures
                 }
-                if(hg.run(forest ? "fupdate" : "update", "--clean", "--rev", getBranch(env)).pwd(repository).join()!=0) {
+                if (bookmark != null) {
+                	if (hg.run("pull", "-B", getBookmark(env)).pwd(repository).join() != 0) {
+                		listener.error("Failed to import bookmark");
+                        return false;
+                	}
+                }
+                String updateTo = bookmark != null ? getBookmark(env) : getBranch(env);
+                if(hg.run(forest ? "fupdate" : "update", "--clean", "--rev", updateTo).pwd(repository).join()!=0) {
                     listener.error("Failed to update");
                     return false;
                 }
@@ -565,7 +586,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
         ArgumentListBuilder args = new ArgumentListBuilder();
         args.add(forest ? "fclone" : "clone");
-        args.add("--rev", getBranch(env));
+        args.add("--branch", getBranch(env));
         String cachedSource = cachedSource(build.getBuiltOn(), launcher, listener, false);
         if (cachedSource != null) {
             args.add(cachedSource);
@@ -582,7 +603,12 @@ public class MercurialSCM extends SCM implements Serializable {
             e.printStackTrace(listener.error("Failed to clone "+source));
             return false;
         }
-
+        if (bookmark != null) {
+        	if(hg.run(forest ? "fupdate" : "update", "--clean", "--rev", getBookmark(env)).pwd(repository).join()!=0) {
+                listener.error("Failed to update");
+                return false;
+            }
+        }
         if (cachedSource != null) {
             FilePath hgrc = repository.child(".hg/hgrc");
             if (hgrc.exists()) {
