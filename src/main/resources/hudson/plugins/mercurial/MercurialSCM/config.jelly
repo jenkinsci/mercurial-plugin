@@ -19,6 +19,9 @@
     <f:textbox/>
   </f:entry>
   <f:advanced>
+    <f:entry field="bookmark" title="${%Bookmark}">
+      <f:textbox/>
+    </f:entry>
     <f:entry field="modules" title="${%Modules}">
       <f:textbox/>
     </f:entry>
