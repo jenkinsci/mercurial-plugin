@@ -57,6 +57,7 @@ import java.util.regex.Pattern;
 
 import net.sf.json.JSONObject;
 
+import org.apache.commons.io.output.NullOutputStream;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.framework.io.WriterOutputStream;
@@ -271,28 +272,39 @@ public class MercurialSCM extends SCM implements Serializable {
         Set<String> changedFileNames = new HashSet<String>();
         FilePath tmpFile = workspace.createTextTempFile("tmp", "style", FILES_STYLE);
         try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
             // Get the list of changed files.
-            AbstractProject<?,?> _project = project; // javac considers project.getLastBuild() to be a Run
-            Node node = _project.getLastBuiltOn(); // HUDSON-5984: ugly but matches what AbstractProject.poll uses
-            ArgumentListBuilder cmd = findHgExe(node, listener, false);
-            cmd.add(forest ? "fincoming" : "incoming", "--style", tmpFile.getRemote());
-            cmd.add("--no-merges");
-            cmd.add("--rev", getBranch());
-            cmd.add("--newest-first");
-            String cachedSource = cachedSource(node, launcher, listener, true);
-            if (cachedSource != null) {
-                cmd.add(cachedSource);
-            }
-            joinWithPossibleTimeout(
-                    launch(launcher).cmds(cmd).stdout(new ForkOutputStream(baos, output)).pwd(workspace2Repo(workspace)),
-                    true, listener);
+            Node node = project.getLastBuiltOn(); // HUDSON-5984: ugly but matches what AbstractProject.poll uses
+            pull(launcher, workspace2Repo(workspace), listener, output, node,getBranch());
 
+            //TODO forest support ?
+            ArgumentListBuilder logCmd = findHgExe(node, listener, false);
+            logCmd.add("log", "--style", tmpFile.getRemote());
+            logCmd.add("--rev", ".:" + getBranch(), "--branch", getBranch());
+            logCmd.add("--prune", ".");
+            logCmd.add("--no-merges");
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            joinWithPossibleTimeout(
+                    launch(launcher).cmds(logCmd).stdout(new ForkOutputStream(baos, output)).pwd(workspace2Repo(workspace)),
+                    true, listener);
             MercurialTagAction cur = parseIncomingOutput(baos, baseline, changedFileNames);
             return new PollingResult(baseline,cur,computeDegreeOfChanges(changedFileNames,output));
         } finally {
             tmpFile.delete();
         }
+    }
+
+    private void pull(Launcher launcher, FilePath repository, TaskListener listener, PrintStream output, Node node, String branch) throws IOException, InterruptedException {
+        ArgumentListBuilder cmd = findHgExe(node, listener, false);
+        cmd.add(forest ? "fpull" : "pull");
+        cmd.add("--rev", branch);
+        String cachedSource = cachedSource(node, launcher, listener, true);
+        if (cachedSource != null) {
+            cmd.add(cachedSource);
+        }
+        joinWithPossibleTimeout(
+                launch(launcher).cmds(cmd).stdout(output).pwd(repository),
+                true, listener);
     }
 
     static int joinWithPossibleTimeout(ProcStarter proc, boolean useTimeout, final TaskListener listener) throws IOException, InterruptedException {
@@ -361,13 +373,6 @@ public class MercurialSCM extends SCM implements Serializable {
                 String id = line.substring(3);
                 if (headId == null) {
                     headId = id;
-                }
-
-                if (id.equals(baseline.id)) {
-                    // Trim the baseline changeset and earlier.
-                    // HUDSON-6337 uses --newest-first to try to order them;
-                    // --prune would be better but incoming does not support it.
-                    break;
                 }
             }
         }
@@ -452,34 +457,21 @@ public class MercurialSCM extends SCM implements Serializable {
                 }
             }
         }
-        FilePath hgBundle = new FilePath(repository, "hg.bundle");
-
-        // delete the file prior to "hg incoming",
-        // as one user reported that it causes a failure.
-        // The error message was "abort: file 'hg.bundle' already exists"
-        hgBundle.delete();
-
         // calc changelog and create bundle
         final FileOutputStream os = new FileOutputStream(changelogFile);
         int r;
-        final String cachedSource;
         try {
             try {
+                pull(launcher,repository, listener, new PrintStream(new NullOutputStream()),Computer.currentComputer().getNode(),getBranch(env) );
                 os.write("<changesets>\n".getBytes());
                 ArgumentListBuilder args = findHgExe(build, listener, false);
-                args.add(forest ? "fincoming" : "incoming", "--quiet");
-                if (!forest) {
-                    args.add("--bundle", "hg.bundle");
-                }
+                args.add("log");
 
                 args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
 
-                args.add("--rev", getBranch(env));
+                args.add("--rev", ".:" + getBranch(env), "--branch", getBranch(env));
+                args.add("--prune", ".");
 
-                cachedSource = cachedSource(build.getBuiltOn(), launcher, listener, false);
-                if (cachedSource != null) {
-                    args.add(cachedSource);
-                }
 
                 ByteArrayOutputStream errorLog = new ByteArrayOutputStream();
 
@@ -492,7 +484,7 @@ public class MercurialSCM extends SCM implements Serializable {
                 } finally {
                     o.flush(); // make sure to commit all output
                 }
-                if(r!=0 && r!=1) {// 0.9.4 returns 1 for no changes
+                if(r!=0) {
                     Util.copyStream(new ByteArrayInputStream(errorLog.toByteArray()),listener.getLogger());
                     listener.error("Failed to determine incoming changes");
                     return false;
@@ -509,24 +501,10 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         // pull
-        if (r == 0 && (hgBundle.exists() || forest)) {
+        if (r == 0) {
             // if incoming didn't fetch anything, it will return 1. That was for 0.9.3.
             // in 0.9.4 apparently it returns 0.
             try {
-                ProcStarter ps;
-                if (forest) {
-                    ps = hg.run("fpull", "--rev", getBranch(env));
-                } else {
-                    ps = hg.run("unbundle", "hg.bundle");
-                }
-                if(ps.pwd(repository).join()!=0) {
-                    listener.error("Failed to pull");
-                    return false;
-                }
-                if (cachedSource != null && build.getNumber() % 100 == 0) {
-                    // Periodically recreate hardlinks to the cache to save disk space.
-                    hg.run("--config", "extensions.relink=", "relink", cachedSource).pwd(repository).join(); // ignore failures
-                }
                 if(hg.run(forest ? "fupdate" : "update", "--clean", "--rev", getBranch(env)).pwd(repository).join()!=0) {
                     listener.error("Failed to update");
                     return false;
@@ -537,8 +515,6 @@ public class MercurialSCM extends SCM implements Serializable {
                 return false;
             }
         }
-
-        hgBundle.delete(); // do not leave it in workspace
 
         String tip = hg.tip(repository);
         if (tip != null) {
