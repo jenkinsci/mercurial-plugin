@@ -540,12 +540,15 @@ public class MercurialSCM extends SCM implements Serializable {
         HgExe hg = new HgExe(this,launcher,build.getBuiltOn(),listener,env);
 
         ArgumentListBuilder args = new ArgumentListBuilder();
-        args.add(forest ? "fclone" : "clone");
-        args.add("--rev", getBranch(env));
         String cachedSource = cachedSource(build.getBuiltOn(), launcher, listener, false);
         if (cachedSource != null) {
+            args.add("share");
+            args.add("--noupdate");
             args.add(cachedSource);
         } else {
+            args.add(forest ? "fclone" : "clone");
+            args.add("--rev", getBranch(env));
+            args.add("--noupdate");
             args.add(source);
         }
         args.add(repository.getRemote());
@@ -559,20 +562,25 @@ public class MercurialSCM extends SCM implements Serializable {
             return false;
         }
 
-        if (cachedSource != null) {
-            FilePath hgrc = repository.child(".hg/hgrc");
-            if (hgrc.exists()) {
-                String hgrcText = hgrc.readToString();
-                if (!hgrcText.contains(cachedSource)) {
-                    listener.error(".hg/hgrc did not contain " + cachedSource + " as expected:\n" + hgrcText);
-                    return false;
-                }
-                hgrc.write(hgrcText.replace(cachedSource, source), null);
-            }
-            // Passing --rev disables hardlinks, so we need to recreate them:
-            hg.run("--config", "extensions.relink=", "relink", cachedSource)
-                    .pwd(repository).join(); // ignore failures
-        }
+        ArgumentListBuilder upArgs = new ArgumentListBuilder();
+        upArgs.add(forest ? "fupdate" : "update");
+        upArgs.add("--rev", getBranch(env));
+        hg.run(upArgs).pwd(repository).join();
+
+//        if (cachedSource != null) {
+//            FilePath hgrc = repository.child(".hg/hgrc");
+//            if (hgrc.exists()) {
+//                String hgrcText = hgrc.readToString();
+//                if (!hgrcText.contains(cachedSource)) {
+//                    listener.error(".hg/hgrc did not contain " + cachedSource + " as expected:\n" + hgrcText);
+//                    return false;
+//                }
+//                hgrc.write(hgrcText.replace(cachedSource, source), null);
+//            }
+//            // Passing --rev disables hardlinks, so we need to recreate them:
+//            hg.run("--config", "extensions.relink=", "relink", cachedSource)
+//                    .pwd(repository).join(); // ignore failures
+//        }
 
         String tip = hg.tip(repository);
         if (tip != null) {

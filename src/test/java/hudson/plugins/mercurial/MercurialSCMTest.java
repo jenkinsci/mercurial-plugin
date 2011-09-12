@@ -205,6 +205,40 @@ public class MercurialSCMTest extends MercurialTestCase {
         assertFalse(it.hasNext());
     }
 
+    public void testMultipleProjectsForSingleSource() throws Exception {
+        FreeStyleProject one = createFreeStyleProject();
+        FreeStyleProject two = createFreeStyleProject();
+        FreeStyleProject three = createFreeStyleProject();
+        FreeStyleProject four = createFreeStyleProject();
+        one.  setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null, null, null, false, false));
+        two.  setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null, null, null, false, false));
+        three.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "b", null, null, null, false, false));
+        four. setScm(new MercurialSCM(hgInstallation, repo.getPath(), "b", null, null, null, false, false));
+
+        hg(repo, "init");
+        touchAndCommit(repo, "f1");
+        assertTrue(pollSCMChanges(one));
+        buildAndCheck(one, "f1");
+        assertTrue(pollSCMChanges(two));
+
+        hg(repo, "branch", "b");
+        touchAndCommit(repo, "b1");
+
+        assertFalse(pollSCMChanges(one));
+
+        buildAndCheck(three, "b1");
+        buildAndCheck(four, "b1");
+
+        touchAndCommit(repo, "b2");
+        assertTrue(pollSCMChanges(three));
+        buildAndCheck(three, "b2");
+        assertTrue(pollSCMChanges(four));
+        
+        assertFalse(pollSCMChanges(one));
+        
+
+    }
+
     /* XXX the following will pass, but canUpdate is not going to work without further changes:
     public void testParameterizedBuildsSource() throws Exception {
         p = createFreeStyleProject();
