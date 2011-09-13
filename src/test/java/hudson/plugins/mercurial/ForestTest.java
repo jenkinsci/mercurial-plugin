@@ -35,6 +35,7 @@ public class ForestTest extends MercurialTestCase {
         assertFalse(ws.child("junk").exists());
         assertFalse(ws.child("sub/trash").exists());
         touchAndCommit(subrepo, "more");
+        assertTrue(pollSCMChanges(p));
         buildAndCheck(p, "sub/more");
     }
 

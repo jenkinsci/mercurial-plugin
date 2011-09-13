@@ -274,9 +274,12 @@ public class MercurialSCM extends SCM implements Serializable {
         try {
             // Get the list of changed files.
             Node node = project.getLastBuiltOn(); // HUDSON-5984: ugly but matches what AbstractProject.poll uses
-            pull(launcher, workspace2Repo(workspace), listener, output, node,getBranch());
+            HgExe hg = new HgExe(this, launcher, node, listener, new EnvVars());
 
-            //TODO forest support ?
+
+            FilePath repository = workspace2Repo(workspace);
+            pull(launcher, repository, listener, output, node,getBranch());
+            
             ArgumentListBuilder logCmd = findHgExe(node, listener, false);
             logCmd.add("log", "--style", tmpFile.getRemote());
             logCmd.add("--rev", ".:" + getBranch(), "--branch", getBranch());
@@ -284,9 +287,22 @@ public class MercurialSCM extends SCM implements Serializable {
             logCmd.add("--no-merges");
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            joinWithPossibleTimeout(
-                    launch(launcher).cmds(logCmd).stdout(new ForkOutputStream(baos, output)).pwd(workspace2Repo(workspace)),
-                    true, listener);
+            ForkOutputStream fos = new ForkOutputStream(baos, output);
+
+            if (forest) {
+                StringTokenizer trees = new StringTokenizer(hg.popen(repository, listener, false, new ArgumentListBuilder("ftrees", "--convert")));
+                while (trees.hasMoreTokens()) {
+                    String tree = trees.nextToken();
+                    joinWithPossibleTimeout(
+                            launch(launcher).cmds(logCmd).stdout(fos).pwd(tree.equals(".") ? repository : repository.child(tree)),
+                            true, listener);
+                }
+            } else {
+                joinWithPossibleTimeout(
+                        launch(launcher).cmds(logCmd).stdout(fos).pwd(repository),
+                        true, listener);
+            }
+
             MercurialTagAction cur = parseIncomingOutput(baos, baseline, changedFileNames);
             return new PollingResult(baseline,cur,computeDegreeOfChanges(changedFileNames,output));
         } finally {
@@ -436,27 +452,6 @@ public class MercurialSCM extends SCM implements Serializable {
         EnvVars env = build.getEnvironment(listener);
 
         HgExe hg = new HgExe(this, launcher, build, listener, env);
-        if(clean) {
-            if (hg.run(forest ? "fupdate" : "update", "--clean", ".").pwd(repository).join() != 0) {
-                listener.error("Failed to clobber local modifications");
-                return false;
-            }
-            if (forest) {
-                StringTokenizer trees = new StringTokenizer(hg.popen(repository, listener, false, new ArgumentListBuilder("ftrees", "--convert")));
-                while (trees.hasMoreTokens()) {
-                    String tree = trees.nextToken();
-                    if (hg.cleanAll().pwd(tree.equals(".") ? repository : repository.child(tree)).join() != 0) {
-                        listener.error("Failed to clean unversioned files in " + tree);
-                        return false;
-                    }
-                }
-            } else {
-                if (hg.cleanAll().pwd(repository).join() != 0) {
-                    listener.error("Failed to clean unversioned files");
-                    return false;
-                }
-            }
-        }
         // calc changelog and create bundle
         final FileOutputStream os = new FileOutputStream(changelogFile);
         int r;
@@ -499,11 +494,30 @@ public class MercurialSCM extends SCM implements Serializable {
         } finally {
             os.close();
         }
+        
+        if(clean) {
+            if (hg.run(forest ? "fupdate" : "update", "--clean", ".").pwd(repository).join() != 0) {
+                listener.error("Failed to clobber local modifications");
+                return false;
+            }
+            if (forest) {
+                StringTokenizer trees = new StringTokenizer(hg.popen(repository, listener, false, new ArgumentListBuilder("ftrees", "--convert")));
+                while (trees.hasMoreTokens()) {
+                    String tree = trees.nextToken();
+                    if (hg.cleanAll().pwd(tree.equals(".") ? repository : repository.child(tree)).join() != 0) {
+                        listener.error("Failed to clean unversioned files in " + tree);
+                        return false;
+                    }
+                }
+            } else {
+                if (hg.cleanAll().pwd(repository).join() != 0) {
+                    listener.error("Failed to clean unversioned files");
+                    return false;
+                }
+            }
+        }
 
-        // pull
         if (r == 0) {
-            // if incoming didn't fetch anything, it will return 1. That was for 0.9.3.
-            // in 0.9.4 apparently it returns 0.
             try {
                 if(hg.run(forest ? "fupdate" : "update", "--clean", "--rev", getBranch(env)).pwd(repository).join()!=0) {
                     listener.error("Failed to update");
