@@ -1,16 +1,32 @@
 package hudson.plugins.mercurial;
 
 import hudson.FilePath;
+import hudson.Proc;
+import hudson.Launcher.ProcStarter;
+import hudson.model.Build;
+import hudson.model.FreeStyleBuild;
+import hudson.model.AbstractBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.ParametersAction;
 import hudson.model.StringParameterValue;
 import hudson.scm.ChangeLogSet;
+import hudson.scm.ChangeLogSet.Entry;
+
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
+
 import org.jvnet.hudson.test.Bug;
+import org.jvnet.hudson.test.FakeLauncher;
+import org.jvnet.hudson.test.PretendSlave;
 
 public class MercurialSCMTest extends MercurialTestCase {
 
@@ -145,6 +161,83 @@ public class MercurialSCMTest extends MercurialTestCase {
         assertEquals(Collections.singleton("extra/f1"), new HashSet<String>(entry.getAffectedPaths()));
         assertFalse(it.hasNext());
     }
+    
+    /**
+     * Control case for {@link #testChangelogOnClone()}.
+     */
+    public void testChangelogOnUpdate() throws Exception {
+    	AbstractBuild<?, ?> b;
+    	FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null, null, null, false, false));
+        hg(repo, "init");
+        touchAndCommit(repo, "dir1/f1");
+        b = p.scheduleBuild2(0).get();
+        assertTrue(b.getChangeSet().isEmptySet());
+        touchAndCommit(repo, "dir2/f1");
+        b = p.scheduleBuild2(0).get();
+        assertChangeSetPaths(Collections.singletonList(Collections.singleton("dir2/f1")), b);
+        touchAndCommit(repo, "dir3/f1");
+        b = p.scheduleBuild2(0).get();
+        assertChangeSetPaths(Collections.singletonList(Collections.singleton("dir3/f1")), b);
+    }
+    
+    /**
+     * The change log should be based on comparison with the previous build,
+     * not depending on the state of the current local clone.  If a workspace
+     * is wiped out, or the build is run on a new slave, it should still result
+     * in the same change log.  This test verifies that, by comparing the
+     * "normal" behavior with when the workspace is removed after every build.
+     */
+    @Bug(10255)
+    public void testChangelogOnClone() throws Exception {
+    	AbstractBuild<?, ?> b;
+    	FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null, null, null, false, false));
+        hg(repo, "init");
+        touchAndCommit(repo, "dir1/f1");
+        b = p.scheduleBuild2(0).get();
+        assertTrue(b.getChangeSet().isEmptySet());
+        b.getWorkspace().deleteRecursive(); // Remove the workspace to force a re-clone
+        touchAndCommit(repo, "dir2/f1");
+        b = p.scheduleBuild2(0).get();
+        assertChangeSetPaths(Collections.singletonList(Collections.singleton("dir2/f1")), b);
+        b.getWorkspace().deleteRecursive(); // Remove the workspace to force a re-clone
+        touchAndCommit(repo, "dir3/f1");
+        b = p.scheduleBuild2(0).get();
+        assertChangeSetPaths(Collections.singletonList(Collections.singleton("dir3/f1")), b);
+    }
+    
+    /**
+     * The change log should be based on comparison with the previous build,
+     * not depending on the state of the current local clone.  When there are
+     * multiple nodes in use, it's possible that there will be a local clone
+     * that doesn't contain the same changesets as the one that was used for
+     * the previous build.  Regardless, that shouldn't affect the change log.
+     * This test verifies that by running 3 builds, each for one commit, but
+     * alternating which node the build runs on.
+     */
+    @Bug(10255)
+    public void testChangelogFromPreviousBuild() throws Exception {
+    	AbstractBuild<?, ?> b;
+        FreeStyleProject p = createFreeStyleProject();
+        PretendSlave s1 = createNoopPretendSlave();
+        PretendSlave s2 = createNoopPretendSlave();
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null, null, null, false, false));
+        p.setAssignedNode(s1);
+        hg(repo, "init");
+        touchAndCommit(repo, "dir1/f1");
+        b = p.scheduleBuild2(0).get();
+        assertTrue(b.getChangeSet().isEmptySet());
+        p.setAssignedNode(s2);
+        touchAndCommit(repo, "dir2/f1");
+        b = p.scheduleBuild2(0).get();
+        // this isn't as notable, as it's also covered by testChangelogOnClone
+        // assertChangeSetPaths(Collections.singletonList(Collections.singleton("dir2/f1")), b);
+        p.setAssignedNode(s1);
+        touchAndCommit(repo, "dir3/f1");
+        b = p.scheduleBuild2(0).get();
+        assertChangeSetPaths(Collections.singletonList(Collections.singleton("dir3/f1")), b);
+    }
 
     @Bug(4271)
     public void testParameterizedBuildsBranch() throws Exception {
@@ -230,4 +323,22 @@ public class MercurialSCMTest extends MercurialTestCase {
     }
      */
 
+    private PretendSlave createNoopPretendSlave() throws Exception {
+    	return createPretendSlave(new NoopFakeLauncher());
+    }
+    
+    private void assertChangeSetPaths(List<Set<String>> expectedChangeSetPaths, AbstractBuild<?, ?> build) {
+    	ChangeLogSet<? extends Entry> actualChangeLogSet = build.getChangeSet();
+    	List<Set<String>> actualChangeSetPaths = new LinkedList<Set<String>>();
+    	for(Entry entry : actualChangeLogSet) {
+    		actualChangeSetPaths.add(new LinkedHashSet<String>(entry.getAffectedPaths()));
+    	}
+    	assertEquals(expectedChangeSetPaths, actualChangeSetPaths);
+    }
+    
+    private static final class NoopFakeLauncher implements FakeLauncher {
+    	public Proc onLaunch(ProcStarter p) throws IOException {
+    		return null;
+    	}
+    }
 }
