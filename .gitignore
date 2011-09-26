@@ -1,3 +1,6 @@
 target
 work
 mercurial.i*
+.classpath
+.settings
+.project
