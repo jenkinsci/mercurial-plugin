@@ -15,6 +15,7 @@ import hudson.model.BuildListener;
 import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.Node;
+import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.plugins.mercurial.browser.HgBrowser;
 import hudson.plugins.mercurial.browser.HgWeb;
@@ -459,53 +460,35 @@ public class MercurialSCM extends SCM implements Serializable {
         // The error message was "abort: file 'hg.bundle' already exists"
         hgBundle.delete();
 
-        // calc changelog and create bundle
-        final FileOutputStream os = new FileOutputStream(changelogFile);
+        // create bundle
         int r;
         final String cachedSource;
         try {
-            try {
-                os.write("<changesets>\n".getBytes());
-                ArgumentListBuilder args = findHgExe(build, listener, false);
-                args.add(forest ? "fincoming" : "incoming", "--quiet");
-                if (!forest) {
-                    args.add("--bundle", "hg.bundle");
-                }
-
-                args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
-
-                args.add("--rev", getBranch(env));
-
-                cachedSource = cachedSource(build.getBuiltOn(), launcher, listener, false);
-                if (cachedSource != null) {
-                    args.add(cachedSource);
-                }
-
-                ByteArrayOutputStream errorLog = new ByteArrayOutputStream();
-
-                // mercurial produces text in the platform default encoding, so we need to
-                // convert it back to UTF-8
-                WriterOutputStream o = new WriterOutputStream(new OutputStreamWriter(os, "UTF-8"), Computer.currentComputer().getDefaultCharset());
-                try {
-                    r = launch(launcher).cmds(args).envs(env)
-                            .stdout(new ForkOutputStream(o,errorLog)).pwd(repository).join();
-                } finally {
-                    o.flush(); // make sure to commit all output
-                }
-                if(r!=0 && r!=1) {// 0.9.4 returns 1 for no changes
-                    Util.copyStream(new ByteArrayInputStream(errorLog.toByteArray()),listener.getLogger());
-                    listener.error("Failed to determine incoming changes");
-                    return false;
-                }
-            } catch (IOException e) {
-                listener.error("Failed to pull");
-                e.printStackTrace(listener.getLogger());
-                return false;
-            } finally {
-                os.write("</changesets>".getBytes());
+            ArgumentListBuilder args = findHgExe(build, listener, false);
+            args.add(forest ? "fincoming" : "incoming", "--quiet");
+            if (!forest) {
+                args.add("--bundle", "hg.bundle");
             }
-        } finally {
-            os.close();
+
+            args.add("--rev", getBranch(env));
+
+            cachedSource = cachedSource(build.getBuiltOn(), launcher, listener, false);
+            if (cachedSource != null) {
+                args.add(cachedSource);
+            }
+
+            ByteArrayOutputStream errorLog = new ByteArrayOutputStream();
+            r = launch(launcher).cmds(args).envs(env)
+                    .stdout(errorLog).pwd(repository).join();
+            if(r!=0 && r!=1) {// 0.9.4 returns 1 for no changes
+                Util.copyStream(new ByteArrayInputStream(errorLog.toByteArray()),listener.getLogger());
+                listener.error("Failed to determine incoming changes");
+                return false;
+            }
+        } catch (IOException e) {
+            listener.error("Failed to pull");
+            e.printStackTrace(listener.getLogger());
+            return false;
         }
 
         // pull
@@ -539,13 +522,61 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         hgBundle.delete(); // do not leave it in workspace
-
+        
         String tip = hg.tip(repository);
         if (tip != null) {
-            build.addAction(new MercurialTagAction(tip));
+            MercurialTagAction newTag = new MercurialTagAction(tip);
+            build.addAction(newTag);
+            Run<?, ?> prevBuild = build.getPreviousBuild();
+            if(prevBuild != null) {
+            	MercurialTagAction prevTag = prevBuild.getAction(MercurialTagAction.class);
+            	return createChangelog(build, launcher, repository, listener, changelogFile, newTag, prevTag);
+            }
         }
+        return createEmptyChangeLog(changelogFile, listener, "changesets");
+    }
+    
+    private boolean createChangelog(AbstractBuild<?,?> build, Launcher launcher, FilePath repository, BuildListener listener, File changelogFile, MercurialTagAction newTag, MercurialTagAction prevTag) throws InterruptedException, IOException {
+    	int r;
+    	EnvVars env = build.getEnvironment(listener);
+		FileOutputStream os = new FileOutputStream(changelogFile);
+		os.write("<changesets>\n".getBytes());
+        try {
+            try {
+                ArgumentListBuilder args = findHgExe(build, listener, false);
+                args.add("log");
+                args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
+                args.add("--branch", getBranch(env));
+                args.add("--rev", "0:" + newTag.getId());
+                args.add("--prune", prevTag.getId());
 
-        return true;
+                ByteArrayOutputStream errorLog = new ByteArrayOutputStream();
+
+                // mercurial produces text in the platform default encoding, so we need to
+                // convert it back to UTF-8
+                WriterOutputStream o = new WriterOutputStream(new OutputStreamWriter(os, "UTF-8"), Computer.currentComputer().getDefaultCharset());
+                try {
+                    r = launch(launcher).cmds(args).envs(env)
+                            .stdout(new ForkOutputStream(o,errorLog)).pwd(repository).join();
+                } finally {
+                    o.flush(); // make sure to commit all output
+                }
+                if(r!=0 && r!=1) {// 0.9.4 returns 1 for no changes
+                    Util.copyStream(new ByteArrayInputStream(errorLog.toByteArray()),listener.getLogger());
+                    listener.error("Failed to determine changes");
+                    return false;
+                }
+                return true;
+            } catch (IOException e) {
+                listener.error("Failed to determine changes");
+                e.printStackTrace(listener.getLogger());
+                return false;
+            } finally {
+                os.write("</changesets>".getBytes());
+            }
+        } finally {
+            os.close();
+        }
     }
 
     /**
@@ -600,10 +631,15 @@ public class MercurialSCM extends SCM implements Serializable {
 
         String tip = hg.tip(repository);
         if (tip != null) {
-            build.addAction(new MercurialTagAction(tip));
+            MercurialTagAction newTag = new MercurialTagAction(tip);
+            build.addAction(newTag);
+            Run<?, ?> prevBuild = build.getPreviousBuild();
+            if(prevBuild != null) {
+            	MercurialTagAction prevTag = prevBuild.getAction(MercurialTagAction.class);
+            	return createChangelog(build, launcher, repository, listener, changelogFile, newTag, prevTag);
+            }
         }
-
-        return createEmptyChangeLog(changelogFile, listener, "changelog");
+    	return createEmptyChangeLog(changelogFile, listener, "changesets");
     }
 
     @Override
