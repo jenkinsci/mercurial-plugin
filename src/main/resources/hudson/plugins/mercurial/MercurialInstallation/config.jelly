@@ -11,6 +11,9 @@
   <f:entry field="useCaches" title="${%Use Repository Caches}">
     <f:checkbox/>
   </f:entry>
+  <f:entry field="useSharing" title="${%Use Repository Sharing}">
+    <f:checkbox/>
+  </f:entry>
   <f:entry field="debug" title="${%Debug Flag}">
     <f:checkbox/>
   </f:entry>

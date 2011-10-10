@@ -70,7 +70,7 @@ public class MercurialSCM extends SCM implements Serializable {
     /**
      * Name of selected installation, if any.
      */
-    private final String installation;
+    private final String installationName;
 
     /**
      * Source repository URL from which we pull.
@@ -101,7 +101,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
     @DataBoundConstructor
     public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean, boolean forest) {
-        this.installation = installation;
+        this.installationName = installation;
         this.source = source;
         this.modules = Util.fixNull(modules);
         this.subdir = Util.fixEmptyAndTrim(subdir);
@@ -145,7 +145,7 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     public String getInstallation() {
-        return installation;
+        return installationName;
     }
 
     /**
@@ -214,7 +214,7 @@ public class MercurialSCM extends SCM implements Serializable {
      */
     ArgumentListBuilder findHgExe(Node node, TaskListener listener, boolean allowDebug) throws IOException, InterruptedException {
         for (MercurialInstallation inst : MercurialInstallation.allInstallations()) {
-            if (inst.getName().equals(installation)) {
+            if (inst.getName().equals(installationName)) {
                 // XXX what about forEnvironment?
                 ArgumentListBuilder b = new ArgumentListBuilder(inst.executableWithSubstitution(
                         inst.forNode(node, listener).getHome()));
@@ -314,9 +314,9 @@ public class MercurialSCM extends SCM implements Serializable {
         ArgumentListBuilder cmd = findHgExe(node, listener, false);
         cmd.add(forest ? "fpull" : "pull");
         cmd.add("--rev", branch);
-        String cachedSource = cachedSource(node, launcher, listener, true);
+        PossiblyCachedRepo cachedSource = cachedSource(node, launcher, listener, true);
         if (cachedSource != null) {
-            cmd.add(cachedSource);
+            cmd.add(cachedSource.getRepoLocation());
         }
         joinWithPossibleTimeout(
                 launch(launcher).cmds(cmd).stdout(output).pwd(repository),
@@ -402,6 +402,7 @@ public class MercurialSCM extends SCM implements Serializable {
     @Override
     public boolean checkout(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, final BuildListener listener, File changelogFile)
             throws IOException, InterruptedException {
+
         boolean canUpdate = workspace2Repo(workspace).act(new FileCallable<Boolean>() {
             public Boolean invoke(File ws, VirtualChannel channel) throws IOException {
                 if (!HgRc.getHgRcFile(ws).exists()) {
@@ -554,11 +555,18 @@ public class MercurialSCM extends SCM implements Serializable {
         HgExe hg = new HgExe(this,launcher,build.getBuiltOn(),listener,env);
 
         ArgumentListBuilder args = new ArgumentListBuilder();
-        String cachedSource = cachedSource(build.getBuiltOn(), launcher, listener, false);
+        PossiblyCachedRepo cachedSource = cachedSource(build.getBuiltOn(), launcher, listener, false);
         if (cachedSource != null) {
-            args.add("share");
-            args.add("--noupdate");
-            args.add(cachedSource);
+            if (cachedSource.isUseSharing()) {
+                args.add("share");
+                args.add("--noupdate");
+                args.add(cachedSource.getRepoLocation());
+            } else {
+                args.add("clone");
+                args.add("--rev", getBranch(env));
+                args.add("--noupdate");
+                args.add(cachedSource.getRepoLocation());
+            }
         } else {
             args.add(forest ? "fclone" : "clone");
             args.add("--rev", getBranch(env));
@@ -576,25 +584,25 @@ public class MercurialSCM extends SCM implements Serializable {
             return false;
         }
 
+        if (cachedSource != null && cachedSource.isUseCaches()) {
+            FilePath hgrc = repository.child(".hg/hgrc");
+            if (hgrc.exists()) {
+                String hgrcText = hgrc.readToString();
+                if (!hgrcText.contains(cachedSource.getRepoLocation())) {
+                    listener.error(".hg/hgrc did not contain " + cachedSource.getRepoLocation() + " as expected:\n" + hgrcText);
+                    return false;
+                }
+                hgrc.write(hgrcText.replace(cachedSource.getRepoLocation(), source), null);
+            }
+            // Passing --rev disables hardlinks, so we need to recreate them:
+            hg.run("--config", "extensions.relink=", "relink", cachedSource.getRepoLocation())
+                    .pwd(repository).join(); // ignore failures
+        }
+
         ArgumentListBuilder upArgs = new ArgumentListBuilder();
         upArgs.add(forest ? "fupdate" : "update");
         upArgs.add("--rev", getBranch(env));
         hg.run(upArgs).pwd(repository).join();
-
-//        if (cachedSource != null) {
-//            FilePath hgrc = repository.child(".hg/hgrc");
-//            if (hgrc.exists()) {
-//                String hgrcText = hgrc.readToString();
-//                if (!hgrcText.contains(cachedSource)) {
-//                    listener.error(".hg/hgrc did not contain " + cachedSource + " as expected:\n" + hgrcText);
-//                    return false;
-//                }
-//                hgrc.write(hgrcText.replace(cachedSource, source), null);
-//            }
-//            // Passing --rev disables hardlinks, so we need to recreate them:
-//            hg.run("--config", "extensions.relink=", "relink", cachedSource)
-//                    .pwd(repository).join(); // ignore failures
-//        }
 
         String tip = hg.tip(repository);
         if (tip != null) {
@@ -627,7 +635,7 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     static boolean CACHE_LOCAL_REPOS = false;
-    private @CheckForNull String cachedSource(Node node, Launcher launcher, TaskListener listener, boolean fromPolling) {
+    private @CheckForNull PossiblyCachedRepo cachedSource(Node node, Launcher launcher, TaskListener listener, boolean fromPolling) {
         if (!CACHE_LOCAL_REPOS && source.matches("(file:|[/\\\\]).+")) {
             return null;
         }
@@ -636,9 +644,11 @@ public class MercurialSCM extends SCM implements Serializable {
             return null;
         }
         boolean useCaches = false;
+        MercurialInstallation _installation = null;
         for (MercurialInstallation inst : MercurialInstallation.allInstallations()) {
-            if (inst.getName().equals(installation)) {
+            if (inst.getName().equals(installationName)) {
                 useCaches = inst.isUseCaches();
+                _installation = inst;
                 break;
             }
         }
@@ -648,7 +658,7 @@ public class MercurialSCM extends SCM implements Serializable {
         try {
             FilePath cache = Cache.fromURL(source).repositoryCache(this, node, launcher, listener, fromPolling);
             if (cache != null) {
-                return cache.getRemote();
+                return new PossiblyCachedRepo(cache.getRemote(), _installation.isUseCaches(), _installation.isUseSharing());
             } else {
                 listener.error("Failed to use repository cache for " + source);
                 return null;
@@ -656,6 +666,30 @@ public class MercurialSCM extends SCM implements Serializable {
         } catch (Exception x) {
             x.printStackTrace(listener.error("Failed to use repository cache for " + source));
             return null;
+        }
+    }
+
+    private static class PossiblyCachedRepo {
+        private final String repoLocation;
+        private final boolean useCaches;
+        private final boolean useSharing;
+
+        private PossiblyCachedRepo(String repoLocation, boolean useCaches, boolean useSharing) {
+            this.repoLocation = repoLocation;
+            this.useCaches = useCaches;
+            this.useSharing = useSharing;
+        }
+
+        public String getRepoLocation() {
+            return repoLocation;
+        }
+
+        public boolean isUseSharing() {
+            return useSharing;
+        }
+
+        public boolean isUseCaches() {
+            return useCaches;
         }
     }
 

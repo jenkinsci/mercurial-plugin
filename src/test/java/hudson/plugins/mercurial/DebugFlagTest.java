@@ -10,7 +10,7 @@ public class DebugFlagTest extends MercurialSCMTest {
         super.setUp();
         hgInstallation = "debug";
         Hudson.getInstance().getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(
-                new MercurialInstallation("debug", "", "hg", null, true, false, Collections.<ToolProperty<?>>emptyList()));
+                new MercurialInstallation("debug", "", "hg", null, true, false, false, Collections.<ToolProperty<?>>emptyList()));
     }
 
 }
