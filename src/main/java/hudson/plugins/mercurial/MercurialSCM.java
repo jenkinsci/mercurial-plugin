@@ -27,6 +27,7 @@ import hudson.scm.RepositoryBrowsers;
 import hudson.scm.SCM;
 import hudson.scm.SCMDescriptor;
 import hudson.scm.SCMRevisionState;
+import hudson.security.Permission;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.ForkOutputStream;
 
@@ -399,6 +400,14 @@ public class MercurialSCM extends SCM implements Serializable {
         return new MercurialTagAction(headId);
     }
 
+    public static MercurialInstallation findInstallation(String name) {
+        for (MercurialInstallation inst : MercurialInstallation.allInstallations()) {
+            if (inst.getName().equals(name)) {
+                return inst;
+            }
+        }
+        return null;
+    }
     @Override
     public boolean checkout(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, final BuildListener listener, File changelogFile)
             throws IOException, InterruptedException {
@@ -408,6 +417,18 @@ public class MercurialSCM extends SCM implements Serializable {
                 if (!HgRc.getHgRcFile(ws).exists()) {
                     return false;
                 }
+
+                MercurialInstallation mercurialInstallation = findInstallation(installationName);
+                boolean jobUsesSharing = HgRc.getShareFile(ws).exists();
+                boolean jobShouldUseSharing = mercurialInstallation != null && mercurialInstallation.isUseSharing();
+
+                if (jobShouldUseSharing && !jobUsesSharing) {
+                    return false;
+                }
+                if (!jobShouldUseSharing && jobUsesSharing) {
+                    return false;
+                }
+
                 HgRc hgrc = new HgRc(ws);
                 return canUpdate(hgrc);
             }
