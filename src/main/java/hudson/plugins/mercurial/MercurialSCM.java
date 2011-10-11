@@ -605,7 +605,7 @@ public class MercurialSCM extends SCM implements Serializable {
             return false;
         }
 
-        if (cachedSource != null && cachedSource.isUseCaches()) {
+        if (cachedSource != null && cachedSource.isUseCaches() && !cachedSource.isUseSharing()) {
             FilePath hgrc = repository.child(".hg/hgrc");
             if (hgrc.exists()) {
                 String hgrcText = hgrc.readToString();
