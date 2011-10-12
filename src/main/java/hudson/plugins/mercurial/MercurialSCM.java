@@ -412,20 +412,21 @@ public class MercurialSCM extends SCM implements Serializable {
     public boolean checkout(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, final BuildListener listener, File changelogFile)
             throws IOException, InterruptedException {
 
+        MercurialInstallation mercurialInstallation = findInstallation(installationName);
+        final boolean jobShouldUseSharing = mercurialInstallation != null && mercurialInstallation.isUseSharing();
+        
         boolean canUpdate = workspace2Repo(workspace).act(new FileCallable<Boolean>() {
             public Boolean invoke(File ws, VirtualChannel channel) throws IOException {
                 if (!HgRc.getHgRcFile(ws).exists()) {
                     return false;
                 }
 
-                MercurialInstallation mercurialInstallation = findInstallation(installationName);
                 boolean jobUsesSharing = HgRc.getShareFile(ws).exists();
-                boolean jobShouldUseSharing = mercurialInstallation != null && mercurialInstallation.isUseSharing();
 
                 if (jobShouldUseSharing && !jobUsesSharing) {
                     return false;
                 }
-                if (!jobShouldUseSharing && jobUsesSharing) {
+                if (jobUsesSharing && !jobShouldUseSharing) {
                     return false;
                 }
 
