@@ -70,7 +70,7 @@ public class MercurialSCM extends SCM implements Serializable {
     /**
      * Name of selected installation, if any.
      */
-    private final String installationName;
+    private final String installation;
 
     /**
      * Source repository URL from which we pull.
@@ -101,7 +101,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
     @DataBoundConstructor
     public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean, boolean forest) {
-        this.installationName = installation;
+        this.installation = installation;
         this.source = source;
         this.modules = Util.fixNull(modules);
         this.subdir = Util.fixEmptyAndTrim(subdir);
@@ -145,7 +145,7 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     public String getInstallation() {
-        return installationName;
+        return installation;
     }
 
     /**
@@ -214,7 +214,7 @@ public class MercurialSCM extends SCM implements Serializable {
      */
     ArgumentListBuilder findHgExe(Node node, TaskListener listener, boolean allowDebug) throws IOException, InterruptedException {
         for (MercurialInstallation inst : MercurialInstallation.allInstallations()) {
-            if (inst.getName().equals(installationName)) {
+            if (inst.getName().equals(installation)) {
                 // XXX what about forEnvironment?
                 ArgumentListBuilder b = new ArgumentListBuilder(inst.executableWithSubstitution(
                         inst.forNode(node, listener).getHome()));
@@ -411,7 +411,7 @@ public class MercurialSCM extends SCM implements Serializable {
     public boolean checkout(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, final BuildListener listener, File changelogFile)
             throws IOException, InterruptedException {
 
-        MercurialInstallation mercurialInstallation = findInstallation(installationName);
+        MercurialInstallation mercurialInstallation = findInstallation(installation);
         final boolean jobShouldUseSharing = mercurialInstallation != null && mercurialInstallation.isUseSharing();
 
         FilePath repository = workspace2Repo(workspace);
@@ -697,7 +697,7 @@ public class MercurialSCM extends SCM implements Serializable {
         boolean useCaches = false;
         MercurialInstallation _installation = null;
         for (MercurialInstallation inst : MercurialInstallation.allInstallations()) {
-            if (inst.getName().equals(installationName)) {
+            if (inst.getName().equals(installation)) {
                 useCaches = inst.isUseCaches();
                 _installation = inst;
                 break;
