@@ -57,6 +57,7 @@ import java.util.regex.Pattern;
 
 import net.sf.json.JSONObject;
 
+import org.apache.commons.io.output.NullOutputStream;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.framework.io.WriterOutputStream;
@@ -271,28 +272,55 @@ public class MercurialSCM extends SCM implements Serializable {
         Set<String> changedFileNames = new HashSet<String>();
         FilePath tmpFile = workspace.createTextTempFile("tmp", "style", FILES_STYLE);
         try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
             // Get the list of changed files.
-            AbstractProject<?,?> _project = project; // javac considers project.getLastBuild() to be a Run
-            Node node = _project.getLastBuiltOn(); // HUDSON-5984: ugly but matches what AbstractProject.poll uses
-            ArgumentListBuilder cmd = findHgExe(node, listener, false);
-            cmd.add(forest ? "fincoming" : "incoming", "--style", tmpFile.getRemote());
-            cmd.add("--no-merges");
-            cmd.add("--rev", getBranch());
-            cmd.add("--newest-first");
-            String cachedSource = cachedSource(node, launcher, listener, true);
-            if (cachedSource != null) {
-                cmd.add(cachedSource);
+            Node node = project.getLastBuiltOn(); // HUDSON-5984: ugly but matches what AbstractProject.poll uses
+            HgExe hg = new HgExe(this, launcher, node, listener, new EnvVars());
+
+
+            FilePath repository = workspace2Repo(workspace);
+            pull(launcher, repository, listener, output, node,getBranch());
+            
+            ArgumentListBuilder logCmd = findHgExe(node, listener, false);
+            logCmd.add("log", "--style", tmpFile.getRemote());
+            logCmd.add("--rev", ".:" + getBranch(), "--branch", getBranch());
+            logCmd.add("--prune", ".");
+            logCmd.add("--no-merges");
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ForkOutputStream fos = new ForkOutputStream(baos, output);
+
+            if (forest) {
+                StringTokenizer trees = new StringTokenizer(hg.popen(repository, listener, false, new ArgumentListBuilder("ftrees", "--convert")));
+                while (trees.hasMoreTokens()) {
+                    String tree = trees.nextToken();
+                    joinWithPossibleTimeout(
+                            launch(launcher).cmds(logCmd).stdout(fos).pwd(tree.equals(".") ? repository : repository.child(tree)),
+                            true, listener);
+                }
+            } else {
+                joinWithPossibleTimeout(
+                        launch(launcher).cmds(logCmd).stdout(fos).pwd(repository),
+                        true, listener);
             }
-            joinWithPossibleTimeout(
-                    launch(launcher).cmds(cmd).stdout(new ForkOutputStream(baos, output)).pwd(workspace2Repo(workspace)),
-                    true, listener);
 
             MercurialTagAction cur = parseIncomingOutput(baos, baseline, changedFileNames);
             return new PollingResult(baseline,cur,computeDegreeOfChanges(changedFileNames,output));
         } finally {
             tmpFile.delete();
         }
+    }
+
+    private void pull(Launcher launcher, FilePath repository, TaskListener listener, PrintStream output, Node node, String branch) throws IOException, InterruptedException {
+        ArgumentListBuilder cmd = findHgExe(node, listener, false);
+        cmd.add(forest ? "fpull" : "pull");
+        cmd.add("--rev", branch);
+        PossiblyCachedRepo cachedSource = cachedSource(node, launcher, listener, true);
+        if (cachedSource != null) {
+            cmd.add(cachedSource.getRepoLocation());
+        }
+        joinWithPossibleTimeout(
+                launch(launcher).cmds(cmd).stdout(output).pwd(repository),
+                true, listener);
     }
 
     static int joinWithPossibleTimeout(ProcStarter proc, boolean useTimeout, final TaskListener listener) throws IOException, InterruptedException {
@@ -362,13 +390,6 @@ public class MercurialSCM extends SCM implements Serializable {
                 if (headId == null) {
                     headId = id;
                 }
-
-                if (id.equals(baseline.id)) {
-                    // Trim the baseline changeset and earlier.
-                    // HUDSON-6337 uses --newest-first to try to order them;
-                    // --prune would be better but incoming does not support it.
-                    break;
-                }
             }
         }
 
@@ -378,14 +399,37 @@ public class MercurialSCM extends SCM implements Serializable {
         return new MercurialTagAction(headId);
     }
 
+    public static MercurialInstallation findInstallation(String name) {
+        for (MercurialInstallation inst : MercurialInstallation.allInstallations()) {
+            if (inst.getName().equals(name)) {
+                return inst;
+            }
+        }
+        return null;
+    }
     @Override
     public boolean checkout(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, final BuildListener listener, File changelogFile)
             throws IOException, InterruptedException {
-        boolean canUpdate = workspace2Repo(workspace).act(new FileCallable<Boolean>() {
+
+        MercurialInstallation mercurialInstallation = findInstallation(installation);
+        final boolean jobShouldUseSharing = mercurialInstallation != null && mercurialInstallation.isUseSharing();
+
+        FilePath repository = workspace2Repo(workspace);
+        boolean canReuseExistingWorkspace = repository.act(new FileCallable<Boolean>() {
             public Boolean invoke(File ws, VirtualChannel channel) throws IOException {
                 if (!HgRc.getHgRcFile(ws).exists()) {
                     return false;
                 }
+
+                boolean jobUsesSharing = HgRc.getShareFile(ws).exists();
+
+                if (jobShouldUseSharing && !jobUsesSharing) {
+                    return false;
+                }
+                if (jobUsesSharing && !jobShouldUseSharing) {
+                    return false;
+                }
+
                 HgRc hgrc = new HgRc(ws);
                 return canUpdate(hgrc);
             }
@@ -416,21 +460,95 @@ public class MercurialSCM extends SCM implements Serializable {
             }
         });
 
-        if (canUpdate) {
-            return update(build, launcher, workspace2Repo(workspace), listener, changelogFile);
+
+        boolean success;
+        if (canReuseExistingWorkspace) {
+            success = update(build, launcher, repository, listener);
         } else {
-            return clone(build, launcher, workspace2Repo(workspace), listener, changelogFile);
+            success = clone(build, launcher, repository, listener, changelogFile);
+        }
+
+        try {
+            determineChanges(build, launcher, listener, changelogFile, repository);
+            return success;
+        } catch (IOException e) {
+            return false;
+        } 
+    }
+
+    private void determineChanges(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, File changelogFile, FilePath repository) throws IOException, InterruptedException {
+        
+        AbstractBuild<?, ?> previousBuild = build.getPreviousBuild();
+        MercurialTagAction prevTag = previousBuild != null ? previousBuild.getAction(MercurialTagAction.class) : null;
+        if (prevTag == null) {
+            createEmptyChangeLog(changelogFile, listener, "changelog");
+            return;
+        }
+        EnvVars env = build.getEnvironment(listener);
+
+        ArgumentListBuilder logCommand = findHgExe(build, listener, false).add("log", "--rev", prevTag.getId());
+        int exitCode = launch(launcher).cmds(logCommand).envs(env).pwd(repository).join();
+        if(exitCode != 0) {
+            listener.error("previous built revision " + prevTag.getId() + " is not know in this clone");
+            createEmptyChangeLog(changelogFile, listener, "changelog");
+            return;
+        }
+        
+        // calc changelog and create bundle
+        final FileOutputStream os = new FileOutputStream(changelogFile);
+        try {
+            try {
+                os.write("<changesets>\n".getBytes());
+                ArgumentListBuilder args = findHgExe(build, listener, false);
+                args.add("log");
+
+                args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
+                args.add("--rev", getBranch(env) + ":0");
+                args.add("--follow");
+                args.add("--prune", prevTag.getId());
+
+
+                ByteArrayOutputStream errorLog = new ByteArrayOutputStream();
+
+                // mercurial produces text in the platform default encoding, so we need to
+                // convert it back to UTF-8
+                WriterOutputStream o = new WriterOutputStream(new OutputStreamWriter(os, "UTF-8"), Computer.currentComputer().getDefaultCharset());
+                int r;
+                try {
+                    r = launch(launcher).cmds(args).envs(env)
+                            .stdout(new ForkOutputStream(o,errorLog)).pwd(repository).join();
+                } finally {
+                    o.flush(); // make sure to commit all output
+                }
+                if(r!=0) {
+                    Util.copyStream(new ByteArrayInputStream(errorLog.toByteArray()), listener.getLogger());
+                    listener.error("Failed to determine incoming changes");
+                    throw new IOException("Failed to determine incoming changes");
+                }
+            } finally {
+                os.write("</changesets>".getBytes());
+            }
+        } finally {
+            os.close();
         }
     }
 
-    /**
+    /*
      * Updates the current repository.
      */
-    private boolean update(AbstractBuild<?,?> build, Launcher launcher, FilePath repository, BuildListener listener, File changelogFile)
+    private boolean update(AbstractBuild<?, ?> build, Launcher launcher, FilePath repository, BuildListener listener)
             throws InterruptedException, IOException {
         EnvVars env = build.getEnvironment(listener);
 
         HgExe hg = new HgExe(this, launcher, build, listener, env);
+        try {
+            pull(launcher, repository, listener, new PrintStream(new NullOutputStream()), Computer.currentComputer().getNode(), getBranch(env));
+        } catch (IOException e) {
+            listener.error("Failed to pull");
+            e.printStackTrace(listener.getLogger());
+            return false;
+        } 
+        
         if(clean) {
             if (hg.run(forest ? "fupdate" : "update", "--clean", ".").pwd(repository).join() != 0) {
                 listener.error("Failed to clobber local modifications");
@@ -452,93 +570,17 @@ public class MercurialSCM extends SCM implements Serializable {
                 }
             }
         }
-        FilePath hgBundle = new FilePath(repository, "hg.bundle");
 
-        // delete the file prior to "hg incoming",
-        // as one user reported that it causes a failure.
-        // The error message was "abort: file 'hg.bundle' already exists"
-        hgBundle.delete();
-
-        // calc changelog and create bundle
-        final FileOutputStream os = new FileOutputStream(changelogFile);
-        int r;
-        final String cachedSource;
         try {
-            try {
-                os.write("<changesets>\n".getBytes());
-                ArgumentListBuilder args = findHgExe(build, listener, false);
-                args.add(forest ? "fincoming" : "incoming", "--quiet");
-                if (!forest) {
-                    args.add("--bundle", "hg.bundle");
-                }
-
-                args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
-
-                args.add("--rev", getBranch(env));
-
-                cachedSource = cachedSource(build.getBuiltOn(), launcher, listener, false);
-                if (cachedSource != null) {
-                    args.add(cachedSource);
-                }
-
-                ByteArrayOutputStream errorLog = new ByteArrayOutputStream();
-
-                // mercurial produces text in the platform default encoding, so we need to
-                // convert it back to UTF-8
-                WriterOutputStream o = new WriterOutputStream(new OutputStreamWriter(os, "UTF-8"), Computer.currentComputer().getDefaultCharset());
-                try {
-                    r = launch(launcher).cmds(args).envs(env)
-                            .stdout(new ForkOutputStream(o,errorLog)).pwd(repository).join();
-                } finally {
-                    o.flush(); // make sure to commit all output
-                }
-                if(r!=0 && r!=1) {// 0.9.4 returns 1 for no changes
-                    Util.copyStream(new ByteArrayInputStream(errorLog.toByteArray()),listener.getLogger());
-                    listener.error("Failed to determine incoming changes");
-                    return false;
-                }
-            } catch (IOException e) {
-                listener.error("Failed to pull");
-                e.printStackTrace(listener.getLogger());
-                return false;
-            } finally {
-                os.write("</changesets>".getBytes());
-            }
-        } finally {
-            os.close();
-        }
-
-        // pull
-        if (r == 0 && (hgBundle.exists() || forest)) {
-            // if incoming didn't fetch anything, it will return 1. That was for 0.9.3.
-            // in 0.9.4 apparently it returns 0.
-            try {
-                ProcStarter ps;
-                if (forest) {
-                    ps = hg.run("fpull", "--rev", getBranch(env));
-                } else {
-                    ps = hg.run("unbundle", "hg.bundle");
-                }
-                if(ps.pwd(repository).join()!=0) {
-                    listener.error("Failed to pull");
-                    return false;
-                }
-                if (cachedSource != null && build.getNumber() % 100 == 0) {
-                    // Periodically recreate hardlinks to the cache to save disk space.
-                    hg.run("--config", "extensions.relink=", "relink", cachedSource).pwd(repository).join(); // ignore failures
-                }
-                if(hg.run(forest ? "fupdate" : "update", "--clean", "--rev", getBranch(env)).pwd(repository).join()!=0) {
-                    listener.error("Failed to update");
-                    return false;
-                }
-            } catch (IOException e) {
-                listener.error("Failed to pull");
-                e.printStackTrace(listener.getLogger());
+            if(hg.run(forest ? "fupdate" : "update", "--clean", "--rev", getBranch(env)).pwd(repository).join()!=0) {
+                listener.error("Failed to update");
                 return false;
             }
+        } catch (IOException e) {
+            listener.error("Failed to update");
+            e.printStackTrace(listener.getLogger());
+            return false;
         }
-
-        hgBundle.delete(); // do not leave it in workspace
 
         String tip = hg.tip(repository);
         if (tip != null) {
@@ -564,12 +606,22 @@ public class MercurialSCM extends SCM implements Serializable {
         HgExe hg = new HgExe(this,launcher,build.getBuiltOn(),listener,env);
 
         ArgumentListBuilder args = new ArgumentListBuilder();
-        args.add(forest ? "fclone" : "clone");
-        args.add("--rev", getBranch(env));
-        String cachedSource = cachedSource(build.getBuiltOn(), launcher, listener, false);
+        PossiblyCachedRepo cachedSource = cachedSource(build.getBuiltOn(), launcher, listener, false);
         if (cachedSource != null) {
-            args.add(cachedSource);
+            if (cachedSource.isUseSharing()) {
+                args.add("share");
+                args.add("--noupdate");
+                args.add(cachedSource.getRepoLocation());
+            } else {
+                args.add("clone");
+                args.add("--rev", getBranch(env));
+                args.add("--noupdate");
+                args.add(cachedSource.getRepoLocation());
+            }
         } else {
+            args.add(forest ? "fclone" : "clone");
+            args.add("--rev", getBranch(env));
+            args.add("--noupdate");
             args.add(source);
         }
         args.add(repository.getRemote());
@@ -583,20 +635,25 @@ public class MercurialSCM extends SCM implements Serializable {
             return false;
         }
 
-        if (cachedSource != null) {
+        if (cachedSource != null && cachedSource.isUseCaches() && !cachedSource.isUseSharing()) {
             FilePath hgrc = repository.child(".hg/hgrc");
             if (hgrc.exists()) {
                 String hgrcText = hgrc.readToString();
-                if (!hgrcText.contains(cachedSource)) {
-                    listener.error(".hg/hgrc did not contain " + cachedSource + " as expected:\n" + hgrcText);
+                if (!hgrcText.contains(cachedSource.getRepoLocation())) {
+                    listener.error(".hg/hgrc did not contain " + cachedSource.getRepoLocation() + " as expected:\n" + hgrcText);
                     return false;
                 }
-                hgrc.write(hgrcText.replace(cachedSource, source), null);
+                hgrc.write(hgrcText.replace(cachedSource.getRepoLocation(), source), null);
             }
             // Passing --rev disables hardlinks, so we need to recreate them:
-            hg.run("--config", "extensions.relink=", "relink", cachedSource)
+            hg.run("--config", "extensions.relink=", "relink", cachedSource.getRepoLocation())
                     .pwd(repository).join(); // ignore failures
         }
+
+        ArgumentListBuilder upArgs = new ArgumentListBuilder();
+        upArgs.add(forest ? "fupdate" : "update");
+        upArgs.add("--rev", getBranch(env));
+        hg.run(upArgs).pwd(repository).join();
 
         String tip = hg.tip(repository);
         if (tip != null) {
@@ -629,7 +686,7 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     static boolean CACHE_LOCAL_REPOS = false;
-    private @CheckForNull String cachedSource(Node node, Launcher launcher, TaskListener listener, boolean fromPolling) {
+    private @CheckForNull PossiblyCachedRepo cachedSource(Node node, Launcher launcher, TaskListener listener, boolean fromPolling) {
         if (!CACHE_LOCAL_REPOS && source.matches("(file:|[/\\\\]).+")) {
             return null;
         }
@@ -638,9 +695,11 @@ public class MercurialSCM extends SCM implements Serializable {
             return null;
         }
         boolean useCaches = false;
+        MercurialInstallation _installation = null;
         for (MercurialInstallation inst : MercurialInstallation.allInstallations()) {
             if (inst.getName().equals(installation)) {
                 useCaches = inst.isUseCaches();
+                _installation = inst;
                 break;
             }
         }
@@ -650,7 +709,7 @@ public class MercurialSCM extends SCM implements Serializable {
         try {
             FilePath cache = Cache.fromURL(source).repositoryCache(this, node, launcher, listener, fromPolling);
             if (cache != null) {
-                return cache.getRemote();
+                return new PossiblyCachedRepo(cache.getRemote(), _installation.isUseCaches(), _installation.isUseSharing());
             } else {
                 listener.error("Failed to use repository cache for " + source);
                 return null;
@@ -658,6 +717,30 @@ public class MercurialSCM extends SCM implements Serializable {
         } catch (Exception x) {
             x.printStackTrace(listener.error("Failed to use repository cache for " + source));
             return null;
+        }
+    }
+
+    private static class PossiblyCachedRepo {
+        private final String repoLocation;
+        private final boolean useCaches;
+        private final boolean useSharing;
+
+        private PossiblyCachedRepo(String repoLocation, boolean useCaches, boolean useSharing) {
+            this.repoLocation = repoLocation;
+            this.useCaches = useCaches;
+            this.useSharing = useSharing;
+        }
+
+        public String getRepoLocation() {
+            return repoLocation;
+        }
+
+        public boolean isUseSharing() {
+            return useSharing;
+        }
+
+        public boolean isUseCaches() {
+            return useCaches;
         }
     }
 

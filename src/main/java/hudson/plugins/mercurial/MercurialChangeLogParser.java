@@ -9,9 +9,7 @@ import org.xml.sax.SAXException;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Parses the changelog.xml.
@@ -66,6 +64,22 @@ public class MercurialChangeLogParser extends ChangeLogParser {
                 }
             }
         }
+
+        //sort the changes from oldest to newest, this gives the best result in the Jenkins changes view,
+        //and is like the old situation where 'hg incoming' was used to determine the changelog
+        Collections.sort(r, new Comparator<MercurialChangeSet>() {
+            public int compare(MercurialChangeSet o1, MercurialChangeSet o2) {
+                //don't do return o1.getRev() - o2.getRev(), as that is susceptible to integer overflow
+                if(o1.getRev() < o2.getRev()) {
+                    return -1;
+                }
+                if (o1.getRev() == o2.getRev()) {
+                    return 0;
+                } else {
+                    return 1;
+                }
+            }
+        });
 
         return new MercurialChangeSetList(build,r);
     }
