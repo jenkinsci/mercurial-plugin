@@ -1,6 +1,3 @@
-/*
- * BitBucketTest.java 07.09.2009
- */
 package hudson.plugins.mercurial.browser;
 
 import java.io.IOException;

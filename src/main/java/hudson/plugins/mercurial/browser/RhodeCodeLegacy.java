@@ -15,38 +15,18 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
 /**
- * Mercurial web interface served using a <a href="http://rhodecode.org/">RhodeCode</a> repository.
+ * Mercurial web interface served using a
+ * <a href="http://rhodecode.org/">RhodeCode</a> repository.  There was a
+ * change to the anchors in the changeset page between release 1.1.8 and
+ * 1.2.0, causing the need for this class to provide compatibility with
+ * the older versions.
  */
-public class RhodeCodeLegacy extends HgBrowser {	    
+public class RhodeCodeLegacy extends RhodeCode {	    
     
 	@DataBoundConstructor
 	public RhodeCodeLegacy(String url) throws MalformedURLException {
 	    super(url);
 	}
-	
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public URL getChangeSetLink(MercurialChangeSet changeSet)
-			throws IOException {
-	    current = changeSet;
-	    // http://demo.rhodecode.org/rhodecode/changeset/55a4cbcd464de2f3969ce680885b3193234a8854
-		return new URL(getUrl(), "changeset/" + changeSet.getNode());
-	}
-
-    /**
-     * {@inheritDoc} 
-     * 
-     * Throws {@link IllegalStateException} when this method is called before at least one call 
-     * to {@literal getChangeSetLink(MercurialChangeSet)}.
-     */
-    @Override
-	public URL getFileLink(String path) throws MalformedURLException {
-        checkCurrentIsNotNull();
-        // http://demo.rhodecode.org/rhodecode/files/55a4cbcd464de2f3969ce680885b3193234a8854/rhodecode/templates/base/base.html        
-        return new URL(getUrl(), "files/" + current.getNode() + "/" + path);
-    }
     
     /**
      * {@inheritDoc}
