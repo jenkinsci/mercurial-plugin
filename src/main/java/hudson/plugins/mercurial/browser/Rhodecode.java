@@ -15,12 +15,12 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
 /**
- * Mercurial web interface served using Rhodecode
+ * Mercurial web interface served using RhodeCode
  */
-public class Rhodecode extends HgBrowser {
+public class RhodeCode extends HgBrowser {
 
     @DataBoundConstructor
-    public Rhodecode(String url) throws MalformedURLException {
+    public RhodeCode(String url) throws MalformedURLException {
         super(url);
     }
 
@@ -65,8 +65,8 @@ public class Rhodecode extends HgBrowser {
             return "rhodecode";
         }
 
-        public @Override Rhodecode newInstance(StaplerRequest req, JSONObject json) throws FormException {
-            return req.bindParameters(Rhodecode.class,"rhodecode.");
+        public @Override RhodeCode newInstance(StaplerRequest req, JSONObject json) throws FormException {
+            return req.bindParameters(RhodeCode.class,"rhodecode.");
         }
     }
 

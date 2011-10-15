@@ -10,14 +10,14 @@ import java.net.MalformedURLException;
 
 import org.junit.Test;
 
-public class RhodecodeTest {
+public class RhodeCodeTest {
 
     private static final String REPO_URL = "https://secure.rhodecode.org/rhodecode";
     protected final HgBrowser browser;
     protected final MercurialChangeSet changeSet;
 
-    public RhodecodeTest() throws MalformedURLException {
-        this.browser = new Rhodecode(REPO_URL);        
+    public RhodeCodeTest() throws MalformedURLException {
+        this.browser = new RhodeCode(REPO_URL);        
         changeSet = new MercurialChangeSet();
         changeSet.setNode("6f1439efaed6");
     }
