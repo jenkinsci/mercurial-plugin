@@ -17,10 +17,10 @@ import org.kohsuke.stapler.StaplerRequest;
 /**
  * Mercurial web interface served using a <a href="http://rhodecode.org/">RhodeCode</a> repository.
  */
-public class RhodeCode extends HgBrowser {	    
+public class RhodeCodeLegacy extends HgBrowser {	    
     
 	@DataBoundConstructor
-	public RhodeCode(String url) throws MalformedURLException {
+	public RhodeCodeLegacy(String url) throws MalformedURLException {
 	    super(url);
 	}
 	
@@ -69,11 +69,11 @@ public class RhodeCode extends HgBrowser {
     @Extension
     public static class DescriptorImpl extends Descriptor<RepositoryBrowser<?>> {
         public String getDisplayName() {
-            return "rhodecode";
+            return "rhodecode (pre-1.2.0)";
         }
 
-        public @Override RhodeCode newInstance(StaplerRequest req, JSONObject json) throws FormException {
-            return req.bindParameters(RhodeCode.class,"rhodecode.");
+        public @Override RhodeCodeLegacy newInstance(StaplerRequest req, JSONObject json) throws FormException {
+            return req.bindParameters(RhodeCodeLegacy.class,"rhodecode-legacy.");
         }
     }
 

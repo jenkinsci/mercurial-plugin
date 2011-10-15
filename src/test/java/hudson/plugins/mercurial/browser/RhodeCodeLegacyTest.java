@@ -8,12 +8,12 @@ import java.net.MalformedURLException;
 
 import org.junit.Test;
 
-public class RhodeCodeTest extends AbstractBrowserTestBase {
+public class RhodeCodeLegacyTest extends AbstractBrowserTestBase {
 
     private static final String REPO_URL = "http://www.example.org/hg/repos";
 
-    public RhodeCodeTest() throws MalformedURLException {
-        super(new RhodeCode(REPO_URL));        
+    public RhodeCodeLegacyTest() throws MalformedURLException {
+        super(new RhodeCodeLegacy(REPO_URL));        
     }
 
     @Test
