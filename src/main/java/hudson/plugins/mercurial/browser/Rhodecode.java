@@ -56,7 +56,7 @@ public class Rhodecode extends HgBrowser {
     @Override
     public URL getDiffLink(String path) throws MalformedURLException {
         checkCurrentIsNotNull();
-        return new URL(getUrl(), "changeset/" + current.getShortNode() + "/" + path.replace("/", "-"));
+        return new URL(getUrl(), "changeset/" + current.getShortNode() + "#C" + path.replace("/", "-"));
     }
 
     @Extension
