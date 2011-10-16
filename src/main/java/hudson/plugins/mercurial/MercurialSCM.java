@@ -410,6 +410,7 @@ public class MercurialSCM extends SCM implements Serializable {
         }
         return null;
     }
+
     @Override
     public boolean checkout(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, final BuildListener listener, File changelogFile)
             throws IOException, InterruptedException {
@@ -418,51 +419,8 @@ public class MercurialSCM extends SCM implements Serializable {
         final boolean jobShouldUseSharing = mercurialInstallation != null && mercurialInstallation.isUseSharing();
 
         FilePath repository = workspace2Repo(workspace);
-        boolean canReuseExistingWorkspace = repository.act(new FileCallable<Boolean>() {
-            public Boolean invoke(File ws, VirtualChannel channel) throws IOException {
-                if (!HgRc.getHgRcFile(ws).exists()) {
-                    return false;
-                }
-
-                boolean jobUsesSharing = HgRc.getShareFile(ws).exists();
-
-                if (jobShouldUseSharing && !jobUsesSharing) {
-                    return false;
-                }
-                if (jobUsesSharing && !jobShouldUseSharing) {
-                    return false;
-                }
-
-                HgRc hgrc = new HgRc(ws);
-                return canUpdate(hgrc);
-            }
-
-            private boolean canUpdate(HgRc ini) {
-                String upstream = ini.getSection("paths").get("default");
-                if (upstream == null) {
-                    return false;
-                }
-
-                if (upstream.equals(source)) {
-                    return true;
-                }
-                if ((upstream + '/').equals(source)) {
-                    return true;
-                }
-                if (upstream.equals(source + '/')) {
-                    return true;
-                }
-                if (source.startsWith("file:/") && new File(upstream).toURI().toString().equals(source)) {
-                    return true;
-                }
-                listener.error(
-                        "Workspace reports paths.default as " + upstream +
-                        "\nwhich looks different than " + source +
-                        "\nso falling back to fresh clone rather than incremental update");
-                return false;
-            }
-        });
-
+        boolean canReuseExistingWorkspace = repository.act(
+                new CheckForReusableWorkspace(jobShouldUseSharing, listener));
 
         boolean success;
         if (canReuseExistingWorkspace) {
@@ -475,6 +433,8 @@ public class MercurialSCM extends SCM implements Serializable {
             determineChanges(build, launcher, listener, changelogFile, repository);
             return success;
         } catch (IOException e) {
+            listener.error("Failed to capture changelog");
+            e.printStackTrace(listener.getLogger());
             return false;
         } 
     }
@@ -484,6 +444,7 @@ public class MercurialSCM extends SCM implements Serializable {
         AbstractBuild<?, ?> previousBuild = build.getPreviousBuild();
         MercurialTagAction prevTag = previousBuild != null ? previousBuild.getAction(MercurialTagAction.class) : null;
         if (prevTag == null) {
+            listener.getLogger().println("WARN: Revision data for previous build unavailable; unable to determine changelog");
             createEmptyChangeLog(changelogFile, listener, "changelog");
             return;
         }
@@ -492,7 +453,7 @@ public class MercurialSCM extends SCM implements Serializable {
         ArgumentListBuilder logCommand = findHgExe(build, listener, false).add("log", "--rev", prevTag.getId());
         int exitCode = launch(launcher).cmds(logCommand).envs(env).pwd(repository).join();
         if(exitCode != 0) {
-            listener.error("previous built revision " + prevTag.getId() + " is not know in this clone");
+            listener.error("Previous built revision " + prevTag.getId() + " is not know in this clone; unable to determine changelog");
             createEmptyChangeLog(changelogFile, listener, "changelog");
             return;
         }
@@ -504,12 +465,10 @@ public class MercurialSCM extends SCM implements Serializable {
                 os.write("<changesets>\n".getBytes());
                 ArgumentListBuilder args = findHgExe(build, listener, false);
                 args.add("log");
-
                 args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
                 args.add("--rev", getBranch(env) + ":0");
                 args.add("--follow");
                 args.add("--prune", prevTag.getId());
-
 
                 ByteArrayOutputStream errorLog = new ByteArrayOutputStream();
 
@@ -525,8 +484,7 @@ public class MercurialSCM extends SCM implements Serializable {
                 }
                 if(r!=0) {
                     Util.copyStream(new ByteArrayInputStream(errorLog.toByteArray()), listener.getLogger());
-                    listener.error("Failed to determine incoming changes");
-                    throw new IOException("Failed to determine incoming changes");
+                    throw new IOException("Failure detected while running hg log to determine changelog");
                 }
             } finally {
                 os.write("</changesets>".getBytes());
@@ -551,12 +509,19 @@ public class MercurialSCM extends SCM implements Serializable {
             e.printStackTrace(listener.getLogger());
             return false;
         } 
-        
-        if(clean) {
-            if (hg.run(forest ? "fupdate" : "update", "--clean", ".").pwd(repository).join() != 0) {
-                listener.error("Failed to clobber local modifications");
+
+        try {
+            if(hg.run(forest ? "fupdate" : "update", "--clean", "--rev", getBranch(env)).pwd(repository).join()!=0) {
+                listener.error("Failed to update");
                 return false;
             }
+        } catch (IOException e) {
+            listener.error("Failed to update");
+            e.printStackTrace(listener.getLogger());
+            return false;
+        }
+        
+        if(clean) {
             if (forest) {
                 StringTokenizer trees = new StringTokenizer(hg.popen(repository, listener, false, new ArgumentListBuilder("ftrees", "--convert")));
                 while (trees.hasMoreTokens()) {
@@ -572,17 +537,6 @@ public class MercurialSCM extends SCM implements Serializable {
                     return false;
                 }
             }
-        }
-
-        try {
-            if(hg.run(forest ? "fupdate" : "update", "--clean", "--rev", getBranch(env)).pwd(repository).join()!=0) {
-                listener.error("Failed to update");
-                return false;
-            }
-        } catch (IOException e) {
-            listener.error("Failed to update");
-            e.printStackTrace(listener.getLogger());
-            return false;
         }
 
         String tip = hg.tip(repository);
@@ -720,6 +674,60 @@ public class MercurialSCM extends SCM implements Serializable {
         } catch (Exception x) {
             x.printStackTrace(listener.error("Failed to use repository cache for " + source));
             return null;
+        }
+    }
+
+    private final class CheckForReusableWorkspace implements FileCallable<Boolean> {
+        private final boolean jobShouldUseSharing;
+        private final BuildListener listener;
+        private static final long serialVersionUID = 1L;
+
+        private CheckForReusableWorkspace(boolean jobShouldUseSharing,
+                BuildListener listener) {
+            this.jobShouldUseSharing = jobShouldUseSharing;
+            this.listener = listener;
+        }
+
+        public Boolean invoke(File ws, VirtualChannel channel) throws IOException {
+            if (!HgRc.getHgRcFile(ws).exists()) {
+                return false;
+            }
+
+            boolean jobUsesSharing = HgRc.getShareFile(ws).exists();
+
+            if (jobShouldUseSharing && !jobUsesSharing) {
+                return false;
+            }
+            if (jobUsesSharing && !jobShouldUseSharing) {
+                return false;
+            }
+
+            HgRc hgrc = new HgRc(ws);
+            return canUpdate(hgrc);
+        }
+
+        private boolean canUpdate(HgRc ini) {
+            String upstream = ini.getSection("paths").get("default");
+            if (upstream == null) {
+                return false;
+            }
+            if (upstream.equals(source)) {
+                return true;
+            }
+            if ((upstream + '/').equals(source)) {
+                return true;
+            }
+            if (upstream.equals(source + '/')) {
+                return true;
+            }
+            if (source.startsWith("file:/") && new File(upstream).toURI().toString().equals(source)) {
+                return true;
+            }
+            listener.error(
+                    "Workspace reports paths.default as " + upstream +
+                    "\nwhich looks different than " + source +
+                    "\nso falling back to fresh clone rather than incremental update");
+            return false;
         }
     }
 
