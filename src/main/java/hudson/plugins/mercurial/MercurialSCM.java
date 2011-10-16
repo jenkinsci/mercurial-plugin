@@ -235,6 +235,9 @@ public class MercurialSCM extends SCM implements Serializable {
                         b.add("--config", "extensions.forest=" + forestPy.getRemote());
                     }
                 }
+                if (inst.isUseSharing()) {
+                    b.add("--config", "extensions.share=");
+                }
                 if (allowDebug && inst.getDebug()) {
                     b.add("--debug");
                 }
