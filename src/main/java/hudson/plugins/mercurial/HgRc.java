@@ -95,6 +95,10 @@ final class HgRc {
         return new File(repository,".hg/hgrc");
     }
 
+    public static File getShareFile(File repository) {
+        return new File(repository, ".hg/sharedpath");
+    }
+
     private Section createSection(String name) {
         Section s = sections.get(name);
         if(s==null)

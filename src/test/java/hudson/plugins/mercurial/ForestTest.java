@@ -14,7 +14,7 @@ public class ForestTest extends MercurialTestCase {
         super.setUp();
         String downloadForest = ForestTest.class.getResource("forest.py").toString(); // copied from 3647b4bed1a1
         Hudson.getInstance().getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(
-                new MercurialInstallation("forested", "", "hg", downloadForest, false, false, Collections.<ToolProperty<?>>emptyList()));
+                new MercurialInstallation("forested", "", "hg", downloadForest, false, false, false, Collections.<ToolProperty<?>>emptyList()));
         toprepo = createTmpDir();
         hg(toprepo, "init");
         subrepo = new File(toprepo, "sub");
@@ -35,6 +35,7 @@ public class ForestTest extends MercurialTestCase {
         assertFalse(ws.child("junk").exists());
         assertFalse(ws.child("sub/trash").exists());
         touchAndCommit(subrepo, "more");
+        assertTrue(pollSCMChanges(p));
         buildAndCheck(p, "sub/more");
     }
 

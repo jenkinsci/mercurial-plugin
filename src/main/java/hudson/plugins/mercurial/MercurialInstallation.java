@@ -51,14 +51,16 @@ public class MercurialInstallation extends ToolInstallation implements  NodeSpec
     private String downloadForest;
     private boolean debug;
     private boolean useCaches;
+    private boolean useSharing;
 
     @DataBoundConstructor
-    public MercurialInstallation(String name, String home, String executable, String downloadForest, boolean debug, boolean useCaches, List<? extends ToolProperty<?>> properties) {
+    public MercurialInstallation(String name, String home, String executable, String downloadForest, boolean debug, boolean useCaches, boolean useSharing, List<? extends ToolProperty<?>> properties) {
         super(name, home, properties);
         this.executable = Util.fixEmpty(executable);
         this.downloadForest = Util.fixEmpty(downloadForest);
         this.debug = debug;
-        this.useCaches = useCaches;
+        this.useCaches = useCaches || useSharing;
+        this.useSharing = useSharing;
     }
 
     public String getExecutable() {
@@ -81,16 +83,20 @@ public class MercurialInstallation extends ToolInstallation implements  NodeSpec
         return useCaches;
     }
 
+    public boolean isUseSharing() {
+        return useSharing;
+    }
+
     public static MercurialInstallation[] allInstallations() {
         return Hudson.getInstance().getDescriptorByType(DescriptorImpl.class).getInstallations();
     }
 
     public MercurialInstallation forNode(Node node, TaskListener log) throws IOException, InterruptedException {
-        return new MercurialInstallation(getName(), translateFor(node, log), executable, downloadForest, debug, useCaches, getProperties().toList());
+        return new MercurialInstallation(getName(), translateFor(node, log), executable, downloadForest, debug, useCaches, useSharing, getProperties().toList());
     }
 
     public MercurialInstallation forEnvironment(EnvVars environment) {
-        return new MercurialInstallation(getName(), environment.expand(getHome()), executable, downloadForest, debug, useCaches, getProperties().toList());
+        return new MercurialInstallation(getName(), environment.expand(getHome()), executable, downloadForest, debug, useCaches, useSharing, getProperties().toList());
     }
 
     @Extension

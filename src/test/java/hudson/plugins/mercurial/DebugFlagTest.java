@@ -6,11 +6,13 @@ import java.util.Collections;
 
 public class DebugFlagTest extends MercurialSCMTest {
 
+    public static final String DEBUG_INSTALLATION = "debug";
+
     protected @Override void setUp() throws Exception {
         super.setUp();
-        hgInstallation = "debug";
+        hgInstallation = DEBUG_INSTALLATION;
         Hudson.getInstance().getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(
-                new MercurialInstallation("debug", "", "hg", null, true, false, Collections.<ToolProperty<?>>emptyList()));
+                new MercurialInstallation(DEBUG_INSTALLATION, "", "hg", null, true, false, false, Collections.<ToolProperty<?>>emptyList()));
     }
 
 }
