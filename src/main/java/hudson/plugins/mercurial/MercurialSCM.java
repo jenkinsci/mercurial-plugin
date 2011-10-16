@@ -430,7 +430,7 @@ public class MercurialSCM extends SCM implements Serializable {
             determineChanges(build, launcher, listener, changelogFile, repository);
             return success;
         } catch (IOException e) {
-            listener.error("Failed to capture changelog");
+            listener.error("Failed to capture change log");
             e.printStackTrace(listener.getLogger());
             return false;
         } 
@@ -441,7 +441,7 @@ public class MercurialSCM extends SCM implements Serializable {
         AbstractBuild<?, ?> previousBuild = build.getPreviousBuild();
         MercurialTagAction prevTag = previousBuild != null ? previousBuild.getAction(MercurialTagAction.class) : null;
         if (prevTag == null) {
-            listener.getLogger().println("WARN: Revision data for previous build unavailable; unable to determine changelog");
+            listener.getLogger().println("WARN: Revision data for previous build unavailable; unable to determine change log");
             createEmptyChangeLog(changelogFile, listener, "changelog");
             return;
         }
@@ -450,7 +450,7 @@ public class MercurialSCM extends SCM implements Serializable {
         ArgumentListBuilder logCommand = findHgExe(build, listener, false).add("log", "--rev", prevTag.getId());
         int exitCode = launch(launcher).cmds(logCommand).envs(env).pwd(repository).join();
         if(exitCode != 0) {
-            listener.error("Previous built revision " + prevTag.getId() + " is not know in this clone; unable to determine changelog");
+            listener.error("Previous built revision " + prevTag.getId() + " is not know in this clone; unable to determine change log");
             createEmptyChangeLog(changelogFile, listener, "changelog");
             return;
         }
@@ -481,7 +481,7 @@ public class MercurialSCM extends SCM implements Serializable {
                 }
                 if(r!=0) {
                     Util.copyStream(new ByteArrayInputStream(errorLog.toByteArray()), listener.getLogger());
-                    throw new IOException("Failure detected while running hg log to determine changelog");
+                    throw new IOException("Failure detected while running hg log to determine change log");
                 }
             } finally {
                 os.write("</changesets>".getBytes());
