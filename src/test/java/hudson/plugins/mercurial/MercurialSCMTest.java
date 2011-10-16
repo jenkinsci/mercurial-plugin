@@ -240,11 +240,9 @@ public class MercurialSCMTest extends MercurialTestCase {
         assertTrue(pollSCMChanges(four));
         
         assertFalse(pollSCMChanges(one));
-        
-
     }
 
-    /*
+    /**
      * Control case for {@link #testChangelogOnClone()}.
      */
     public void testChangelogOnUpdate() throws Exception {
@@ -263,7 +261,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         assertChangeSetPaths(Collections.singletonList(Collections.singleton("dir3/f1")), b);
     }
 
-    /*
+    /**
      * The change log should be based on comparison with the previous build,
      * not depending on the state of the current local clone.  If a workspace
      * is wiped out, or the build is run on a new slave, it should still result
@@ -289,7 +287,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         assertChangeSetPaths(Collections.singletonList(Collections.singleton("dir3/f1")), b);
     }
 
-    /*
+    /**
      * The change log should be based on comparison with the previous build,
      * not depending on the state of the current local clone.  When there are
      * multiple nodes in use, it's possible that there will be a local clone
@@ -339,7 +337,6 @@ public class MercurialSCMTest extends MercurialTestCase {
             return null;
         }
     }
-     
 
     /* XXX the following will pass, but canUpdate is not going to work without further changes:
     public void testParameterizedBuildsSource() throws Exception {
