@@ -235,9 +235,6 @@ public class MercurialSCM extends SCM implements Serializable {
                         b.add("--config", "extensions.forest=" + forestPy.getRemote());
                     }
                 }
-                if (inst.isUseSharing()) {
-                    b.add("--config", "extensions.share=");
-                }
                 if (allowDebug && inst.getDebug()) {
                     b.add("--debug");
                 }
@@ -566,6 +563,7 @@ public class MercurialSCM extends SCM implements Serializable {
         PossiblyCachedRepo cachedSource = cachedSource(build.getBuiltOn(), launcher, listener, false);
         if (cachedSource != null) {
             if (cachedSource.isUseSharing()) {
+                args.add("--config", "extensions.share=");
                 args.add("share");
                 args.add("--noupdate");
                 args.add(cachedSource.getRepoLocation());
