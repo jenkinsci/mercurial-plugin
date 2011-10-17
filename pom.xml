@@ -32,6 +32,11 @@
         <name>Kohsuke Kawaguchi</name>
         <email>kk@kohsuke.org</email>
       </developer>
+      <developer>
+          <id>davidmc24</id>
+          <name>David M. Carr</name>
+          <email>david@carrclan.us</email>
+      </developer>
   </developers>
 
   <scm>
