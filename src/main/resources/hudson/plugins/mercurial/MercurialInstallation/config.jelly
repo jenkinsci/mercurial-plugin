@@ -17,7 +17,4 @@
   <f:entry field="debug" title="${%Debug Flag}">
     <f:checkbox/>
   </f:entry>
-  <f:entry title="${%Download Forest extension}" field="downloadForest">
-    <f:textbox/>
-  </f:entry>
 </j:jelly>

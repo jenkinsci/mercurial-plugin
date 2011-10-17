@@ -35,19 +35,16 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.StringTokenizer;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -96,18 +93,16 @@ public class MercurialSCM extends SCM implements Serializable {
     private final String subdir;
 
     private final boolean clean;
-    private final boolean forest;
 
     private HgBrowser browser;
 
     @DataBoundConstructor
-    public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean, boolean forest) {
+    public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean) {
         this.installation = installation;
         this.source = source;
         this.modules = Util.fixNull(modules);
         this.subdir = Util.fixEmptyAndTrim(subdir);
         this.clean = clean;
-        this.forest = forest;
         parseModules();
         branch = Util.fixEmpty(branch);
         if (branch != null && branch.equals("default")) {
@@ -197,13 +192,6 @@ public class MercurialSCM extends SCM implements Serializable {
         return clean;
     }
 
-    /**
-     * True if we want consider repository a forest
-     */
-    public boolean isForest() {
-        return forest;
-    }
-
     private ArgumentListBuilder findHgExe(AbstractBuild<?,?> build, TaskListener listener, boolean allowDebug) throws IOException, InterruptedException {
         return findHgExe(build.getBuiltOn(), listener, allowDebug);
     }
@@ -219,23 +207,6 @@ public class MercurialSCM extends SCM implements Serializable {
                 // XXX what about forEnvironment?
                 ArgumentListBuilder b = new ArgumentListBuilder(inst.executableWithSubstitution(
                         inst.forNode(node, listener).getHome()));
-                if (forest) {
-                    String downloadForest = inst.getDownloadForest();
-                    if (downloadForest != null) {
-                        // Uniquify path so if user chooses a different URL it will be downloaded again.
-                        FilePath forestPy = node.getRootPath().child(String.format("forest-%08X.py", downloadForest.hashCode()));
-                        if (!forestPy.exists()) {
-                            listener.getLogger().println("Downloading: " + downloadForest);
-                            InputStream is = new URL(downloadForest).openStream();
-                            try {
-                                forestPy.copyFrom(is);
-                            } finally {
-                                is.close();
-                            }
-                        }
-                        b.add("--config", "extensions.forest=" + forestPy.getRemote());
-                    }
-                }
                 if (allowDebug && inst.getDebug()) {
                     b.add("--debug");
                 }
@@ -289,21 +260,10 @@ public class MercurialSCM extends SCM implements Serializable {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ForkOutputStream fos = new ForkOutputStream(baos, output);
 
-            if (forest) {
-                logCmd.add("--prune", ".");
-                StringTokenizer trees = new StringTokenizer(hg.popen(repository, listener, false, new ArgumentListBuilder("ftrees", "--convert")));
-                while (trees.hasMoreTokens()) {
-                    String tree = trees.nextToken();
-                    joinWithPossibleTimeout(
-                            launch(launcher).cmds(logCmd).stdout(fos).pwd(tree.equals(".") ? repository : repository.child(tree)),
-                            true, listener);
-                }
-            } else {
-                logCmd.add("--prune", baseline.id);
-                joinWithPossibleTimeout(
-                        launch(launcher).cmds(logCmd).stdout(fos).pwd(repository),
-                        true, listener);
-            }
+            logCmd.add("--prune", baseline.id);
+            joinWithPossibleTimeout(
+                    launch(launcher).cmds(logCmd).stdout(fos).pwd(repository),
+                    true, listener);
 
             MercurialTagAction cur = parsePollingLogOutput(baos, baseline, changedFileNames);
             return new PollingResult(baseline,cur,computeDegreeOfChanges(changedFileNames,output));
@@ -314,7 +274,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private void pull(Launcher launcher, FilePath repository, TaskListener listener, PrintStream output, Node node, String branch) throws IOException, InterruptedException {
         ArgumentListBuilder cmd = findHgExe(node, listener, false);
-        cmd.add(forest ? "fpull" : "pull");
+        cmd.add("pull");
         cmd.add("--rev", branch);
         PossiblyCachedRepo cachedSource = cachedSource(node, launcher, listener, true);
         if (cachedSource != null) {
@@ -510,7 +470,7 @@ public class MercurialSCM extends SCM implements Serializable {
         } 
 
         try {
-            if(hg.run(forest ? "fupdate" : "update", "--clean", "--rev", getBranch(env)).pwd(repository).join()!=0) {
+            if(hg.run("update", "--clean", "--rev", getBranch(env)).pwd(repository).join()!=0) {
                 listener.error("Failed to update");
                 return false;
             }
@@ -521,20 +481,9 @@ public class MercurialSCM extends SCM implements Serializable {
         }
         
         if(clean) {
-            if (forest) {
-                StringTokenizer trees = new StringTokenizer(hg.popen(repository, listener, false, new ArgumentListBuilder("ftrees", "--convert")));
-                while (trees.hasMoreTokens()) {
-                    String tree = trees.nextToken();
-                    if (hg.cleanAll().pwd(tree.equals(".") ? repository : repository.child(tree)).join() != 0) {
-                        listener.error("Failed to clean unversioned files in " + tree);
-                        return false;
-                    }
-                }
-            } else {
-                if (hg.cleanAll().pwd(repository).join() != 0) {
-                    listener.error("Failed to clean unversioned files");
-                    return false;
-                }
+            if (hg.cleanAll().pwd(repository).join() != 0) {
+                listener.error("Failed to clean unversioned files");
+                return false;
             }
         }
 
@@ -576,7 +525,7 @@ public class MercurialSCM extends SCM implements Serializable {
                 args.add(cachedSource.getRepoLocation());
             }
         } else {
-            args.add(forest ? "fclone" : "clone");
+            args.add("clone");
             args.add("--rev", getBranch(env));
             args.add("--noupdate");
             args.add(source);
@@ -608,7 +557,7 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         ArgumentListBuilder upArgs = new ArgumentListBuilder();
-        upArgs.add(forest ? "fupdate" : "update");
+        upArgs.add("update");
         upArgs.add("--rev", getBranch(env));
         hg.run(upArgs).pwd(repository).join();
 
@@ -645,10 +594,6 @@ public class MercurialSCM extends SCM implements Serializable {
     static boolean CACHE_LOCAL_REPOS = false;
     private @CheckForNull PossiblyCachedRepo cachedSource(Node node, Launcher launcher, TaskListener listener, boolean fromPolling) {
         if (!CACHE_LOCAL_REPOS && source.matches("(file:|[/\\\\]).+")) {
-            return null;
-        }
-        if (forest) {
-            // Caching forests not supported yet - too complicated.
             return null;
         }
         boolean useCaches = false;

@@ -28,9 +28,6 @@
     <f:entry field="subdir" title="${%Subdirectory}">
       <f:textbox/>
     </f:entry>
-    <f:entry field="forest" title="${%Forest Extension - EXPERIMENTAL}">
-      <f:checkbox/>
-    </f:entry>
   </f:advanced>
 
   <t:listScmBrowsers name="mercurial.browser" />

@@ -22,13 +22,13 @@ public class SwitchingSCMTest extends MercurialTestCase {
                 .getDescriptorByType(MercurialInstallation.DescriptorImpl.class)
                 .setInstallations(
                         new MercurialInstallation(cachingInstallation, "",
-                                "hg", null, false, true, false, Collections
+                                "hg", false, true, false, Collections
                                         .<ToolProperty<?>> emptyList()));
         Hudson.getInstance()
                 .getDescriptorByType(MercurialInstallation.DescriptorImpl.class)
                 .setInstallations(
                         new MercurialInstallation(sharingInstallation, "",
-                                "hg", null, false, true, true, Collections
+                                "hg", false, true, true, Collections
                                         .<ToolProperty<?>> emptyList()));
 
         MercurialSCM.CACHE_LOCAL_REPOS = true;
@@ -37,7 +37,7 @@ public class SwitchingSCMTest extends MercurialTestCase {
     public void testSwitchingFromCachedToShared() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
         p.setScm(new MercurialSCM(cachingInstallation, repo.getPath(), null,
-                null, null, null, false, false));
+                null, null, null, false));
 
         hg(repo, "init");
         touchAndCommit(repo, "a");
@@ -46,7 +46,7 @@ public class SwitchingSCMTest extends MercurialTestCase {
                 .exists());
 
         p.setScm(new MercurialSCM(sharingInstallation, repo.getPath(), null,
-                null, null, null, false, false));
+                null, null, null, false));
 
         touchAndCommit(repo, "b");
         buildAndCheck(p, "b");
@@ -58,7 +58,7 @@ public class SwitchingSCMTest extends MercurialTestCase {
     public void testSwitchingFromSharedToCached() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
         p.setScm(new MercurialSCM(sharingInstallation, repo.getPath(), null,
-                null, null, null, false, false));
+                null, null, null, false));
 
         hg(repo, "init");
         touchAndCommit(repo, "a");
@@ -68,7 +68,7 @@ public class SwitchingSCMTest extends MercurialTestCase {
                 .exists());
 
         p.setScm(new MercurialSCM(cachingInstallation, repo.getPath(), null,
-                null, null, null, false, false));
+                null, null, null, false));
 
         touchAndCommit(repo, "b");
         buildAndCheck(p, "b");

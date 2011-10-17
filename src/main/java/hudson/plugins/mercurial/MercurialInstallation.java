@@ -53,18 +53,16 @@ public class MercurialInstallation extends ToolInstallation implements
         EnvironmentSpecific<MercurialInstallation> {
 
     private String executable;
-    private String downloadForest;
     private boolean debug;
     private boolean useCaches;
     private boolean useSharing;
 
     @DataBoundConstructor
     public MercurialInstallation(String name, String home, String executable,
-            String downloadForest, boolean debug, boolean useCaches,
+            boolean debug, boolean useCaches,
             boolean useSharing, List<? extends ToolProperty<?>> properties) {
         super(name, home, properties);
         this.executable = Util.fixEmpty(executable);
-        this.downloadForest = Util.fixEmpty(downloadForest);
         this.debug = debug;
         this.useCaches = useCaches || useSharing;
         this.useSharing = useSharing;
@@ -76,10 +74,6 @@ public class MercurialInstallation extends ToolInstallation implements
 
     String executableWithSubstitution(String home) {
         return getExecutable().replace("INSTALLATION", home);
-    }
-
-    public String getDownloadForest() {
-        return downloadForest;
     }
 
     public boolean getDebug() {
@@ -102,13 +96,13 @@ public class MercurialInstallation extends ToolInstallation implements
     public MercurialInstallation forNode(Node node, TaskListener log)
             throws IOException, InterruptedException {
         return new MercurialInstallation(getName(), translateFor(node, log),
-                executable, downloadForest, debug, useCaches, useSharing,
+                executable, debug, useCaches, useSharing,
                 getProperties().toList());
     }
 
     public MercurialInstallation forEnvironment(EnvVars environment) {
         return new MercurialInstallation(getName(),
-                environment.expand(getHome()), executable, downloadForest,
+                environment.expand(getHome()), executable,
                 debug, useCaches, useSharing, getProperties().toList());
     }
 
