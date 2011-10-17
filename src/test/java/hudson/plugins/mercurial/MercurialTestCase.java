@@ -3,11 +3,11 @@ package hudson.plugins.mercurial;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.Action;
-import hudson.model.Cause.UserCause;
 import hudson.model.FreeStyleBuild;
+import hudson.model.TaskListener;
+import hudson.model.Cause.UserCause;
 import hudson.model.FreeStyleProject;
 import hudson.model.Hudson;
-import hudson.model.TaskListener;
 import hudson.scm.PollingResult;
 import hudson.util.StreamTaskListener;
 
@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+
 import org.jvnet.hudson.test.HudsonTestCase;
 
 public abstract class MercurialTestCase extends HudsonTestCase {
@@ -26,7 +27,8 @@ public abstract class MercurialTestCase extends HudsonTestCase {
     private TaskListener listener;
     private Launcher launcher;
 
-    protected @Override void setUp() throws Exception {
+    protected @Override
+    void setUp() throws Exception {
         super.setUp();
         listener = new StreamTaskListener(System.out, Charset.defaultCharset());
         launcher = Hudson.getInstance().createLauncher(listener);
@@ -38,7 +40,8 @@ public abstract class MercurialTestCase extends HudsonTestCase {
         cmds.add("--config");
         cmds.add("ui.username=nobody@nowhere.net");
         cmds.addAll(Arrays.asList(args));
-        assertEquals(0, MercurialSCM.launch(launcher).cmds(cmds).pwd(repo).stdout(listener).join());
+        assertEquals(0, MercurialSCM.launch(launcher).cmds(cmds).pwd(repo)
+                .stdout(listener).join());
     }
 
     protected void touchAndCommit(File repo, String... names) throws Exception {
@@ -51,11 +54,13 @@ public abstract class MercurialTestCase extends HudsonTestCase {
         hg(repo, "commit", "--message", "added " + Arrays.toString(names));
     }
 
-    protected String buildAndCheck(FreeStyleProject p, String name, Action... actions) throws Exception {
-        FreeStyleBuild b = assertBuildStatusSuccess(p.scheduleBuild2(0, new UserCause(), actions).get());
-//        for (String line : b.getLog(Integer.MAX_VALUE)) {
-//            System.err.println(">> " + line);
-//        }
+    protected String buildAndCheck(FreeStyleProject p, String name,
+            Action... actions) throws Exception {
+        FreeStyleBuild b = assertBuildStatusSuccess(p.scheduleBuild2(0,
+                new UserCause(), actions).get());
+        // for (String line : b.getLog(Integer.MAX_VALUE)) {
+        // System.err.println(">> " + line);
+        // }
         if (!b.getWorkspace().child(name).exists()) {
             Set<String> children = new TreeSet<String>();
             for (FilePath child : b.getWorkspace().list()) {
@@ -70,7 +75,8 @@ public abstract class MercurialTestCase extends HudsonTestCase {
     }
 
     protected PollingResult pollSCMChanges(FreeStyleProject p) {
-        return p.poll(new StreamTaskListener(System.out, Charset.defaultCharset()));
+        return p.poll(new StreamTaskListener(System.out, Charset
+                .defaultCharset()));
     }
 
     protected String getLastChangesetId(File repo) throws Exception {
@@ -82,7 +88,8 @@ public abstract class MercurialTestCase extends HudsonTestCase {
         cmds.add("{node}");
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         TaskListener nodeListener = new StreamTaskListener(baos);
-        assertEquals(0, MercurialSCM.launch(launcher).cmds(cmds).pwd(repo).stdout(nodeListener).stderr(baos).join());
+        assertEquals(0, MercurialSCM.launch(launcher).cmds(cmds).pwd(repo)
+                .stdout(nodeListener).stderr(baos).join());
         return baos.toString();
     }
 

@@ -24,28 +24,33 @@
 
 package hudson.plugins.mercurial;
 
-import edu.umd.cs.findbugs.annotations.SuppressWarnings;
 import hudson.CopyOnWrite;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.Util;
 import hudson.model.EnvironmentSpecific;
+import hudson.model.TaskListener;
 import hudson.model.Hudson;
 import hudson.model.Node;
-import hudson.model.TaskListener;
 import hudson.slaves.NodeSpecific;
 import hudson.tools.ToolDescriptor;
-import hudson.tools.ToolInstallation;
 import hudson.tools.ToolProperty;
+import hudson.tools.ToolInstallation;
+
 import java.io.IOException;
 import java.util.List;
+
 import org.kohsuke.stapler.DataBoundConstructor;
+
+import edu.umd.cs.findbugs.annotations.SuppressWarnings;
 
 /**
  * Installation of Mercurial.
  */
 @SuppressWarnings("SE_NO_SERIALVERSIONID")
-public class MercurialInstallation extends ToolInstallation implements  NodeSpecific<MercurialInstallation>, EnvironmentSpecific<MercurialInstallation> {
+public class MercurialInstallation extends ToolInstallation implements
+        NodeSpecific<MercurialInstallation>,
+        EnvironmentSpecific<MercurialInstallation> {
 
     private String executable;
     private String downloadForest;
@@ -54,7 +59,9 @@ public class MercurialInstallation extends ToolInstallation implements  NodeSpec
     private boolean useSharing;
 
     @DataBoundConstructor
-    public MercurialInstallation(String name, String home, String executable, String downloadForest, boolean debug, boolean useCaches, boolean useSharing, List<? extends ToolProperty<?>> properties) {
+    public MercurialInstallation(String name, String home, String executable,
+            String downloadForest, boolean debug, boolean useCaches,
+            boolean useSharing, List<? extends ToolProperty<?>> properties) {
         super(name, home, properties);
         this.executable = Util.fixEmpty(executable);
         this.downloadForest = Util.fixEmpty(downloadForest);
@@ -88,19 +95,26 @@ public class MercurialInstallation extends ToolInstallation implements  NodeSpec
     }
 
     public static MercurialInstallation[] allInstallations() {
-        return Hudson.getInstance().getDescriptorByType(DescriptorImpl.class).getInstallations();
+        return Hudson.getInstance().getDescriptorByType(DescriptorImpl.class)
+                .getInstallations();
     }
 
-    public MercurialInstallation forNode(Node node, TaskListener log) throws IOException, InterruptedException {
-        return new MercurialInstallation(getName(), translateFor(node, log), executable, downloadForest, debug, useCaches, useSharing, getProperties().toList());
+    public MercurialInstallation forNode(Node node, TaskListener log)
+            throws IOException, InterruptedException {
+        return new MercurialInstallation(getName(), translateFor(node, log),
+                executable, downloadForest, debug, useCaches, useSharing,
+                getProperties().toList());
     }
 
     public MercurialInstallation forEnvironment(EnvVars environment) {
-        return new MercurialInstallation(getName(), environment.expand(getHome()), executable, downloadForest, debug, useCaches, useSharing, getProperties().toList());
+        return new MercurialInstallation(getName(),
+                environment.expand(getHome()), executable, downloadForest,
+                debug, useCaches, useSharing, getProperties().toList());
     }
 
     @Extension
-    public static class DescriptorImpl extends ToolDescriptor<MercurialInstallation> {
+    public static class DescriptorImpl extends
+            ToolDescriptor<MercurialInstallation> {
 
         @CopyOnWrite
         @SuppressWarnings("VO_VOLATILE_REFERENCE_TO_ARRAY")

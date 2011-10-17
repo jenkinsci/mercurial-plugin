@@ -4,17 +4,25 @@ import hudson.FilePath;
 import hudson.model.FreeStyleProject;
 import hudson.model.Hudson;
 import hudson.tools.ToolProperty;
+
 import java.io.File;
 import java.util.Collections;
 
 public class ForestTest extends MercurialTestCase {
 
     private File toprepo, subrepo;
-    protected @Override void setUp() throws Exception {
+
+    protected @Override
+    void setUp() throws Exception {
         super.setUp();
-        String downloadForest = ForestTest.class.getResource("forest.py").toString(); // copied from 3647b4bed1a1
-        Hudson.getInstance().getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(
-                new MercurialInstallation("forested", "", "hg", downloadForest, false, false, false, Collections.<ToolProperty<?>>emptyList()));
+        String downloadForest = ForestTest.class.getResource("forest.py")
+                .toString(); // copied from 3647b4bed1a1
+        Hudson.getInstance()
+                .getDescriptorByType(MercurialInstallation.DescriptorImpl.class)
+                .setInstallations(
+                        new MercurialInstallation("forested", "", "hg",
+                                downloadForest, false, false, false,
+                                Collections.<ToolProperty<?>> emptyList()));
         toprepo = createTmpDir();
         hg(toprepo, "init");
         subrepo = new File(toprepo, "sub");
@@ -26,7 +34,8 @@ public class ForestTest extends MercurialTestCase {
         touchAndCommit(toprepo, "a");
         touchAndCommit(subrepo, "b");
         FreeStyleProject p = createFreeStyleProject();
-        p.setScm(new MercurialSCM("forested", toprepo.getPath(), null, null, null, null, true, true));
+        p.setScm(new MercurialSCM("forested", toprepo.getPath(), null, null,
+                null, null, true, true));
         buildAndCheck(p, "sub/b");
         FilePath ws = p.getSomeWorkspace();
         ws.child("junk").touch(0);
