@@ -8,6 +8,8 @@ import hudson.model.FreeStyleProject;
 import hudson.model.ParametersAction;
 import hudson.model.StringParameterValue;
 import hudson.scm.ChangeLogSet;
+import hudson.scm.PollingResult;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -53,35 +55,38 @@ public class MercurialSCMTest extends MercurialTestCase {
         hg(repo, "update", "--clean", "default");
         touchAndCommit(repo, "default-2");
         // Changes in default should be ignored.
-        assertFalse(pollSCMChanges(p));
+        assertFalse(pollSCMChanges(p).hasChanges());
         hg(repo, "update", "--clean", "b");
         touchAndCommit(repo, "b-2");
         // But changes in b should be pulled.
-        assertTrue(pollSCMChanges(p));
+        assertTrue(pollSCMChanges(p).hasChanges());
         buildAndCheck(p, "b-2");
         // Switch to default branch with an existing workspace.
         p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null, null, null, false, false));
         // Should now consider preexisting changesets in default to be poll triggers.
-        assertTrue(pollSCMChanges(p));
+        assertTrue(pollSCMChanges(p).hasChanges());
         // Should switch working copy to default branch.
         buildAndCheck(p, "default-2");
         touchAndCommit(repo, "b-3");
         // Changes in other branch should be ignored.
-        assertFalse(pollSCMChanges(p));
+        assertFalse(pollSCMChanges(p).hasChanges());
     }
 
     @Bug(1099)
     public void testPollingLimitedToModules() throws Exception {
+        PollingResult pr;
         FreeStyleProject p = createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, "dir1 dir2", null, null, false, false));
         hg(repo, "init");
         touchAndCommit(repo, "dir1/f");
         buildAndCheck(p, "dir1/f");
         touchAndCommit(repo, "dir2/f");
-        assertTrue(pollSCMChanges(p));
+        pr = pollSCMChanges(p);
+        assertEquals(PollingResult.Change.SIGNIFICANT, pr.change);
         buildAndCheck(p, "dir2/f");
         touchAndCommit(repo, "dir3/f");
-        assertFalse(pollSCMChanges(p));
+        pr = pollSCMChanges(p);
+        assertEquals(PollingResult.Change.INSIGNIFICANT, pr.change);
         // No support for partial checkouts yet, so workspace will contain everything.
         buildAndCheck(p, "dir3/f");
         // HUDSON-4972: do not pay attention to merges
@@ -92,12 +97,14 @@ public class MercurialSCMTest extends MercurialTestCase {
         hg(repo, "merge");
         new FilePath(repo).child("dir2/f").write("stuff", "UTF-8");
         hg(repo, "commit", "--message", "merged");
-        assertFalse(pollSCMChanges(p));
+        pr = pollSCMChanges(p);
+        assertEquals(PollingResult.Change.INSIGNIFICANT, pr.change);
         buildAndCheck(p, "dir4/f");
     }
 
     @Bug(6337)
     public void testPollingLimitedToModules2() throws Exception {
+        PollingResult pr;
         FreeStyleProject p = createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, "dir1", null, null, false, false));
         hg(repo, "init");
@@ -105,9 +112,11 @@ public class MercurialSCMTest extends MercurialTestCase {
         pollSCMChanges(p);
         buildAndCheck(p, "starter");
         touchAndCommit(repo, "dir2/f");
-        assertFalse(pollSCMChanges(p));
+        pr = pollSCMChanges(p);
+        assertEquals(PollingResult.Change.INSIGNIFICANT, pr.change);
         touchAndCommit(repo, "dir1/f");
-        assertTrue(pollSCMChanges(p));
+        pr = pollSCMChanges(p);
+        assertEquals(PollingResult.Change.SIGNIFICANT, pr.change);
         buildAndCheck(p, "dir1/f");
     }
 
@@ -222,24 +231,24 @@ public class MercurialSCMTest extends MercurialTestCase {
 
         hg(repo, "init");
         touchAndCommit(repo, "f1");
-        assertTrue(pollSCMChanges(one));
+        assertTrue(pollSCMChanges(one).hasChanges());
         buildAndCheck(one, "f1");
-        assertTrue(pollSCMChanges(two));
+        assertTrue(pollSCMChanges(two).hasChanges());
 
         hg(repo, "branch", "b");
         touchAndCommit(repo, "b1");
 
-        assertFalse(pollSCMChanges(one));
+        assertFalse(pollSCMChanges(one).hasChanges());
 
         buildAndCheck(three, "b1");
         buildAndCheck(four, "b1");
 
         touchAndCommit(repo, "b2");
-        assertTrue(pollSCMChanges(three));
+        assertTrue(pollSCMChanges(three).hasChanges());
         buildAndCheck(three, "b2");
-        assertTrue(pollSCMChanges(four));
+        assertTrue(pollSCMChanges(four).hasChanges());
         
-        assertFalse(pollSCMChanges(one));
+        assertFalse(pollSCMChanges(one).hasChanges());
     }
 
     /**
@@ -319,6 +328,49 @@ public class MercurialSCMTest extends MercurialTestCase {
         assertChangeSetPaths(Collections.singletonList(Collections.singleton("dir3/f1")), b);
     }
 
+    public void testPolling() throws Exception {
+        AbstractBuild<?, ?> b;
+        PollingResult pr;
+        FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null, null, null, false, false));
+        p.setAssignedLabel(null); // Allow roaming
+        
+        // No builds, no workspace, but an available remote repository
+        hg(repo, "init");
+        touchAndCommit(repo, "f1");
+        String cs1 = getLastChangesetId(repo);
+        pr = pollSCMChanges(p);
+        assertPollingResult(PollingResult.Change.INCOMPARABLE, null, null, pr);
+        
+        // We have a workspace, and no new changes in remote repository
+        b = p.scheduleBuild2(0).get();
+        pr = pollSCMChanges(p);
+        assertPollingResult(PollingResult.Change.NONE, cs1, cs1, pr);
+        
+        // We have a workspace, and new changes in the remote repository
+        touchAndCommit(repo, "f2");
+        String cs2 = getLastChangesetId(repo);
+        pr = pollSCMChanges(p);
+        assertPollingResult(PollingResult.Change.SIGNIFICANT, cs1, cs2, pr);
+        
+        // We lost the workspace
+        b.getWorkspace().deleteRecursive();
+        pr = pollSCMChanges(p);
+        assertPollingResult(PollingResult.Change.INCOMPARABLE, null, null, pr);
+        b = p.scheduleBuild2(0).get();
+        
+        // Multiple polls
+        touchAndCommit(repo, "f3");
+        touchAndCommit(repo, "f4");
+        String cs4 = getLastChangesetId(repo);
+        pr = pollSCMChanges(p);
+        assertPollingResult(PollingResult.Change.SIGNIFICANT, cs2, cs4, pr);
+        touchAndCommit(repo, "f5");
+        String cs5 = getLastChangesetId(repo);
+        pr = pollSCMChanges(p);
+        assertPollingResult(PollingResult.Change.SIGNIFICANT, cs4, cs5, pr);
+    }
+
     private PretendSlave createNoopPretendSlave() throws Exception {
         return createPretendSlave(new NoopFakeLauncher());
     }
@@ -330,6 +382,24 @@ public class MercurialSCMTest extends MercurialTestCase {
             actualChangeSetPaths.add(new LinkedHashSet<String>(entry.getAffectedPaths()));
         }
         assertEquals(expectedChangeSetPaths, actualChangeSetPaths);
+    }
+
+    private void assertPollingResult(PollingResult.Change expectedChangeDegree, String expectedBaselineId, String expectedRemoteId, PollingResult actualPollingResult) {
+        assertNotNull(actualPollingResult);
+        PollingResult.Change actualChangeDegree = actualPollingResult.change;
+        assertEquals(expectedChangeDegree, actualChangeDegree);
+        if(expectedBaselineId == null) {
+            assertNull(actualPollingResult.baseline);
+        } else {
+            MercurialTagAction actualBaseline = (MercurialTagAction) actualPollingResult.baseline;
+            assertEquals(expectedBaselineId, actualBaseline.id);
+        }
+        if(expectedRemoteId == null) {
+            assertNull(actualPollingResult.remote);
+        } else {
+            MercurialTagAction actualRemote = (MercurialTagAction) actualPollingResult.remote;
+            assertEquals(expectedRemoteId, actualRemote.id);
+        }
     }
 
     private static final class NoopFakeLauncher implements FakeLauncher {

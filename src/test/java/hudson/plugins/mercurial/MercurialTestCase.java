@@ -8,7 +8,10 @@ import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Hudson;
 import hudson.model.TaskListener;
+import hudson.scm.PollingResult;
 import hudson.util.StreamTaskListener;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -66,8 +69,21 @@ public abstract class MercurialTestCase extends HudsonTestCase {
         return log;
     }
 
-    protected boolean pollSCMChanges(FreeStyleProject p) {
-        return p.poll(new StreamTaskListener(System.out, Charset.defaultCharset())).hasChanges();
+    protected PollingResult pollSCMChanges(FreeStyleProject p) {
+        return p.poll(new StreamTaskListener(System.out, Charset.defaultCharset()));
+    }
+
+    protected String getLastChangesetId(File repo) throws Exception {
+        List<String> cmds = new ArrayList<String>();
+        cmds.add("hg");
+        cmds.add("log");
+        cmds.add("-l1");
+        cmds.add("--template");
+        cmds.add("{node}");
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        TaskListener nodeListener = new StreamTaskListener(baos);
+        assertEquals(0, MercurialSCM.launch(launcher).cmds(cmds).pwd(repo).stdout(nodeListener).stderr(baos).join());
+        return baos.toString();
     }
 
 }

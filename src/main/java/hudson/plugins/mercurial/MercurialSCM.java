@@ -282,14 +282,14 @@ public class MercurialSCM extends SCM implements Serializable {
             
             ArgumentListBuilder logCmd = findHgExe(node, listener, false);
             logCmd.add("log", "--style", tmpFile.getRemote());
-            logCmd.add("--rev", ".:" + getBranch(), "--branch", getBranch());
-            logCmd.add("--prune", ".");
+            logCmd.add("--branch", getBranch());
             logCmd.add("--no-merges");
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ForkOutputStream fos = new ForkOutputStream(baos, output);
 
             if (forest) {
+                logCmd.add("--prune", ".");
                 StringTokenizer trees = new StringTokenizer(hg.popen(repository, listener, false, new ArgumentListBuilder("ftrees", "--convert")));
                 while (trees.hasMoreTokens()) {
                     String tree = trees.nextToken();
@@ -298,12 +298,13 @@ public class MercurialSCM extends SCM implements Serializable {
                             true, listener);
                 }
             } else {
+                logCmd.add("--prune", baseline.id);
                 joinWithPossibleTimeout(
                         launch(launcher).cmds(logCmd).stdout(fos).pwd(repository),
                         true, listener);
             }
 
-            MercurialTagAction cur = parseIncomingOutput(baos, baseline, changedFileNames);
+            MercurialTagAction cur = parsePollingLogOutput(baos, baseline, changedFileNames);
             return new PollingResult(baseline,cur,computeDegreeOfChanges(changedFileNames,output));
         } finally {
             tmpFile.delete();
@@ -371,7 +372,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private static Pattern FILES_LINE = Pattern.compile("files:(.*)");
 
-    private MercurialTagAction parseIncomingOutput(ByteArrayOutputStream output, MercurialTagAction baseline,  Set<String> result) throws IOException {
+    private MercurialTagAction parsePollingLogOutput(ByteArrayOutputStream output, MercurialTagAction baseline,  Set<String> result) throws IOException {
         String headId = null; // the tip of the remote revision
         BufferedReader in = new BufferedReader(new InputStreamReader(
                 new ByteArrayInputStream(output.toByteArray())));
