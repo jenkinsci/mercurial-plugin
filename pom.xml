@@ -50,10 +50,8 @@
   </issueManagement>
 
   <properties>
-        <!--
-            compare: http://docs.codehaus.org/display/MAVENUSER/POM+Element+for+Source+File+Encoding
-        -->
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <netbeans.hint.jdkPlatform>JDK_1.6</netbeans.hint.jdkPlatform> <!-- HUDSON-8942 / JENKINS-10490 -->
   </properties>
 
   <repositories>
