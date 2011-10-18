@@ -17,22 +17,22 @@ import org.kohsuke.stapler.StaplerRequest;
 /**
  * Mercurial web interface served using a <a href="http://bitbucket.org/">BitBucket</a> repository.
  */
-public class BitBucket extends HgBrowser {	    
+public class BitBucket extends HgBrowser {
     
-	@DataBoundConstructor
-	public BitBucket(String url) throws MalformedURLException {
-	    super(url);
-	}
-	
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public URL getChangeSetLink(MercurialChangeSet changeSet)
-			throws IOException {
-	    current = changeSet;
-		return new URL(getUrl(), "changeset/" + changeSet.getShortNode() + "/");
-	}
+    @DataBoundConstructor
+    public BitBucket(String url) throws MalformedURLException {
+        super(url);
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public URL getChangeSetLink(MercurialChangeSet changeSet)
+            throws IOException {
+        current = changeSet;
+        return new URL(getUrl(), "changeset/" + changeSet.getShortNode() + "/");
+    }
 
     /**
      * {@inheritDoc} 
@@ -41,7 +41,7 @@ public class BitBucket extends HgBrowser {
      * to {@literal getChangeSetLink(MercurialChangeSet)}.
      */
     @Override
-	public URL getFileLink(String path) throws MalformedURLException {
+    public URL getFileLink(String path) throws MalformedURLException {
         checkCurrentIsNotNull();
         // http://bitbucket.org/mfriedenhagen/hudson-mercurial/src/d736d15e5389/src/main/java/hudson/plugins/mercurial/browser/HgBrowser.java        
         return new URL(getUrl(), "src/" + current.getShortNode() + "/" + path);
@@ -60,7 +60,6 @@ public class BitBucket extends HgBrowser {
         return new URL(getUrl(), "changeset/" + current.getShortNode() + "/#chg-" + path);
     }
     
-	
     @Extension
     public static class DescriptorImpl extends Descriptor<RepositoryBrowser<?>> {
         public String getDisplayName() {

@@ -20,21 +20,21 @@ import org.kohsuke.stapler.StaplerRequest;
  */
 public class HgWeb extends HgBrowser {
     
-	@DataBoundConstructor
-	public HgWeb(String url) throws MalformedURLException {
-	    super(url);
-	}
-	
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public URL getChangeSetLink(MercurialChangeSet changeSet)
-			throws IOException {
-		current = changeSet;
-		// TODO: consider verifying the repository connection to tip at configuration time?
-		return new URL(getUrl(), "rev/" + changeSet.getShortNode());
-	}
+    @DataBoundConstructor
+    public HgWeb(String url) throws MalformedURLException {
+        super(url);
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public URL getChangeSetLink(MercurialChangeSet changeSet)
+            throws IOException {
+        current = changeSet;
+        // TODO: consider verifying the repository connection to tip at configuration time?
+        return new URL(getUrl(), "rev/" + changeSet.getShortNode());
+    }
 
     /**
      * {@inheritDoc}

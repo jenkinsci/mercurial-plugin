@@ -2,7 +2,6 @@
          xmlns:t="/lib/hudson" xmlns:f="/lib/form">
   <l:layout title="Mercurial">
 
-
     <l:main-panel>
       <h1>Mercurial Build Data</h1>
 

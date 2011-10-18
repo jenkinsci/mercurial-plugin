@@ -19,29 +19,29 @@ import org.kohsuke.stapler.StaplerRequest;
  */
 public class FishEye extends HgBrowser {
     
-	@DataBoundConstructor
-	public FishEye(String url) throws MalformedURLException {
-	    super(url);
-	}
-	
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public URL getChangeSetLink(MercurialChangeSet changeSet)
-			throws IOException {
-	    current = changeSet;
+    @DataBoundConstructor
+    public FishEye(String url) throws MalformedURLException {
+        super(url);
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public URL getChangeSetLink(MercurialChangeSet changeSet)
+            throws IOException {
+        current = changeSet;
 
-	    // replace /browse/ with /changelog/ so that the full changeset changelog will be displayed 
-	    String url = getUrl().toExternalForm();
-	    url = url.replaceAll("/browse/", "/changelog/");
-	    if (url.endsWith("/"))
-	    {
-	        url = url.substring(0, url.length() - 1);
-	    }
-	    // http://www.example.org/changelog/hg?cs=0a43e7e89449d1ca8a9da37e1cc644a620d48e71
-		return new URL(url + "?cs=" + changeSet.getNode());
-	}
+        // replace /browse/ with /changelog/ so that the full changeset changelog will be displayed 
+        String url = getUrl().toExternalForm();
+        url = url.replaceAll("/browse/", "/changelog/");
+        if (url.endsWith("/"))
+        {
+            url = url.substring(0, url.length() - 1);
+        }
+        // http://www.example.org/changelog/hg?cs=0a43e7e89449d1ca8a9da37e1cc644a620d48e71
+        return new URL(url + "?cs=" + changeSet.getNode());
+    }
 
     /**
      * {@inheritDoc} 
@@ -50,7 +50,7 @@ public class FishEye extends HgBrowser {
      * to {@literal getChangeSetLink(MercurialChangeSet)}.
      */
     @Override
-	public URL getFileLink(String path) throws MalformedURLException {
+    public URL getFileLink(String path) throws MalformedURLException {
         checkCurrentIsNotNull();
         // http://www.example.org/browse/hg/samplefile.txt#0a43e7e89449d1ca8a9da37e1cc644a620d48e71
         return new URL(getUrl(), path + "#" + current.getNode());
@@ -69,7 +69,7 @@ public class FishEye extends HgBrowser {
         // http://www.example.org/browse/hg/samplefile.txt?r1=0a43e7e89449d1ca8a9da37e1cc644a620d48e71&r2=
         return new URL(getUrl(), path + "?r1=" + current.getNode() + "&r2=");
     }
-	
+    
     @Extension
     public static class DescriptorImpl extends Descriptor<RepositoryBrowser<?>> {
         public String getDisplayName() {

@@ -246,8 +246,6 @@ public class MercurialSCM extends SCM implements Serializable {
         try {
             // Get the list of changed files.
             Node node = project.getLastBuiltOn(); // HUDSON-5984: ugly but matches what AbstractProject.poll uses
-            HgExe hg = new HgExe(this, launcher, node, listener, new EnvVars());
-
 
             FilePath repository = workspace2Repo(workspace);
             pull(launcher, repository, listener, output, node,getBranch());
@@ -417,7 +415,7 @@ public class MercurialSCM extends SCM implements Serializable {
             return;
         }
         
-        // calc changelog and create bundle
+        // calc changelog
         final FileOutputStream os = new FileOutputStream(changelogFile);
         try {
             try {

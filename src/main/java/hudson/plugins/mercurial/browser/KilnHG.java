@@ -19,21 +19,21 @@ import org.kohsuke.stapler.StaplerRequest;
  */
 public class KilnHG extends HgBrowser {
 
-	@DataBoundConstructor
-	public KilnHG(String url) throws MalformedURLException {
-		super(url);
-	}
-	
-	/**
-	 * {@inheritDoc}
-	 */
-	@Override
-	public URL getChangeSetLink(MercurialChangeSet changeSet)
-			throws IOException {
-		current = changeSet;
-	    // http://kilnhg.com/Repo/Repositories/Group/RepoName/History/12345
-		return new URL(getUrl(), "History/" + changeSet.getShortNode());
-	}
+    @DataBoundConstructor
+    public KilnHG(String url) throws MalformedURLException {
+        super(url);
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public URL getChangeSetLink(MercurialChangeSet changeSet)
+            throws IOException {
+        current = changeSet;
+        // http://kilnhg.com/Repo/Repositories/Group/RepoName/History/12345
+        return new URL(getUrl(), "History/" + changeSet.getShortNode());
+    }
 
     /**
      * {@inheritDoc}

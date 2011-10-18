@@ -119,7 +119,7 @@ public class HgExe {
     }
 
     public ProcStarter cleanAll() {
-        return run("--config", "extensions.purge=", "clean", "--all");        
+        return run("--config", "extensions.purge=", "clean", "--all");
     }
 
     /**

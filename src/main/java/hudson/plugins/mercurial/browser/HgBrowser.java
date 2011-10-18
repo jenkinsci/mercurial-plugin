@@ -73,7 +73,7 @@ public class HgBrowser extends RepositoryBrowser<MercurialChangeSet> {
     }
 
     // compatibility with earlier plugins
-    public Object readResolve() {        
+    public Object readResolve() {
         if (!this.getClass().equals(HgBrowser.class)) {
             return this;
         }
