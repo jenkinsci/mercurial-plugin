@@ -13,7 +13,6 @@ import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.Computer;
-import hudson.model.Descriptor;
 import hudson.model.Node;
 import hudson.plugins.mercurial.browser.HgBrowser;
 import hudson.plugins.mercurial.browser.HgWeb;
@@ -21,8 +20,6 @@ import hudson.remoting.VirtualChannel;
 import hudson.scm.ChangeLogParser;
 import hudson.scm.PollingResult;
 import hudson.scm.PollingResult.Change;
-import hudson.scm.RepositoryBrowser;
-import hudson.scm.RepositoryBrowsers;
 import hudson.scm.SCMDescriptor;
 import hudson.scm.SCMRevisionState;
 import hudson.scm.SCM;
@@ -42,7 +39,6 @@ import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -706,23 +702,6 @@ public class MercurialSCM extends SCM implements Serializable {
         public DescriptorImpl() {
             super(HgBrowser.class);
             load();
-        }
-
-        /**
-         * {@inheritDoc}
-         *
-         * Due to compatibility issues with older version we implement this ourselves instead of relying
-         * on the parent method. Kohsuke implemented a fix for this in the core (r21961), so we may drop
-         * this function after 1.325 is released.
-         *
-         * @todo: remove this function after 1.325 is released.
-         *
-         * @see <a href="https://hudson.dev.java.net/issues/show_bug.cgi?id=4514">#4514</a>
-         * @see <a href="http://fisheye4.atlassian.com/changelog/hudson/trunk/hudson?cs=21961">core fix</a>
-         */
-        @Override
-        public List<Descriptor<RepositoryBrowser<?>>> getBrowserDescriptors() {
-            return RepositoryBrowsers.filter(HgBrowser.class);
         }
 
         public String getDisplayName() {
