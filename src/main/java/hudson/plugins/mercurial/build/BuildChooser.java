@@ -2,6 +2,10 @@ package hudson.plugins.mercurial.build;
 
 import hudson.DescriptorExtensionList;
 import hudson.ExtensionPoint;
+import hudson.FilePath;
+import hudson.Launcher;
+import hudson.model.AbstractBuild;
+import hudson.model.BuildListener;
 import hudson.model.Describable;
 import hudson.model.Hudson;
 import hudson.plugins.mercurial.MercurialSCM;
@@ -9,6 +13,7 @@ import hudson.plugins.mercurial.MercurialSCM;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.logging.Logger;
 
 /**
  * Extension point to identify the revision (commit ID) to be built
@@ -18,11 +23,10 @@ import java.util.Collection;
 public abstract class BuildChooser implements ExtensionPoint, Describable<BuildChooser>, Serializable {
 
     /**
-     * Get a list of revisions (commit IDs or branch names) that are candidates to be built.
+     * Get a the revision (commit IDs or branch names) that will be built.
      * @param branchSpec the branch specification, may be a specific branch name or a pattern to monitor multiple branches
-     * @return candidate revisions, may be an empty collection but not null
      */
-    public abstract Collection<String> getCandidateRevisions(String branchSpec) throws IOException;
+    public abstract String getRevisionToBuild(AbstractBuild<?, ?> build, Launcher launcher, FilePath repository, BuildListener listener) throws IOException, InterruptedException;
 
     /**
      * Refers back to the {@link MercurialSCM} that owns this build chooser.
@@ -38,5 +42,7 @@ public abstract class BuildChooser implements ExtensionPoint, Describable<BuildC
     }
 
     private static final long serialVersionUID = 1L;
+
+    protected static final Logger LOGGER = Logger.getLogger(BuildChooser.class.getName());
 
 }

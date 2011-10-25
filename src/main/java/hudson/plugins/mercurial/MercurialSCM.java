@@ -276,8 +276,8 @@ public class MercurialSCM extends SCM implements Serializable {
     /**
      * Compute the changes compared to existing state
      */
-    private List<ChangeSet> changeSet(Launcher launcher, FilePath workspace, TaskListener listener, String branch,
-                                      String baseline, PrintStream output, Node node, FilePath repository) throws IOException, InterruptedException {
+    public List<ChangeSet> changeSet(Launcher launcher, FilePath workspace, TaskListener listener, String branch,
+                                     String baseline, PrintStream output, Node node, FilePath repository) throws IOException, InterruptedException {
         // Mercurial requires the style file to be in a file..
         FilePath tmpFile = workspace.createTextTempFile("tmp", "style", FILES_STYLE);
         try {
@@ -344,7 +344,7 @@ public class MercurialSCM extends SCM implements Serializable {
         return useTimeout ? proc.start().joinWithTimeout(/* #4528: not in JDK 5: 1, TimeUnit.HOURS*/60 * 60, TimeUnit.SECONDS, listener) : proc.join();
     }
 
-    private Change computeDegreeOfChanges(ChangeSet changeSet, PrintStream output) {
+    public Change computeDegreeOfChanges(ChangeSet changeSet, PrintStream output) {
         LOGGER.log(FINE, "Changed file names: {0}", changeSet.files);
 
         if (changeSet.files.isEmpty()) {
@@ -422,7 +422,7 @@ public class MercurialSCM extends SCM implements Serializable {
         return incoming;
     }
 
-    private class ChangeSet {
+    public static class ChangeSet {
         String id;
         String branch;
         Set<String> files = new HashSet<String>();

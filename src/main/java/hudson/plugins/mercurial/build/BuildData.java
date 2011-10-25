@@ -2,7 +2,6 @@ package hudson.plugins.mercurial.build;
 
 import static hudson.Util.fixNull;
 
-<<<<<<< HEAD
 import hudson.model.AbstractBuild;
 import hudson.model.Action;
 import hudson.plugins.mercurial.MercurialTagAction;
@@ -10,12 +9,6 @@ import hudson.plugins.mercurial.MercurialTagAction;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
-=======
-import hudson.model.Action;
-
-import java.io.Serializable;
-import java.util.HashMap;
->>>>>>> 386bffe... BuildChooser extension point (mimic git-plugin)
 import java.util.Map;
 
 /**
@@ -28,7 +21,6 @@ public class BuildData implements Action, Serializable {
     /**
      * Map of branch name -> build (Branch name to last built SHA1).
      */
-<<<<<<< HEAD
     Map<String,MercurialTagAction> buildsByBranchName = new HashMap<String,MercurialTagAction>();
 
     public final String scm;
@@ -39,34 +31,19 @@ public class BuildData implements Action, Serializable {
 
     public void saveBuild(MercurialTagAction build) {
         buildsByBranchName.put(build.getBranch(), build);
-=======
-    Map<String,Build> buildsByBranchName = new HashMap<String,Build>();
-
-    public void saveBuild(Build build) {
-        buildsByBranchName.put(build.branch, build);
->>>>>>> 386bffe... BuildChooser extension point (mimic git-plugin)
     }
 
     /**
      * @return true if the changesetID has already been built in the past
      */
     public boolean hasBeenBuilt(String changesetID) {
-<<<<<<< HEAD
         for (MercurialTagAction b : buildsByBranchName.values()) {
             if (b.getId().equals(changesetID)) return true;
-=======
-        for (Build b : buildsByBranchName.values()) {
-            if (b.changesetID.equals(changesetID)) return true;
->>>>>>> 386bffe... BuildChooser extension point (mimic git-plugin)
         }
         return false;
     }
 
-<<<<<<< HEAD
     public MercurialTagAction getLastBuildOfBranch(String branch) {
-=======
-    public Build getLastBuildOfBranch(String branch) {
->>>>>>> 386bffe... BuildChooser extension point (mimic git-plugin)
         return buildsByBranchName.get(branch);
     }
 
@@ -81,7 +58,6 @@ public class BuildData implements Action, Serializable {
     public String getUrlName() {
         return "mercurial";
     }
-<<<<<<< HEAD
 
     public static BuildData getBuildData(String scm, AbstractBuild<?,?> build) {
         BuildData buildData = null;
@@ -101,6 +77,4 @@ public class BuildData implements Action, Serializable {
 
         return (buildData != null ? buildData : new BuildData(scm));
     }
-=======
->>>>>>> 386bffe... BuildChooser extension point (mimic git-plugin)
 }
