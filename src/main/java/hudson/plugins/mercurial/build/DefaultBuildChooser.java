@@ -18,10 +18,16 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.lang.StringUtils;
 
+import org.kohsuke.stapler.DataBoundConstructor;
+
 /**
  * @author <a href="mailto:nicolas.deloof@cloudbees.com">Nicolas De loof</a>
  */
 public class DefaultBuildChooser extends BuildChooser {
+
+    @DataBoundConstructor
+    public DefaultBuildChooser() {
+    }
 
     @Override
     public String getRevisionToBuild(AbstractBuild<?, ?> build, Launcher launcher, FilePath repository, BuildListener listener) throws IOException, InterruptedException {
