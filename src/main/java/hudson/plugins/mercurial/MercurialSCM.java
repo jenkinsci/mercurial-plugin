@@ -463,10 +463,6 @@ public class MercurialSCM extends SCM implements Serializable {
     private boolean verify(AbstractBuild<?,?> build, Launcher launcher, FilePath repository, BuildListener listener, EnvVars env)
             throws InterruptedException, IOException
         {
-
-        if (!verify)
-            return true;
-
         HgExe hgverify = new HgExe(this, launcher, build, listener, env);
 
         if (hgverify.run("verify", "--noninteractive").pwd(repository).join() != 0)
