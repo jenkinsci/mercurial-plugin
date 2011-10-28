@@ -1,95 +1,36 @@
 package hudson.plugins.mercurial;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.Reader;
+import java.io.InputStream;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.logging.Logger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import org.apache.commons.io.IOUtils;
-
-import edu.umd.cs.findbugs.annotations.SuppressWarnings;
+import org.ini4j.ConfigParser;
 
 /**
  * Parses the <tt>.hgrc</tt> file.
  */
 final class HgRc {
-    private final Map<String, Section> sections = new TreeMap<String, Section>();
+    private final ConfigParser p;
 
-    public HgRc(File repository) throws IOException {
+    HgRc(File repository) throws IOException {
         this(load(repository), getHgRcFile(repository));
     }
 
-    private static Reader load(File repository) throws IOException {
+    private static InputStream load(File repository) throws IOException {
         File hgrc = getHgRcFile(repository);
-        if (!hgrc.exists())
+        if (!hgrc.exists()) {
             throw new IOException("No such file: " + hgrc);
-        // TODO: what is the encoding of hgrc?
-        return new FileReader(hgrc);
+        }
+        return new FileInputStream(hgrc);
     }
 
-    @SuppressWarnings("SBSC_USE_STRINGBUFFER_CONCATENATION")
-    HgRc(Reader input, File hgrc) throws IOException {
+    HgRc(InputStream input, File hgrc) throws IOException {
         try {
-            BufferedReader r = new BufferedReader(input);
-            String line;
-            Section current = null;
-            String key = null, value = null;
-
-            while ((line = r.readLine()) != null) {
-                if (line.length() == 0)
-                    continue;
-                switch (line.charAt(0)) {
-                case ';':
-                case '#':
-                    // comment
-                    break;
-                case '[':
-                    // section
-                    if (key != null) {
-                        // commit the previous value
-                        current.add(key, value);
-                        key = null;
-                    }
-
-                    Matcher m = SECTION_HEADER.matcher(line);
-                    if (!m.matches()) {
-                        LOGGER.warning("Failed to parse " + hgrc + " : " + line);
-                        continue;
-                    }
-                    current = createSection(m.group(1));
-                    break;
-                case ' ':
-                case '\t':
-                    // continuation of previous value
-                    while (line.length() > 0
-                            && Character.isWhitespace(line.charAt(0)))
-                        line = line.substring(1);
-                    value += line;
-                    continue;
-                default:
-                    // key=value line
-                    m = KEY_VALUE.matcher(line);
-                    if (!m.matches()) {
-                        LOGGER.warning("Failed to parse " + hgrc + " : " + line);
-                        continue;
-                    }
-                    if (key != null) // commit the previous value
-                        current.add(key, value);
-                    key = m.group(1);
-                    value = m.group(2);
-                    continue;
-                }
-            }
-
-            if (key != null)
-                // commit the last value
-                current.add(key, value);
+            p = new ConfigParser();
+            p.read(input);
         } finally {
             IOUtils.closeQuietly(input);
         }
@@ -103,52 +44,53 @@ final class HgRc {
         return new File(repository, ".hg/sharedpath");
     }
 
-    private Section createSection(String name) {
-        Section s = sections.get(name);
-        if (s == null)
-            sections.put(name, s = new Section());
-        return s;
-    }
-
     /**
      * Gets the section. If no such section exists, return an empty constant
      * section.
      */
     public Section getSection(String name) {
-        Section s = sections.get(name);
-        if (s == null)
-            s = NULL;
-        return s;
+        return new Section(p, name);
     }
 
     @Override
     public String toString() {
+        Map<String,Section> sections = new TreeMap<String,Section>();
+        for (String s : p.sections()) {
+            sections.put(s, getSection(s));
+        }
         return sections.toString();
     }
 
     public static final class Section {
-        private final Map<String, String> values = new TreeMap<String, String>();
 
-        public void add(String key, String value) {
-            values.put(key, value);
+        private final ConfigParser p;
+        private final String name;
+
+        private Section(ConfigParser p, String name) {
+            this.p = p;
+            this.name = name;
         }
 
         public String get(String key) {
-            return values.get(key);
+            try {
+                return p.get(name, key);
+            } catch (ConfigParser.ConfigParserException x) {
+                return null;
+            }
         }
 
         @Override
         public String toString() {
+            Map<String,String> values = new TreeMap<String,String>();
+            try {
+                for (String s : p.options(name)) {
+                    values.put(s, p.get(name, s));
+                }
+            } catch (ConfigParser.ConfigParserException x) {
+                // ignore
+            }
             return values.toString();
         }
     }
 
-    private static final Pattern SECTION_HEADER = Pattern
-            .compile("\\[(\\w+)\\].*");
-    private static final Pattern KEY_VALUE = Pattern
-            .compile("([^:=\\s][^:=]*?)\\s*[=:]\\s*(.*)");
-
-    private static final Logger LOGGER = Logger.getLogger(HgRc.class.getName());
-
-    private static final Section NULL = new Section();
 }
