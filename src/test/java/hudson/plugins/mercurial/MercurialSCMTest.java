@@ -6,6 +6,7 @@ import hudson.Proc;
 import hudson.model.AbstractBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.ParametersAction;
+import hudson.model.Result;
 import hudson.model.StringParameterValue;
 import hudson.scm.ChangeLogSet;
 import hudson.scm.ChangeLogSet.Entry;
@@ -422,6 +423,17 @@ public class MercurialSCMTest extends MercurialTestCase {
         String cs5 = getLastChangesetId(repo);
         pr = pollSCMChanges(p);
         assertPollingResult(PollingResult.Change.SIGNIFICANT, cs4, cs5, pr);
+    }
+    
+    @Bug(11460)
+    public void testTrailingUrlWhitespace() throws Exception {
+        FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath() + " ", null,
+                null, null, null, false));
+        hg(repo, "init");
+        touchAndCommit(repo, "dir1/f1");
+        AbstractBuild<?, ?> b = p.scheduleBuild2(0).get();
+        assertEquals(Result.SUCCESS, b.getResult());
     }
 
     private PretendSlave createNoopPretendSlave() throws Exception {

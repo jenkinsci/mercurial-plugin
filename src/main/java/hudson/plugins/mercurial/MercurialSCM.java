@@ -95,7 +95,7 @@ public class MercurialSCM extends SCM implements Serializable {
     @DataBoundConstructor
     public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean) {
         this.installation = installation;
-        this.source = source;
+        this.source = Util.fixEmptyAndTrim(source);
         this.modules = Util.fixNull(modules);
         this.subdir = Util.fixEmptyAndTrim(subdir);
         this.clean = clean;
