@@ -7,13 +7,13 @@ import java.io.InputStream;
 import java.util.Map;
 import java.util.TreeMap;
 import org.apache.commons.io.IOUtils;
-import org.ini4j.ConfigParser;
+import org.ini4j.Ini;
 
 /**
  * Parses the <tt>.hgrc</tt> file.
  */
 final class HgRc {
-    private final ConfigParser p;
+    private final Ini ini;
 
     HgRc(File repository) throws IOException {
         this(load(repository), getHgRcFile(repository));
@@ -29,8 +29,7 @@ final class HgRc {
 
     HgRc(InputStream input, File hgrc) throws IOException {
         try {
-            p = new ConfigParser();
-            p.read(input);
+            ini = new Ini(input);
         } finally {
             IOUtils.closeQuietly(input);
         }
@@ -49,13 +48,13 @@ final class HgRc {
      * section.
      */
     public Section getSection(String name) {
-        return new Section(p, name);
+        return new Section(ini, name);
     }
 
     @Override
     public String toString() {
         Map<String,Section> sections = new TreeMap<String,Section>();
-        for (String s : p.sections()) {
+        for (String s : ini.keySet()) {
             sections.put(s, getSection(s));
         }
         return sections.toString();
@@ -63,33 +62,22 @@ final class HgRc {
 
     public static final class Section {
 
-        private final ConfigParser p;
+        private final Ini ini;
         private final String name;
 
-        private Section(ConfigParser p, String name) {
-            this.p = p;
+        private Section(Ini ini, String name) {
+            this.ini = ini;
             this.name = name;
         }
 
         public String get(String key) {
-            try {
-                return p.get(name, key);
-            } catch (ConfigParser.ConfigParserException x) {
-                return null;
-            }
+            return ini.get(name, key);
         }
 
         @Override
         public String toString() {
-            Map<String,String> values = new TreeMap<String,String>();
-            try {
-                for (String s : p.options(name)) {
-                    values.put(s, p.get(name, s));
-                }
-            } catch (ConfigParser.ConfigParserException x) {
-                // ignore
-            }
-            return values.toString();
+            Map<String,String> vals = ini.get(name);
+            return vals != null ? new TreeMap<String,String>(vals).toString() : "{}";
         }
     }
 
