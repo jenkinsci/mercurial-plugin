@@ -379,7 +379,7 @@ public class MercurialSCM extends SCM implements Serializable {
         if (canReuseExistingWorkspace) {
             success = update(build, launcher, repository, listener);
         } else {
-            success = clone(build, launcher, repository, listener, changelogFile);
+            success = clone(build, launcher, repository, listener);
         }
 
         try {
@@ -492,7 +492,7 @@ public class MercurialSCM extends SCM implements Serializable {
     /**
      * Start from scratch and clone the whole repository.
      */
-    private boolean clone(AbstractBuild<?,?> build, Launcher launcher, FilePath repository, BuildListener listener, File changelogFile)
+    private boolean clone(AbstractBuild<?,?> build, Launcher launcher, FilePath repository, BuildListener listener)
             throws InterruptedException, IOException {
         try {
             repository.deleteRecursive();
@@ -560,7 +560,7 @@ public class MercurialSCM extends SCM implements Serializable {
             build.addAction(new MercurialTagAction(tip));
         }
 
-        return createEmptyChangeLog(changelogFile, listener, "changelog");
+        return true;
     }
 
     @Override
