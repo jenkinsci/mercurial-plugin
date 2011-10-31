@@ -37,8 +37,10 @@ import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.net.MalformedURLException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -230,14 +232,21 @@ public class MercurialSCM extends SCM implements Serializable {
     @Override
     protected PollingResult compareRemoteRevisionWith(AbstractProject<?, ?> project, Launcher launcher, FilePath workspace,
             TaskListener listener, SCMRevisionState _baseline) throws IOException, InterruptedException {
+
+        final AbstractBuild lastBuild = project.getLastBuild();
+        if (lastBuild == null) {
+            // If we've never been built before, well, gotta build!
+            return PollingResult.BUILD_NOW;
+        }
+
         MercurialTagAction baseline = (MercurialTagAction)_baseline;
 
         PrintStream output = listener.getLogger();
 
         // XXX do canUpdate check similar to in checkout, and possibly return INCOMPARABLE
 
+        List<ChangeSet> incoming;
         // Mercurial requires the style file to be in a file..
-        Set<String> changedFileNames = new HashSet<String>();
         FilePath tmpFile = workspace.createTextTempFile("tmp", "style", FILES_STYLE);
         try {
             // Get the list of changed files.
@@ -259,11 +268,16 @@ public class MercurialSCM extends SCM implements Serializable {
                     launch(launcher).cmds(logCmd).stdout(fos).pwd(repository),
                     true, listener);
 
-            MercurialTagAction cur = parsePollingLogOutput(baos, baseline, changedFileNames);
-            return new PollingResult(baseline,cur,computeDegreeOfChanges(changedFileNames,output));
+            incoming = parsePollingLogOutput(baos);
         } finally {
             tmpFile.delete();
         }
+
+        for (ChangeSet changeSet : incoming) {
+            if (computeDegreeOfChanges(changeSet,output) == Change.INSIGNIFICANT) continue;
+            return PollingResult.SIGNIFICANT;
+        }
+        return PollingResult.NO_CHANGES;
     }
 
     private void pull(Launcher launcher, FilePath repository, TaskListener listener, PrintStream output, Node node, String branch) throws IOException, InterruptedException {
@@ -283,14 +297,14 @@ public class MercurialSCM extends SCM implements Serializable {
         return useTimeout ? proc.start().joinWithTimeout(/* #4528: not in JDK 5: 1, TimeUnit.HOURS*/60 * 60, TimeUnit.SECONDS, listener) : proc.join();
     }
 
-    private Change computeDegreeOfChanges(Set<String> changedFileNames, PrintStream output) {
-        LOGGER.log(FINE, "Changed file names: {0}", changedFileNames);
+    private Change computeDegreeOfChanges(ChangeSet changeSet, PrintStream output) {
+        LOGGER.log(FINE, "Changed file names: {0}", changeSet.files);
 
-        if (changedFileNames.isEmpty()) {
+        if (changeSet.files.isEmpty()) {
             return Change.NONE;
         }
 
-        Set<String> depchanges = dependentChanges(changedFileNames);
+        Set<String> depchanges = dependentChanges(changeSet.files);
         LOGGER.log(FINE, "Dependent changed file names: {0}", depchanges);
 
         if (depchanges.isEmpty()) {
@@ -327,32 +341,48 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private static Pattern FILES_LINE = Pattern.compile("files:(.*)");
 
-    private MercurialTagAction parsePollingLogOutput(ByteArrayOutputStream output, MercurialTagAction baseline,  Set<String> result) throws IOException {
-        String headId = null; // the tip of the remote revision
+    private List<ChangeSet> parsePollingLogOutput(ByteArrayOutputStream output) throws IOException {
+        List<ChangeSet> incoming = new ArrayList<ChangeSet>();
+
         BufferedReader in = new BufferedReader(new InputStreamReader(
                 new ByteArrayInputStream(output.toByteArray())));
+
+        ChangeSet changeSet = null;
         String line;
         while ((line = in.readLine()) != null) {
             Matcher matcher = FILES_LINE.matcher(line);
             if (matcher.matches()) {
                 for (String s : matcher.group(1).split(":")) {
                     if (s.length() > 0) {
-                        result.add(s);
+                        changeSet.files.add(s);
                     }
                 }
             }
             if (line.startsWith("id:")) {
                 String id = line.substring(3);
-                if (headId == null) {
-                    headId = id;
+                changeSet = new ChangeSet(id);
+                incoming.add(changeSet);
+            }
+            if (line.startsWith("branch:")) {
+                String branch = line.substring(7);
+	            if (branch == null) {
+                    branch = "default";
                 }
+                changeSet.branch = branch;
             }
         }
 
-        if (headId==null) {
-            return baseline; // no new revisions found
+        return incoming;
+    }
+
+    private class ChangeSet {
+        String id;
+        String branch;
+        Set<String> files = new HashSet<String>();
+
+        private ChangeSet(String id) {
+            this.id = id;
         }
-        return new MercurialTagAction(headId);
     }
 
     public static MercurialInstallation findInstallation(String name) {
