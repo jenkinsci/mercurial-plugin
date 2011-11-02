@@ -253,21 +253,9 @@ public class MercurialSCM extends SCM implements Serializable {
         FilePath repository = workspace2Repo(workspace);
         pull(launcher, repository, listener, output, node);
 
-        Collection<MercurialTagAction> activeBranches = getActiveBranches(lastBuild, launcher, listener);
-        for (MercurialTagAction activeBranch : activeBranches) {
-            String branch = activeBranch.getBranch();
-            if (!matches(branch)) {
-                LOGGER.fine("ignore branch " + branch);
-                continue;
-            }
-            List<ChangeSet> incoming = changeSet(launcher, workspace, listener, branch, baseline.id, output, node, repository);
+        String revisionToBuild = buildChooser.getRevisionToBuild(lastBuild, launcher, workspace, listener);
 
-            for (ChangeSet changeSet : incoming) {
-                if (computeDegreeOfChanges(changeSet,output) == Change.INSIGNIFICANT) continue;
-                return PollingResult.SIGNIFICANT;
-            }
-        }
-        return PollingResult.NO_CHANGES;
+        return "tip".equals(revisionToBuild) ? PollingResult.NO_CHANGES : PollingResult.SIGNIFICANT;
     }
 
     private transient Pattern branchSpec;
@@ -547,7 +535,7 @@ public class MercurialSCM extends SCM implements Serializable {
             return false;
         }
 
-        String branchToBuild = getBranchToBuild(build, launcher, repository, listener);
+        String branchToBuild = buildChooser.getRevisionToBuild(build, launcher, repository, listener);
 
         try {
             if(hg.run("update", "--clean", "--rev", branchToBuild).pwd(repository).join()!=0) {
@@ -637,7 +625,7 @@ public class MercurialSCM extends SCM implements Serializable {
                     .pwd(repository).join(); // ignore failures
         }
 
-        String branchToBuild = getBranchToBuild(build, launcher, repository, listener);
+        String branchToBuild = buildChooser.getRevisionToBuild(build, launcher, repository, listener);
 
         ArgumentListBuilder upArgs = new ArgumentListBuilder();
         upArgs.add("update");
@@ -653,34 +641,6 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         return true;
-    }
-
-    private String getBranchToBuild(AbstractBuild<?, ?> build, Launcher launcher, FilePath repository, BuildListener listener) throws IOException, InterruptedException {
-        BuildData buildData = BuildData.getBuildData(source, build);
-        Collection<MercurialTagAction> activeBranches = getActiveBranches(build, launcher, listener);
-
-        for (MercurialTagAction activeBranch : activeBranches) {
-            String candidateBranch = activeBranch.getBranch();
-            if (!matches(candidateBranch)) {
-                LOGGER.fine("ignore branch " + candidateBranch);
-                continue;
-            }
-            MercurialTagAction lastBuild = buildData.getLastBuildOfBranch(candidateBranch);
-            if (lastBuild == null) {
-                LOGGER.info("new branch detected " + candidateBranch);
-                return candidateBranch;
-            }
-            List<ChangeSet> incoming = changeSet(launcher, repository, listener, candidateBranch, lastBuild.id, listener.getLogger(), build.getBuiltOn(), repository);
-
-            for (ChangeSet changeSet : incoming) {
-                if (computeDegreeOfChanges(changeSet,listener.getLogger()) != Change.INSIGNIFICANT) {
-                    LOGGER.info("change detected on branch " + candidateBranch);
-                    return candidateBranch;
-                }
-            }
-        }
-        // No change detected, build the workspace tip
-        return "tip";
     }
 
     @Override
