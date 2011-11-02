@@ -240,44 +240,48 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         MercurialTagAction baseline = (MercurialTagAction)_baseline;
-
         PrintStream output = listener.getLogger();
+        Node node = project.getLastBuiltOn(); // HUDSON-5984: ugly but matches what AbstractProject.poll uses
 
-        // XXX do canUpdate check similar to in checkout, and possibly return INCOMPARABLE
+        FilePath repository = workspace2Repo(workspace);
+        pull(launcher, repository, listener, output, node,getBranch());
 
-        List<ChangeSet> incoming;
-        // Mercurial requires the style file to be in a file..
-        FilePath tmpFile = workspace.createTextTempFile("tmp", "style", FILES_STYLE);
-        try {
-            // Get the list of changed files.
-            Node node = project.getLastBuiltOn(); // HUDSON-5984: ugly but matches what AbstractProject.poll uses
-
-            FilePath repository = workspace2Repo(workspace);
-            pull(launcher, repository, listener, output, node,getBranch());
-            
-            ArgumentListBuilder logCmd = findHgExe(node, listener, false);
-            logCmd.add("log", "--style", tmpFile.getRemote());
-            logCmd.add("--branch", getBranch());
-            logCmd.add("--no-merges");
-
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ForkOutputStream fos = new ForkOutputStream(baos, output);
-
-            logCmd.add("--prune", baseline.id);
-            joinWithPossibleTimeout(
-                    launch(launcher).cmds(logCmd).stdout(fos).pwd(repository),
-                    true, listener);
-
-            incoming = parsePollingLogOutput(baos);
-        } finally {
-            tmpFile.delete();
-        }
+        List<ChangeSet> incoming = changeSet(launcher, workspace, listener, getBranch(), baseline.id, output, node, repository);
 
         for (ChangeSet changeSet : incoming) {
             if (computeDegreeOfChanges(changeSet,output) == Change.INSIGNIFICANT) continue;
             return PollingResult.SIGNIFICANT;
         }
         return PollingResult.NO_CHANGES;
+    }
+
+    /**
+     * Compute the changes compared to existing state
+     */
+    private List<ChangeSet> changeSet(Launcher launcher, FilePath workspace, TaskListener listener, String branch,
+                                      String baseline, PrintStream output, Node node, FilePath repository) throws IOException, InterruptedException {
+        // Mercurial requires the style file to be in a file..
+        FilePath tmpFile = workspace.createTextTempFile("tmp", "style", FILES_STYLE);
+        try {
+            ArgumentListBuilder logCmd = findHgExe(node, listener, false);
+            logCmd.add("log", "--style", tmpFile.getRemote());
+            if (branch != null) {
+                logCmd.add("--branch", branch);
+            }
+            logCmd.add("--no-merges");
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ForkOutputStream fos = new ForkOutputStream(baos, output);
+
+            logCmd.add("--prune", baseline);
+            joinWithPossibleTimeout(
+                    launch(launcher).cmds(logCmd).stdout(fos).pwd(repository),
+                    true, listener);
+
+            return parsePollingLogOutput(baos);
+        } finally {
+            tmpFile.delete();
+        }
     }
 
     private void pull(Launcher launcher, FilePath repository, TaskListener listener, PrintStream output, Node node, String branch) throws IOException, InterruptedException {
