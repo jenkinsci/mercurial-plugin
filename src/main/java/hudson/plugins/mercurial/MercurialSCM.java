@@ -249,13 +249,30 @@ public class MercurialSCM extends SCM implements Serializable {
         FilePath repository = workspace2Repo(workspace);
         pull(launcher, repository, listener, output, node,getBranch());
 
-        List<ChangeSet> incoming = changeSet(launcher, workspace, listener, getBranch(), baseline.id, output, node, repository);
+        Collection<MercurialTagAction> activeBranches = getActiveBranches(lastBuild, launcher, listener);
+        for (MercurialTagAction activeBranch : activeBranches) {
+            String branch = activeBranch.getBranch();
+            if (!matches(branch)) {
+                LOGGER.fine("ignore branch " + branch);
+                continue;
+            }
+            List<ChangeSet> incoming = changeSet(launcher, workspace, listener, branch, baseline.id, output, node, repository);
 
-        for (ChangeSet changeSet : incoming) {
-            if (computeDegreeOfChanges(changeSet,output) == Change.INSIGNIFICANT) continue;
-            return PollingResult.SIGNIFICANT;
+            for (ChangeSet changeSet : incoming) {
+                if (computeDegreeOfChanges(changeSet,output) == Change.INSIGNIFICANT) continue;
+                return PollingResult.SIGNIFICANT;
+            }
         }
         return PollingResult.NO_CHANGES;
+    }
+
+    private transient Pattern branchSpec;
+
+    public boolean matches(String name) {
+        if (branchSpec == null) {
+            branchSpec = Pattern.compile(StringUtils.replace(getBranch(), "*", ".*"));
+        }
+        return branchSpec.matcher(name).matches();
     }
 
     /**
