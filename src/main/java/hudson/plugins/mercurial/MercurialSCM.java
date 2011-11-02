@@ -16,6 +16,8 @@ import hudson.model.Computer;
 import hudson.model.Node;
 import hudson.plugins.mercurial.browser.HgBrowser;
 import hudson.plugins.mercurial.browser.HgWeb;
+import hudson.plugins.mercurial.build.Build;
+import hudson.plugins.mercurial.build.BuildData;
 import hudson.remoting.VirtualChannel;
 import hudson.scm.ChangeLogParser;
 import hudson.scm.PollingResult;
@@ -469,7 +471,8 @@ public class MercurialSCM extends SCM implements Serializable {
             listener.error("Failed to capture change log");
             e.printStackTrace(listener.getLogger());
             return false;
-        } 
+        }
+
     }
 
     private void determineChanges(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, File changelogFile, FilePath repository) throws IOException, InterruptedException {
@@ -535,8 +538,9 @@ public class MercurialSCM extends SCM implements Serializable {
         EnvVars env = build.getEnvironment(listener);
 
         HgExe hg = new HgExe(this, launcher, build, listener, env);
+        String branchToBuild = getBranch(env);
         try {
-            pull(launcher, repository, listener, new PrintStream(new NullOutputStream()), Computer.currentComputer().getNode(), getBranch(env));
+            pull(launcher, repository, listener, new PrintStream(new NullOutputStream()), Computer.currentComputer().getNode(), branchToBuild);
         } catch (IOException e) {
             listener.error("Failed to pull");
             e.printStackTrace(listener.getLogger());
@@ -544,7 +548,7 @@ public class MercurialSCM extends SCM implements Serializable {
         } 
 
         try {
-            if(hg.run("update", "--clean", "--rev", getBranch(env)).pwd(repository).join()!=0) {
+            if(hg.run("update", "--clean", "--rev", branchToBuild).pwd(repository).join()!=0) {
                 listener.error("Failed to update");
                 return false;
             }
@@ -561,9 +565,12 @@ public class MercurialSCM extends SCM implements Serializable {
             }
         }
 
-        String tip = hg.tip(repository);
-        if (tip != null) {
-            build.addAction(new MercurialTagAction(tip));
+        String head = hg.head(repository, branchToBuild);
+        if (head != null) {
+            MercurialTagAction revision = new MercurialTagAction(head, branchToBuild);
+            build.addAction(revision);
+            BuildData buildData = BuildData.getBuildData(source, build);
+            buildData.saveBuild(revision);
         }
 
         return true;
@@ -586,6 +593,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
         ArgumentListBuilder args = new ArgumentListBuilder();
         PossiblyCachedRepo cachedSource = cachedSource(build.getBuiltOn(), launcher, listener, false);
+        String branchToBuild = getBranch(env);
         if (cachedSource != null) {
             if (cachedSource.isUseSharing()) {
                 args.add("--config", "extensions.share=");
@@ -594,13 +602,13 @@ public class MercurialSCM extends SCM implements Serializable {
                 args.add(cachedSource.getRepoLocation());
             } else {
                 args.add("clone");
-                args.add("--rev", getBranch(env));
+                args.add("--rev", branchToBuild);
                 args.add("--noupdate");
                 args.add(cachedSource.getRepoLocation());
             }
         } else {
             args.add("clone");
-            args.add("--rev", getBranch(env));
+            args.add("--rev", branchToBuild);
             args.add("--noupdate");
             args.add(source);
         }
@@ -632,12 +640,15 @@ public class MercurialSCM extends SCM implements Serializable {
 
         ArgumentListBuilder upArgs = new ArgumentListBuilder();
         upArgs.add("update");
-        upArgs.add("--rev", getBranch(env));
+        upArgs.add("--rev", branchToBuild);
         hg.run(upArgs).pwd(repository).join();
 
-        String tip = hg.tip(repository);
-        if (tip != null) {
-            build.addAction(new MercurialTagAction(tip));
+        String head = hg.head(repository, branchToBuild);
+        if (head != null) {
+            MercurialTagAction revision = new MercurialTagAction(head, branchToBuild);
+            build.addAction(revision);
+            BuildData buildData = BuildData.getBuildData(source, build);
+            buildData.saveBuild(revision);
         }
 
         return true;
