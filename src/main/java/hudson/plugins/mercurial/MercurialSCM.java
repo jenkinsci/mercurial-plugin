@@ -38,6 +38,7 @@ import java.io.PrintStream;
 import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -51,12 +52,14 @@ import java.util.regex.Pattern;
 import net.sf.json.JSONObject;
 
 import org.apache.commons.io.output.NullOutputStream;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.framework.io.WriterOutputStream;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.SuppressWarnings;
+import sun.rmi.runtime.Log;
 
 /**
  * Mercurial SCM.
@@ -283,6 +286,32 @@ public class MercurialSCM extends SCM implements Serializable {
             tmpFile.delete();
         }
     }
+
+    public Collection<MercurialTagAction> getActiveBranches(AbstractBuild<?, ?> build, Launcher launcher, TaskListener listener)
+    throws IOException, InterruptedException {
+
+        ArgumentListBuilder cmd = findHgExe(build, listener, false);
+        cmd.add("branches", "--active");
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        joinWithPossibleTimeout(
+                    launch(launcher).cmds(cmd)
+                            .stdout(new ForkOutputStream(baos, listener.getLogger()))
+                            .pwd(workspace2Repo(build.getWorkspace())),
+                    true, listener);
+
+        Collection<MercurialTagAction> branches = new ArrayList<MercurialTagAction>();
+        BufferedReader in = new BufferedReader(new InputStreamReader(
+                new ByteArrayInputStream(baos.toByteArray())));
+        String line;
+        while ((line = in.readLine()) != null) {
+            String sha = line.substring(line.indexOf(':')+1);
+            String name = line.substring(0, line.indexOf(" "));
+            branches.add(new MercurialTagAction(sha, name));
+        }
+        return branches;
+    }
+
+
 
     private void pull(Launcher launcher, FilePath repository, TaskListener listener, PrintStream output, Node node, String branch) throws IOException, InterruptedException {
         ArgumentListBuilder cmd = findHgExe(node, listener, false);
