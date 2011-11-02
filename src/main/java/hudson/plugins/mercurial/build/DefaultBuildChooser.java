@@ -5,6 +5,7 @@ import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
+import hudson.model.TaskListener;
 import hudson.plugins.mercurial.MercurialSCM;
 import hudson.plugins.mercurial.MercurialSCM.ChangeSet;
 import hudson.plugins.mercurial.MercurialTagAction;
@@ -30,7 +31,7 @@ public class DefaultBuildChooser extends BuildChooser {
     }
 
     @Override
-    public String getRevisionToBuild(AbstractBuild<?, ?> build, Launcher launcher, FilePath repository, BuildListener listener) throws IOException, InterruptedException {
+    public String getRevisionToBuild(AbstractBuild<?, ?> build, Launcher launcher, FilePath repository, TaskListener listener) throws IOException, InterruptedException {
 
         BuildData buildData = BuildData.getBuildData(scm.getSource(), build);
         Collection<MercurialTagAction> activeBranches = scm.getActiveBranches(build, launcher, listener);
@@ -56,7 +57,7 @@ public class DefaultBuildChooser extends BuildChooser {
             }
         }
         // No change detected, build the workspace tip
-        return "tip";
+        return DEFAULT_REVISION;
     }
 
 
