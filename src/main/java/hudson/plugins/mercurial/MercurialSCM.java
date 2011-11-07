@@ -4,7 +4,6 @@ import static java.util.logging.Level.FINE;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
-import hudson.FilePath.FileCallable;
 import hudson.Launcher;
 import hudson.Launcher.ProcStarter;
 import hudson.Util;
@@ -16,7 +15,6 @@ import hudson.model.Computer;
 import hudson.model.Node;
 import hudson.plugins.mercurial.browser.HgBrowser;
 import hudson.plugins.mercurial.browser.HgWeb;
-import hudson.remoting.VirtualChannel;
 import hudson.scm.ChangeLogParser;
 import hudson.scm.PollingResult;
 import hudson.scm.PollingResult.Change;
@@ -372,8 +370,8 @@ public class MercurialSCM extends SCM implements Serializable {
         final boolean jobShouldUseSharing = mercurialInstallation != null && mercurialInstallation.isUseSharing();
 
         FilePath repository = workspace2Repo(workspace);
-        boolean canReuseExistingWorkspace = repository.act(
-                new CheckForReusableWorkspace(jobShouldUseSharing, listener));
+        boolean canReuseExistingWorkspace =
+                canReuseWorkspace(repository, jobShouldUseSharing, build, launcher, listener);
 
         boolean success;
         if (canReuseExistingWorkspace) {
@@ -390,6 +388,48 @@ public class MercurialSCM extends SCM implements Serializable {
             e.printStackTrace(listener.getLogger());
             return false;
         } 
+    }
+    
+    private boolean canReuseWorkspace(FilePath repo,
+            boolean jobShouldUseSharing, AbstractBuild<?,?> build,
+            Launcher launcher, BuildListener listener)
+                throws IOException, InterruptedException {
+        if (!new FilePath(repo, ".hg/hgrc").exists()) {
+            return false;
+        }
+        
+        boolean jobUsesSharing = new FilePath(repo, ".hg/sharedpath").exists();
+        if (jobShouldUseSharing && !jobUsesSharing) {
+            return false;
+        }
+        if (jobUsesSharing && !jobShouldUseSharing) {
+            return false;
+        }
+        
+        EnvVars env = build.getEnvironment(listener);
+        HgExe hg = new HgExe(this,launcher,build,listener,env);
+        String upstream = hg.config(repo, "paths.default");
+        if (upstream == null) {
+            return false;
+        }
+        if (upstream.equals(source)) {
+            return true;
+        }
+        if ((upstream + '/').equals(source)) {
+            return true;
+        }
+        if (upstream.equals(source + '/')) {
+            return true;
+        }
+        if (source.startsWith("file:/") && new File(upstream).toURI().toString().equals(source)) {
+            return true;
+        }
+        
+        listener.error(
+                "Workspace reports paths.default as " + upstream +
+                "\nwhich looks different than " + source +
+                "\nso falling back to fresh clone rather than incremental update");
+        return false;
     }
 
     private void determineChanges(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, File changelogFile, FilePath repository) throws IOException, InterruptedException {
@@ -613,60 +653,6 @@ public class MercurialSCM extends SCM implements Serializable {
         } catch (Exception x) {
             x.printStackTrace(listener.error("Failed to use repository cache for " + source));
             return null;
-        }
-    }
-
-    private final class CheckForReusableWorkspace implements FileCallable<Boolean> {
-        private final boolean jobShouldUseSharing;
-        private final BuildListener listener;
-        private static final long serialVersionUID = 1L;
-
-        private CheckForReusableWorkspace(boolean jobShouldUseSharing,
-                BuildListener listener) {
-            this.jobShouldUseSharing = jobShouldUseSharing;
-            this.listener = listener;
-        }
-
-        public Boolean invoke(File ws, VirtualChannel channel) throws IOException {
-            if (!HgRc.getHgRcFile(ws).exists()) {
-                return false;
-            }
-
-            boolean jobUsesSharing = HgRc.getShareFile(ws).exists();
-
-            if (jobShouldUseSharing && !jobUsesSharing) {
-                return false;
-            }
-            if (jobUsesSharing && !jobShouldUseSharing) {
-                return false;
-            }
-
-            HgRc hgrc = new HgRc(ws);
-            return canUpdate(hgrc);
-        }
-
-        private boolean canUpdate(HgRc ini) {
-            String upstream = ini.getSection("paths").get("default");
-            if (upstream == null) {
-                return false;
-            }
-            if (upstream.equals(source)) {
-                return true;
-            }
-            if ((upstream + '/').equals(source)) {
-                return true;
-            }
-            if (upstream.equals(source + '/')) {
-                return true;
-            }
-            if (source.startsWith("file:/") && new File(upstream).toURI().toString().equals(source)) {
-                return true;
-            }
-            listener.error(
-                    "Workspace reports paths.default as " + upstream +
-                    "\nwhich looks different than " + source +
-                    "\nso falling back to fresh clone rather than incremental update");
-            return false;
         }
     }
 
