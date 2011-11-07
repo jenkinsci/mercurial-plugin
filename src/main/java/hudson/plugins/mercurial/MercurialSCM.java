@@ -144,6 +144,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private Object readResolve() {
         parseModules();
+        buildChooser.scm = this;
         return this;
     }
 
@@ -561,6 +562,7 @@ public class MercurialSCM extends SCM implements Serializable {
             build.addAction(revision);
             BuildData buildData = BuildData.getBuildData(source, build);
             buildData.saveBuild(revision);
+            build.addAction(buildData);
         }
 
         return true;
@@ -638,6 +640,7 @@ public class MercurialSCM extends SCM implements Serializable {
             build.addAction(revision);
             BuildData buildData = BuildData.getBuildData(source, build);
             buildData.saveBuild(revision);
+            build.addAction(buildData);
         }
 
         return true;
