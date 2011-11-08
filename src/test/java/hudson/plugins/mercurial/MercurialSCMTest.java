@@ -436,6 +436,32 @@ public class MercurialSCMTest extends MercurialTestCase {
         assertEquals(Result.SUCCESS, b.getResult());
     }
 
+
+    public void testMultipleBranches() throws Exception {
+        hg(repo, "init");
+        touchAndCommit(repo, "init");
+        hg(repo, "tag", "init");
+        touchAndCommit(repo, "default-1");
+        FreeStyleProject p = createFreeStyleProject();
+        // Clone off b.
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "*", null,
+                null, null, false));
+        buildAndCheck(p, "default-1");
+
+        hg(repo, "update", "--clean", "init");
+        hg(repo, "branch", "b1");
+        touchAndCommit(repo, "b-1");
+        assertTrue(pollSCMChanges(p).hasChanges());
+        buildAndCheck(p, "b-1");
+
+        hg(repo, "update", "--clean", "init");
+        hg(repo, "branch", "b2");
+        touchAndCommit(repo, "b-2");
+        assertTrue(pollSCMChanges(p).hasChanges());
+        buildAndCheck(p, "b-2");
+    }
+
+
     private PretendSlave createNoopPretendSlave() throws Exception {
         return createPretendSlave(new NoopFakeLauncher());
     }
