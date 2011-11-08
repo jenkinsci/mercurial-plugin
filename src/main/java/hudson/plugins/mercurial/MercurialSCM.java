@@ -237,8 +237,11 @@ public class MercurialSCM extends SCM implements Serializable {
     @Override
     public SCMRevisionState calcRevisionsFromBuild(AbstractBuild<?, ?> build, Launcher launcher, TaskListener listener)
             throws IOException, InterruptedException {
-        // MercurialTagAction is added to the build during checkout
-        throw new UnsupportedOperationException();
+        // MercurialTagAction is added to the build during checkout,
+        // but accoring to HUDSON-7723 this MAY fail in some unknown circumstances
+        HgExe hg = new HgExe(this, launcher, build, listener, build.getEnvironment(listener));
+        String tip = hg.tip(workspace2Repo(build.getWorkspace()));
+        return tip != null ? new MercurialTagAction(tip, "tip") : null;
     }
 
     private static final String FILES_STYLE = "changeset = 'id:{node}\\nfiles:{files}\\n'\n" + "file = '{file}:'";
