@@ -421,9 +421,6 @@ public class MercurialSCM extends SCM implements Serializable {
             }
             if (line.startsWith("branch:")) {
                 String branch = line.substring(7);
-	            if (branch == null) {
-                    branch = "default";
-                }
                 changeSet.branch = branch;
             }
         }
