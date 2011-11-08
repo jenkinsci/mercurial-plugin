@@ -466,6 +466,17 @@ public class MercurialSCM extends SCM implements Serializable {
             return false;
         }
 
+        EnvVars env = build.getEnvironment(listener);
+        HgExe hg = new HgExe(this,launcher,build.getBuiltOn(),listener,env);
+        String head = hg.head(repository, branchToBuild);
+        if (head != null) {
+            MercurialTagAction revision = new MercurialTagAction(head, branchToBuild);
+            build.addAction(revision);
+            BuildData buildData = BuildData.getBuildData(source, build);
+            buildData.saveBuild(revision);
+            build.addAction(buildData);
+        }
+
         return true;
     }
 
@@ -560,16 +571,6 @@ public class MercurialSCM extends SCM implements Serializable {
                 return null;
             }
         }
-
-        String head = hg.head(repository, branchToBuild);
-        if (head != null) {
-            MercurialTagAction revision = new MercurialTagAction(head, branchToBuild);
-            build.addAction(revision);
-            BuildData buildData = BuildData.getBuildData(source, build);
-            buildData.saveBuild(revision);
-            build.addAction(buildData);
-        }
-
         return branchToBuild;
     }
 
@@ -638,15 +639,6 @@ public class MercurialSCM extends SCM implements Serializable {
         upArgs.add("update");
         upArgs.add("--rev", branchToBuild);
         hg.run(upArgs).pwd(repository).join();
-
-        String head = hg.head(repository, branchToBuild);
-        if (head != null) {
-            MercurialTagAction revision = new MercurialTagAction(head, branchToBuild);
-            build.addAction(revision);
-            BuildData buildData = BuildData.getBuildData(source, build);
-            buildData.saveBuild(revision);
-            build.addAction(buildData);
-        }
 
         return branchToBuild;
     }
