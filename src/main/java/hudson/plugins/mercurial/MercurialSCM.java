@@ -19,6 +19,7 @@ import hudson.plugins.mercurial.browser.HgWeb;
 import hudson.plugins.mercurial.build.BuildData;
 import hudson.plugins.mercurial.build.BuildChooser;
 import hudson.plugins.mercurial.build.BuildChooserDescriptor;
+import hudson.plugins.mercurial.build.DefaultBuildChooser;
 import hudson.remoting.VirtualChannel;
 import hudson.scm.ChangeLogParser;
 import hudson.scm.PollingResult;
@@ -101,8 +102,13 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private BuildChooser buildChooser;
 
+    public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean) {
+        this(installation, source, branch, modules, subdir, browser, clean, new DefaultBuildChooser());
+    }
+
+
     @DataBoundConstructor
-    public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean, boolean forest, BuildChooser buildChooser) {
+    public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean, BuildChooser buildChooser) {
         this.installation = installation;
         this.source = Util.fixEmptyAndTrim(source);
         this.modules = Util.fixNull(modules);
