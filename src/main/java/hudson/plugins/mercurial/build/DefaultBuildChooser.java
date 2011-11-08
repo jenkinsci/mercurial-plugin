@@ -68,4 +68,6 @@ public class DefaultBuildChooser extends BuildChooser {
         }
     }
 
+    private static final Logger LOGGER = Logger.getLogger(DefaultBuildChooser.class.getName());
+
 }

@@ -47,6 +47,4 @@ public abstract class BuildChooser implements ExtensionPoint, Describable<BuildC
 
     private static final long serialVersionUID = 1L;
 
-    protected static final Logger LOGGER = Logger.getLogger(BuildChooser.class.getName());
-
 }
