@@ -56,7 +56,6 @@ import java.util.regex.Pattern;
 import net.sf.json.JSONObject;
 
 import org.apache.commons.io.output.NullOutputStream;
-import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.framework.io.WriterOutputStream;
@@ -273,9 +272,9 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private transient Pattern branchSpec;
 
-    public boolean matches(String name) {
+    private boolean matches(String name) {
         if (branchSpec == null) {
-            branchSpec = Pattern.compile(StringUtils.replace(getBranch(), "*", ".*"));
+            branchSpec = Pattern.compile("\\Q" + getBranch().replace("*", "\\E.*\\Q") + "\\E");
         }
         return branchSpec.matcher(name).matches();
     }
