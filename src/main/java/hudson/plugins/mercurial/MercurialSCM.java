@@ -337,6 +337,9 @@ public class MercurialSCM extends SCM implements Serializable {
     private void pull(Launcher launcher, FilePath repository, TaskListener listener, PrintStream output, Node node) throws IOException, InterruptedException {
         ArgumentListBuilder cmd = findHgExe(node, listener, false);
         cmd.add("pull");
+        if (!getBranch().contains("*")) {
+            cmd.add( "--rev", getBranch());
+        }
         PossiblyCachedRepo cachedSource = cachedSource(node, launcher, listener, true);
         if (cachedSource != null) {
             cmd.add(cachedSource.getRepoLocation());
