@@ -272,7 +272,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private transient Pattern branchSpec;
 
-    private boolean matches(String name) {
+    public boolean matches(String name) {
         if (branchSpec == null) {
             branchSpec = Pattern.compile("\\Q" + getBranch().replace("*", "\\E.*\\Q") + "\\E");
         }
