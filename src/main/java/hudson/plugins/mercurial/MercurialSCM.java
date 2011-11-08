@@ -150,6 +150,9 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private Object readResolve() {
         parseModules();
+        if (buildChooser == null) {
+            buildChooser = new DefaultBuildChooser();
+        }
         buildChooser.scm = this;
         return this;
     }
