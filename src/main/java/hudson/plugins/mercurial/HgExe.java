@@ -176,6 +176,13 @@ public class HgExe {
         return id;
     }
 
+    /**
+     * Gets the current value of a specified config item.
+     */
+    public String config(FilePath repository, String name) throws IOException, InterruptedException {
+        return popen(repository, listener, false, new ArgumentListBuilder("showconfig", name)).trim();
+    }
+
     public List<String> toArgList() {
         return base.toList();
     }
