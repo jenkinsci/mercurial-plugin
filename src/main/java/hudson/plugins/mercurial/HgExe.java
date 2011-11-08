@@ -176,6 +176,18 @@ public class HgExe {
         return id;
     }
 
+    /**
+     * Gets the revision ID of the head ot the specified branch in workspace.
+     */
+    public @CheckForNull String head(FilePath repository, String branch) throws IOException, InterruptedException {
+        String id = popen(repository, listener, false, new ArgumentListBuilder("log", "--rev", branch, "--template", "{node}"));
+        if (!REVISIONID_PATTERN.matcher(id).matches()) {
+            listener.error("Expected to get an id but got '" + id + "' instead.");
+            return null; // HUDSON-7723
+        }
+        return id;
+    }
+
     public List<String> toArgList() {
         return base.toList();
     }

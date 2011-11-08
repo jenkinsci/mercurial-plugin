@@ -22,8 +22,15 @@ public class MercurialTagAction extends SCMRevisionState {
      */
     public final String id;
 
-    public MercurialTagAction(@NonNull String id) {
+    private final String branch;
+
+    public MercurialTagAction(@NonNull String id, @NonNull String branch) {
         this.id = id;
+        this.branch = branch;
+    }
+
+    public String getBranch() {
+        return branch;
     }
 
     @Exported(name = "mercurialNodeName")
