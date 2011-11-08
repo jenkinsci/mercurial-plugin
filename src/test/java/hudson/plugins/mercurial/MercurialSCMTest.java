@@ -11,6 +11,7 @@ import hudson.model.StringParameterValue;
 import hudson.scm.ChangeLogSet;
 import hudson.scm.ChangeLogSet.Entry;
 import hudson.scm.PollingResult;
+import hudson.scm.PollingResult.Change;
 
 import java.io.File;
 import java.io.IOException;
@@ -394,23 +395,23 @@ public class MercurialSCMTest extends MercurialTestCase {
         touchAndCommit(repo, "f1");
         String cs1 = getLastChangesetId(repo);
         pr = pollSCMChanges(p);
-        assertPollingResult(PollingResult.Change.INCOMPARABLE, null, null, pr);
+        assertPollingResult(PollingResult.Change.INCOMPARABLE, pr);
 
         // We have a workspace, and no new changes in remote repository
         b = p.scheduleBuild2(0).get();
         pr = pollSCMChanges(p);
-        assertPollingResult(PollingResult.Change.NONE, null, null, pr);
+        assertPollingResult(PollingResult.Change.NONE, pr);
 
         // We have a workspace, and new changes in the remote repository
         touchAndCommit(repo, "f2");
         String cs2 = getLastChangesetId(repo);
         pr = pollSCMChanges(p);
-        assertPollingResult(PollingResult.Change.SIGNIFICANT, null, null, pr);
+        assertPollingResult(PollingResult.Change.SIGNIFICANT, pr);
 
         // We lost the workspace
         b.getWorkspace().deleteRecursive();
         pr = pollSCMChanges(p);
-        assertPollingResult(PollingResult.Change.INCOMPARABLE, null, null, pr);
+        assertPollingResult(PollingResult.Change.INCOMPARABLE, pr);
         b = p.scheduleBuild2(0).get();
 
         // Multiple polls
@@ -418,11 +419,11 @@ public class MercurialSCMTest extends MercurialTestCase {
         touchAndCommit(repo, "f4");
         String cs4 = getLastChangesetId(repo);
         pr = pollSCMChanges(p);
-        assertPollingResult(PollingResult.Change.SIGNIFICANT, null, null, pr);
+        assertPollingResult(PollingResult.Change.SIGNIFICANT, pr);
         touchAndCommit(repo, "f5");
         String cs5 = getLastChangesetId(repo);
         pr = pollSCMChanges(p);
-        assertPollingResult(PollingResult.Change.SIGNIFICANT, null, null, pr);
+        assertPollingResult(PollingResult.Change.SIGNIFICANT, pr);
     }
     
     @Bug(11460)
@@ -477,24 +478,11 @@ public class MercurialSCMTest extends MercurialTestCase {
         assertEquals(expectedChangeSetPaths, actualChangeSetPaths);
     }
 
-    private void assertPollingResult(PollingResult.Change expectedChangeDegree,
-            String expectedBaselineId, String expectedRemoteId,
-            PollingResult actualPollingResult) {
+    private void assertPollingResult(Change expectedChangeDegree,
+                                     PollingResult actualPollingResult) {
         assertNotNull(actualPollingResult);
         PollingResult.Change actualChangeDegree = actualPollingResult.change;
         assertEquals(expectedChangeDegree, actualChangeDegree);
-        if (expectedBaselineId == null) {
-            assertNull(actualPollingResult.baseline);
-        } else {
-            MercurialTagAction actualBaseline = (MercurialTagAction) actualPollingResult.baseline;
-            assertEquals(expectedBaselineId, actualBaseline.id);
-        }
-        if (expectedRemoteId == null) {
-            assertNull(actualPollingResult.remote);
-        } else {
-            MercurialTagAction actualRemote = (MercurialTagAction) actualPollingResult.remote;
-            assertEquals(expectedRemoteId, actualRemote.id);
-        }
     }
 
     private static final class NoopFakeLauncher implements FakeLauncher {
