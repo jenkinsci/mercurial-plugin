@@ -29,7 +29,7 @@
       <f:textbox/>
     </f:entry>
 
-    <f:dropdownList name="buildChooser" title="${%Choosing strategy}" help="/plugin/mercurial/help/buildChooser.html">
+    <f:dropdownList name="buildChooser" title="${%Branch selection strategy}" help="/plugin/mercurial/help/buildChooser.html">
       <j:scope>
         <j:set var="current" value="${instance.buildChooser}"/>
         <j:invokeStatic var="descriptors" className="hudson.plugins.mercurial.build.BuildChooser" method="all"/>
