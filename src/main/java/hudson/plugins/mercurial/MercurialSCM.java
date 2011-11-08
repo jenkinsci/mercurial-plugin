@@ -312,7 +312,7 @@ public class MercurialSCM extends SCM implements Serializable {
     throws IOException, InterruptedException {
 
         ArgumentListBuilder cmd = findHgExe(build, listener, false);
-        cmd.add("branches", "--active");
+        cmd.add("branches", "--active", "--debug");
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         joinWithPossibleTimeout(
                     launch(launcher).cmds(cmd)
