@@ -399,13 +399,13 @@ public class MercurialSCMTest extends MercurialTestCase {
         // We have a workspace, and no new changes in remote repository
         b = p.scheduleBuild2(0).get();
         pr = pollSCMChanges(p);
-        assertPollingResult(PollingResult.Change.NONE, cs1, cs1, pr);
+        assertPollingResult(PollingResult.Change.NONE, null, null, pr);
 
         // We have a workspace, and new changes in the remote repository
         touchAndCommit(repo, "f2");
         String cs2 = getLastChangesetId(repo);
         pr = pollSCMChanges(p);
-        assertPollingResult(PollingResult.Change.SIGNIFICANT, cs1, cs2, pr);
+        assertPollingResult(PollingResult.Change.SIGNIFICANT, null, null, pr);
 
         // We lost the workspace
         b.getWorkspace().deleteRecursive();
@@ -418,11 +418,11 @@ public class MercurialSCMTest extends MercurialTestCase {
         touchAndCommit(repo, "f4");
         String cs4 = getLastChangesetId(repo);
         pr = pollSCMChanges(p);
-        assertPollingResult(PollingResult.Change.SIGNIFICANT, cs2, cs4, pr);
+        assertPollingResult(PollingResult.Change.SIGNIFICANT, null, null, pr);
         touchAndCommit(repo, "f5");
         String cs5 = getLastChangesetId(repo);
         pr = pollSCMChanges(p);
-        assertPollingResult(PollingResult.Change.SIGNIFICANT, cs4, cs5, pr);
+        assertPollingResult(PollingResult.Change.SIGNIFICANT, null, null, pr);
     }
     
     @Bug(11460)
