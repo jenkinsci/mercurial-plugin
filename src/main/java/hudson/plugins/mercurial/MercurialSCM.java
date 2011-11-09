@@ -18,7 +18,6 @@ import hudson.plugins.mercurial.browser.HgBrowser;
 import hudson.plugins.mercurial.browser.HgWeb;
 import hudson.plugins.mercurial.build.BuildData;
 import hudson.plugins.mercurial.build.BuildChooser;
-import hudson.plugins.mercurial.build.BuildChooserDescriptor;
 import hudson.plugins.mercurial.build.DefaultBuildChooser;
 import hudson.remoting.VirtualChannel;
 import hudson.scm.ChangeLogParser;
@@ -333,12 +332,20 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
 
-
     private void pull(Launcher launcher, FilePath repository, TaskListener listener, PrintStream output, Node node) throws IOException, InterruptedException {
+        // If branch depends on build environment, pull all
+        pull(launcher, repository, listener, output, node, getBranch().contains("$") ? null : getBranch());
+    }
+
+    private void pull(Launcher launcher, FilePath repository, TaskListener listener, PrintStream output, Node node, EnvVars env) throws IOException, InterruptedException {
+        pull(launcher, repository, listener, output, node, getBranch(env));
+    }
+
+    private void pull(Launcher launcher, FilePath repository, TaskListener listener, PrintStream output, Node node, String branchToPull) throws IOException, InterruptedException {
         ArgumentListBuilder cmd = findHgExe(node, listener, false);
         cmd.add("pull");
-        if (!getBranch().contains("*")) {
-            cmd.add( "--rev", getBranch());
+        if (branchToPull != null && !branchToPull.contains("*")) {
+            cmd.add( "--rev", branchToPull);
         }
         PossiblyCachedRepo cachedSource = cachedSource(node, launcher, listener, true);
         if (cachedSource != null) {
@@ -556,7 +563,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
         HgExe hg = new HgExe(this, launcher, build, listener, env);
         try {
-            pull(launcher, repository, listener, new PrintStream(new NullOutputStream()), Computer.currentComputer().getNode());
+            pull(launcher, repository, listener, new PrintStream(new NullOutputStream()), Computer.currentComputer().getNode(), env);
         } catch (IOException e) {
             listener.error("Failed to pull");
             e.printStackTrace(listener.getLogger());

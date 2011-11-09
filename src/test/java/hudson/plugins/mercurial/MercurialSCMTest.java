@@ -107,7 +107,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         buildAndCheck(p, "dir2/f");
         touchAndCommit(repo, "dir3/f");
         pr = pollSCMChanges(p);
-        assertEquals(PollingResult.Change.INSIGNIFICANT, pr.change);
+        assertEquals(PollingResult.Change.NONE, pr.change);
         // No support for partial checkouts yet, so workspace will contain
         // everything.
         buildAndCheck(p, "dir3/f");
@@ -121,7 +121,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         new FilePath(repo).child("dir2/f").write("stuff", "UTF-8");
         hg(repo, "commit", "--message", "merged");
         pr = pollSCMChanges(p);
-        assertEquals(PollingResult.Change.INSIGNIFICANT, pr.change);
+        assertEquals(PollingResult.Change.NONE, pr.change);
         buildAndCheck(p, "dir4/f");
     }
 
@@ -137,7 +137,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         buildAndCheck(p, "starter");
         touchAndCommit(repo, "dir2/f");
         pr = pollSCMChanges(p);
-        assertEquals(PollingResult.Change.INSIGNIFICANT, pr.change);
+        assertEquals(PollingResult.Change.NONE, pr.change);
         touchAndCommit(repo, "dir1/f");
         pr = pollSCMChanges(p);
         assertEquals(PollingResult.Change.SIGNIFICANT, pr.change);
@@ -204,16 +204,19 @@ public class MercurialSCMTest extends MercurialTestCase {
                 null, null, null, false));
         // This is not how a real parameterized build runs, but using
         // ParametersDefinitionProperty just looks untestable:
-        String log = buildAndCheck(p, new ParametersAction(
-                new StringParameterValue("BRANCH", "b")), "variant");
+        String log = buildAndCheck(p,
+                new ParametersAction(new StringParameterValue("BRANCH", "b")),
+                "variant");
         assertTrue(log, log.contains("--rev b"));
         assertFalse(log, log.contains("--rev ${BRANCH}"));
+
         touchAndCommit(repo, "further-variant");
         // the following assertion commented out as a part of the fix to
-        // HUDSON-6126
-        // assertTrue(pollSCMChanges(p));
-        buildAndCheck(p, new ParametersAction(
-                new StringParameterValue("BRANCH", "b")), "further-variant");
+        // FIXME revisit HUDSON-6126
+        //assertTrue(pollSCMChanges(p).hasChanges());
+        buildAndCheck(p,
+                new ParametersAction(new StringParameterValue("BRANCH", "b")),
+                "further-variant");
     }
 
     @Bug(6517)
@@ -542,36 +545,6 @@ public class MercurialSCMTest extends MercurialTestCase {
         touchAndCommit(repo, "b-2");
 
         buildAndCheck(p, "b-1", "b-2");
-        assertFalse(pollSCMChanges(p).hasChanges());
-    }
-
-    /**
-     * Check MercurialSCM to ignore branches that have been merged
-     */
-    public void testMergedBranches() throws Exception {
-        hg(repo, "init");
-        touchAndCommit(repo, "init");
-        hg(repo, "tag", "init");
-        touchAndCommit(repo, "default-1");
-
-        hg(repo, "update", "--clean", "init");
-        hg(repo, "branch", "b-1");
-        touchAndCommit(repo, "b-1");
-
-        hg(repo, "update", "--clean", "init");
-        hg(repo, "branch", "b-2");
-        touchAndCommit(repo, "b-2");
-
-        hg(repo, "merge", "b-1");
-        hg(repo, "commit", "-m", "merge");
-
-        FreeStyleProject p = createFreeStyleProject();
-        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "b-1", null,
-                null, null, false));
-
-        assertTrue(pollSCMChanges(p).hasChanges());
-        buildAndCheck(p, "b-1", "b-2" );
-
         assertFalse(pollSCMChanges(p).hasChanges());
     }
 
