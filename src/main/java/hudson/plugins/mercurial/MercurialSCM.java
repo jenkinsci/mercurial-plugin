@@ -598,6 +598,7 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         EnvVars env = build.getEnvironment(listener);
+        String branch = getBranch(env);
         HgExe hg = new HgExe(this,launcher,build.getBuiltOn(),listener,env);
 
         ArgumentListBuilder args = new ArgumentListBuilder();
@@ -610,11 +611,17 @@ public class MercurialSCM extends SCM implements Serializable {
                 args.add(cachedSource.getRepoLocation());
             } else {
                 args.add("clone");
+                if (!branch.contains("*")) {
+                    args.add("--rev", branch);
+                }
                 args.add("--noupdate");
                 args.add(cachedSource.getRepoLocation());
             }
         } else {
             args.add("clone");
+            if (!branch.contains("*")) {
+                args.add("--rev", branch);
+            }
             args.add("--noupdate");
             args.add(source);
         }

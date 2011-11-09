@@ -13,6 +13,7 @@ import hudson.util.StreamTaskListener;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -35,13 +36,16 @@ public abstract class MercurialTestCase extends HudsonTestCase {
     }
 
     protected final void hg(File repo, String... args) throws Exception {
+        hg(repo, listener.getLogger(), args);
+    }
+    protected final void hg(File repo, OutputStream out, String... args) throws Exception {
         List<String> cmds = new ArrayList<String>();
         cmds.add("hg");
         cmds.add("--config");
         cmds.add("ui.username=nobody@nowhere.net");
         cmds.addAll(Arrays.asList(args));
         assertEquals(0, MercurialSCM.launch(launcher).cmds(cmds).pwd(repo)
-                .stdout(listener).join());
+                .stdout(out).join());
     }
 
     protected void touchAndCommit(File repo, String... names) throws Exception {
@@ -54,19 +58,24 @@ public abstract class MercurialTestCase extends HudsonTestCase {
         hg(repo, "commit", "--message", "added " + Arrays.toString(names));
     }
 
-    protected String buildAndCheck(FreeStyleProject p, String name,
-            Action... actions) throws Exception {
+    protected String buildAndCheck(FreeStyleProject p, String... expectedFiles) throws Exception {
+        return buildAndCheck(p, null, expectedFiles);
+    }
+
+    protected String buildAndCheck(FreeStyleProject p, Action action, String... expectedFiles) throws Exception {
         FreeStyleBuild b = assertBuildStatusSuccess(p.scheduleBuild2(0,
-                new UserCause(), actions).get());
+                new UserCause(), action).get());
         // for (String line : b.getLog(Integer.MAX_VALUE)) {
         // System.err.println(">> " + line);
         // }
-        if (!b.getWorkspace().child(name).exists()) {
-            Set<String> children = new TreeSet<String>();
-            for (FilePath child : b.getWorkspace().list()) {
-                children.add(child.getName());
+        for (String name : expectedFiles) {
+            if (!b.getWorkspace().child(name).exists()) {
+                Set<String> children = new TreeSet<String>();
+                for (FilePath child : b.getWorkspace().list()) {
+                    children.add(child.getName());
+                }
+                fail("Could not find " + name + " among " + children);
             }
-            fail("Could not find " + name + " among " + children);
         }
         assertNotNull(b.getAction(MercurialTagAction.class));
         @SuppressWarnings("deprecation")

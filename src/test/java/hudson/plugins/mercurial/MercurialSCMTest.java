@@ -1,6 +1,7 @@
 package hudson.plugins.mercurial;
 
 import hudson.FilePath;
+import hudson.FilePath.FileCallable;
 import hudson.Launcher;
 import hudson.Proc;
 import hudson.model.AbstractBuild;
@@ -8,12 +9,16 @@ import hudson.model.FreeStyleProject;
 import hudson.model.ParametersAction;
 import hudson.model.Result;
 import hudson.model.StringParameterValue;
+import hudson.remoting.VirtualChannel;
 import hudson.scm.ChangeLogSet;
 import hudson.scm.ChangeLogSet.Entry;
 import hudson.scm.PollingResult;
 import hudson.scm.PollingResult.Change;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -199,16 +204,16 @@ public class MercurialSCMTest extends MercurialTestCase {
                 null, null, null, false));
         // This is not how a real parameterized build runs, but using
         // ParametersDefinitionProperty just looks untestable:
-        String log = buildAndCheck(p, "variant", new ParametersAction(
-                new StringParameterValue("BRANCH", "b")));
+        String log = buildAndCheck(p, new ParametersAction(
+                new StringParameterValue("BRANCH", "b")), "variant");
         assertTrue(log, log.contains("--rev b"));
         assertFalse(log, log.contains("--rev ${BRANCH}"));
         touchAndCommit(repo, "further-variant");
         // the following assertion commented out as a part of the fix to
         // HUDSON-6126
         // assertTrue(pollSCMChanges(p));
-        buildAndCheck(p, "further-variant", new ParametersAction(
-                new StringParameterValue("BRANCH", "b")));
+        buildAndCheck(p, new ParametersAction(
+                new StringParameterValue("BRANCH", "b")), "further-variant");
     }
 
     @Bug(6517)
@@ -437,14 +442,18 @@ public class MercurialSCMTest extends MercurialTestCase {
         assertEquals(Result.SUCCESS, b.getResult());
     }
 
+    // -- tests for multi-branch support
 
+    /**
+     * Check SCM polling to detect and trigger a build when branch are created on repository
+     */
     public void testMultipleBranches() throws Exception {
         hg(repo, "init");
         touchAndCommit(repo, "init");
         hg(repo, "tag", "init");
         touchAndCommit(repo, "default-1");
         FreeStyleProject p = createFreeStyleProject();
-        // Clone off b.
+
         p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "*", null,
                 null, null, false));
         buildAndCheck(p, "default-1");
@@ -462,6 +471,181 @@ public class MercurialSCMTest extends MercurialTestCase {
         buildAndCheck(p, "b-2");
     }
 
+    /**
+     * Check MercurialSCM to ignore branches that don't match the branchSpec
+     */
+    public void testNonMatchingBranches() throws Exception {
+        hg(repo, "init");
+        touchAndCommit(repo, "init");
+        hg(repo, "tag", "init");
+        hg(repo, "update", "--clean", "init");
+        hg(repo, "branch", "b-1");
+        touchAndCommit(repo, "b-1");
+
+        FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "b-*", null,
+                null, null, false));
+
+        assertTrue(pollSCMChanges(p).hasChanges());
+        buildAndCheck(p, "b-1");
+
+        hg(repo, "update", "--clean", "init");
+        hg(repo, "branch", "ignore-1");
+        touchAndCommit(repo, "ignore-1");
+
+        assertFalse(pollSCMChanges(p).hasChanges());
+    }
+
+    /**
+     * Check MercurialSCM to ignore closed branches
+     */
+    public void testClosedBranches() throws Exception {
+        hg(repo, "init");
+        touchAndCommit(repo, "init");
+        hg(repo, "tag", "init");
+
+        FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "*", null,
+                null, null, false));
+
+        buildAndCheck(p, "init");
+
+        hg(repo, "update", "--clean", "init");
+        hg(repo, "branch", "b-1");
+        touchAndCommit(repo, "b-1");
+        hg(repo, "commit", "--close-branch", "-m", "closed branch");
+
+        assertFalse(pollSCMChanges(p).hasChanges());
+    }
+
+    /**
+     * Check MercurialSCM to ignore inactive branches, i.e. branche b-1 whos commits are entirely includes in branch
+     * b-2 will be ignored
+     */
+    public void testInactiveBranches() throws Exception {
+
+        hg(repo, "init");
+        touchAndCommit(repo, "init");
+        hg(repo, "tag", "init");
+
+        FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "*", null,
+                null, null, false));
+
+        buildAndCheck(p, "init");
+
+        hg(repo, "update", "--clean", "init");
+        hg(repo, "branch", "b-1");
+        touchAndCommit(repo, "b-1");
+        // b-2 includes b-1, so the later should not be active
+        hg(repo, "branch", "b-2");
+        touchAndCommit(repo, "b-2");
+
+        buildAndCheck(p, "b-1", "b-2");
+        assertFalse(pollSCMChanges(p).hasChanges());
+    }
+
+    /**
+     * Check MercurialSCM to ignore branches that have been merged
+     */
+    public void testMergedBranches() throws Exception {
+        hg(repo, "init");
+        touchAndCommit(repo, "init");
+        hg(repo, "tag", "init");
+        touchAndCommit(repo, "default-1");
+
+        hg(repo, "update", "--clean", "init");
+        hg(repo, "branch", "b-1");
+        touchAndCommit(repo, "b-1");
+
+        hg(repo, "update", "--clean", "init");
+        hg(repo, "branch", "b-2");
+        touchAndCommit(repo, "b-2");
+
+        hg(repo, "merge", "b-1");
+        hg(repo, "commit", "-m", "merge");
+
+        FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "b-1", null,
+                null, null, false));
+
+        assertTrue(pollSCMChanges(p).hasChanges());
+        buildAndCheck(p, "b-1", "b-2" );
+
+        assertFalse(pollSCMChanges(p).hasChanges());
+    }
+
+    /**
+     * Check mercurialSCM to only pull single branch in local workspace when branchSpec is <b>not</b> set to match
+     * multiple branches.
+     */
+    public void testSingleBranchJobDontPullWholeRepo() throws Exception {
+        hg(repo, "init");
+        touchAndCommit(repo, "init");
+        hg(repo, "tag", "init");
+
+        hg(repo, "update", "--clean", "init");
+        hg(repo, "branch", "b-1");
+        touchAndCommit(repo, "b-1");
+
+        hg(repo, "update", "--clean", "init");
+        hg(repo, "branch", "b-2");
+        touchAndCommit(repo, "b-2");
+
+        FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "b-1", null,
+                null, null, false));
+
+        buildAndCheck(p, "b-1"); // First build, will trigger a clone
+        assertSingleBranchInWorkspace(p, "b-1");
+
+        buildAndCheck(p, "b-1"); // 2nd build, will trigger an update
+        assertSingleBranchInWorkspace(p, "b-1");
+    }
+
+    private void assertSingleBranchInWorkspace(FreeStyleProject p, final String name) throws IOException, InterruptedException {
+        // FIXME simpler way to implement this ?
+        hudson.getWorkspaceFor(p).act(new FileCallable<Object>() {
+            public Object invoke(File workspace, VirtualChannel channel) throws IOException, InterruptedException {
+                try {
+                    File out = new File(workspace, "out");
+                    hg(workspace, new FileOutputStream(out), "branches", "--active");
+                    BufferedReader r = new BufferedReader(new FileReader(out));
+                    String line = r.readLine();
+                    assertTrue("expected branch not found", line.startsWith(name));
+                    line = r.readLine();
+                    assertNull("unexpected branch pulled", line);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return null;
+            }
+        });
+    }
+
+    public void testNewBranchWithoutChangeFromRoot() throws Exception {
+        hg(repo, "init");
+        touchAndCommit(repo, "init");
+        hg(repo, "tag", "init");
+        touchAndCommit(repo, "default-1");
+        FreeStyleProject p = createFreeStyleProject();
+
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "*", null,
+                null, null, false));
+        buildAndCheck(p, "default-1");
+
+        hg(repo, "update", "--clean", "init");
+        hg(repo, "branch", "b1");
+        touchAndCommit(repo, "b-1");
+        assertTrue(pollSCMChanges(p).hasChanges());
+        buildAndCheck(p, "b-1");
+
+        // New branch, but no file committed
+        hg(repo, "update", "--clean", "init");
+        hg(repo, "branch", "b2");
+
+        assertFalse(pollSCMChanges(p).hasChanges());
+    }
 
     private PretendSlave createNoopPretendSlave() throws Exception {
         return createPretendSlave(new NoopFakeLauncher());
