@@ -338,7 +338,7 @@ public class MercurialSCM extends SCM implements Serializable {
     private void pull(Launcher launcher, FilePath repository, TaskListener listener, PrintStream output, Node node, String branchToPull) throws IOException, InterruptedException {
         ArgumentListBuilder cmd = findHgExe(node, listener, false);
         cmd.add("pull");
-        if (branchToPull != null && !branchToPull.contains("*")) {
+        if (isSingleBranchSpec(branchToPull)) {
             cmd.add( "--rev", branchToPull);
         }
         PossiblyCachedRepo cachedSource = cachedSource(node, launcher, listener, true);
@@ -348,6 +348,10 @@ public class MercurialSCM extends SCM implements Serializable {
         joinWithPossibleTimeout(
                 launch(launcher).cmds(cmd).stdout(output).pwd(repository),
                 true, listener);
+    }
+
+    private boolean isSingleBranchSpec(String branchToPull) {
+        return branchToPull != null && !branchToPull.contains("*") && !branchToPull.contains("?");
     }
 
     static int joinWithPossibleTimeout(ProcStarter proc, boolean useTimeout, final TaskListener listener) throws IOException, InterruptedException {
@@ -612,7 +616,7 @@ public class MercurialSCM extends SCM implements Serializable {
                 args.add(cachedSource.getRepoLocation());
             } else {
                 args.add("clone");
-                if (!branch.contains("*")) {
+                if (isSingleBranchSpec(branch)) {
                     args.add("--rev", branch);
                 }
                 args.add("--noupdate");
@@ -620,7 +624,7 @@ public class MercurialSCM extends SCM implements Serializable {
             }
         } else {
             args.add("clone");
-            if (!branch.contains("*")) {
+            if (isSingleBranchSpec(branch)) {
                 args.add("--rev", branch);
             }
             args.add("--noupdate");

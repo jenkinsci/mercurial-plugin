@@ -477,7 +477,7 @@ public class MercurialSCMTest extends MercurialTestCase {
     /**
      * Check MercurialSCM to ignore branches that don't match the branchSpec
      */
-    public void testNonMatchingBranches() throws Exception {
+    public void testBranchesPatternMatching() throws Exception {
         hg(repo, "init");
         touchAndCommit(repo, "init");
         hg(repo, "tag", "init");
@@ -485,18 +485,35 @@ public class MercurialSCMTest extends MercurialTestCase {
         hg(repo, "branch", "b-1");
         touchAndCommit(repo, "b-1");
 
-        FreeStyleProject p = createFreeStyleProject();
-        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "b-*", null,
+        FreeStyleProject p1 = createFreeStyleProject();
+        p1.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "b-*", null,
+                null, null, false));
+        FreeStyleProject p2 = createFreeStyleProject();
+        p2.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "b-?", null,
                 null, null, false));
 
-        assertTrue(pollSCMChanges(p).hasChanges());
-        buildAndCheck(p, "b-1");
+
+        assertTrue(pollSCMChanges(p1).hasChanges());
+        buildAndCheck(p1, "b-1");
+
+        assertTrue(pollSCMChanges(p2).hasChanges());
+        buildAndCheck(p2, "b-1");
 
         hg(repo, "update", "--clean", "init");
         hg(repo, "branch", "ignore-1");
         touchAndCommit(repo, "ignore-1");
 
-        assertFalse(pollSCMChanges(p).hasChanges());
+        assertFalse(pollSCMChanges(p1).hasChanges());
+        assertFalse(pollSCMChanges(p2).hasChanges());
+
+        hg(repo, "update", "--clean", "init");
+        hg(repo, "branch", "b-other");
+        touchAndCommit(repo, "b-other");
+
+        assertTrue(pollSCMChanges(p1).hasChanges());
+        buildAndCheck(p1, "b-other");
+        assertFalse(pollSCMChanges(p2).hasChanges());
+
     }
 
     /**
