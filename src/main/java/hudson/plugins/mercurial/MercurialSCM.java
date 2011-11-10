@@ -482,7 +482,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
             FilePath subPath = new FilePath(repository, subArray[arrayCount].trim());
 
-            // hg verify doesn't detect missing subrepo folders, nor does a FilePath declaraction throw
+            // hg verify doesn't detect missing subrepo folders, nor does a FilePath declaration throw
             // an exception if the path doesn't exists, so we must check it manually
             if (!subPath.exists())
             {
