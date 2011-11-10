@@ -177,7 +177,7 @@ public class HgExe {
     }
 
     /**
-     * Gets the revision ID of the head ot the specified branch in workspace.
+     * Gets the revision ID of the head of the specified branch in workspace.
      */
     public @CheckForNull String head(FilePath repository, String branch) throws IOException, InterruptedException {
         String id = popen(repository, listener, false, new ArgumentListBuilder("log", "--rev", branch, "--template", "{node}"));
