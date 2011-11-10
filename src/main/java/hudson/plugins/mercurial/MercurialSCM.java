@@ -252,10 +252,6 @@ public class MercurialSCM extends SCM implements Serializable {
             TaskListener listener, SCMRevisionState _baseline) throws IOException, InterruptedException {
 
         final AbstractBuild lastBuild = project.getLastBuild();
-        if (lastBuild == null) {
-            // If we've never been built before, well, gotta build!
-            return PollingResult.BUILD_NOW;
-        }
 
         MercurialTagAction baseline = (MercurialTagAction)_baseline;
         PrintStream output = listener.getLogger();
