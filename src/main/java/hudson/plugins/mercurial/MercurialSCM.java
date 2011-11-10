@@ -252,8 +252,6 @@ public class MercurialSCM extends SCM implements Serializable {
             TaskListener listener, SCMRevisionState _baseline) throws IOException, InterruptedException {
 
         final AbstractBuild lastBuild = project.getLastBuild();
-
-        MercurialTagAction baseline = (MercurialTagAction)_baseline;
         PrintStream output = listener.getLogger();
         Node node = project.getLastBuiltOn(); // HUDSON-5984: ugly but matches what AbstractProject.poll uses
 
