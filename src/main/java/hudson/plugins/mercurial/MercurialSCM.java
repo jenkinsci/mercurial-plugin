@@ -398,7 +398,8 @@ public class MercurialSCM extends SCM implements Serializable {
             return false;
         }
         
-        if (jobShouldUseSharing ^ new FilePath(repo, ".hg/sharedpath").exists()) {
+        boolean jobUsesSharing = new FilePath(repo, ".hg/sharedpath").exists();
+        if (jobShouldUseSharing != jobUsesSharing) {
             return false;
         }
         
