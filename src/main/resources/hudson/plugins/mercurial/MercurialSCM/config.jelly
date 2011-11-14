@@ -15,9 +15,24 @@
   <f:entry field="source" title="${%Repository URL}">
     <f:textbox/>
   </f:entry>
-  <f:entry field="branch" title="${%Branch}">
-    <f:textbox/>
-  </f:entry>
+
+  <f:dropdownList name="branchSelector" title="${%Branch selection strategy}" help="/plugin/mercurial/help/branchSelector.html">
+      <j:scope>
+        <j:set var="current" value="${instance.branchSelector}"/>
+        <j:invokeStatic var="descriptors" className="hudson.plugins.mercurial.build.BranchSelector" method="all"/>
+        <j:forEach var="descriptor" items="${descriptors}">
+          <f:dropdownListBlock value="${descriptor.clazz.name}" title="${descriptor.displayName}"
+            selected="${current.descriptor==descriptor or (current==null and descriptor.displayName=='Default')}">
+            <j:set var="instance" value="${current.descriptor==descriptor ? current : null}" />
+            <tr><td>
+              <input type="hidden" name="stapler-class" value="${descriptor.clazz.name}" />
+            </td></tr>
+            <st:include from="${descriptor}" page="${descriptor.configPage}" optional="true"/>
+          </f:dropdownListBlock>
+        </j:forEach>
+      </j:scope>
+  </f:dropdownList>
+
   <f:advanced>
     <f:entry field="modules" title="${%Modules}">
       <f:textbox/>
@@ -29,7 +44,7 @@
       <f:textbox/>
     </f:entry>
 
-    <f:dropdownList name="buildChooser" title="${%Branch selection strategy}" help="/plugin/mercurial/help/buildChooser.html">
+    <f:dropdownList name="buildChooser" title="${%Built revision selection strategy}" help="/plugin/mercurial/help/buildChooser.html">
       <j:scope>
         <j:set var="current" value="${instance.buildChooser}"/>
         <j:invokeStatic var="descriptors" className="hudson.plugins.mercurial.build.BuildChooser" method="all"/>

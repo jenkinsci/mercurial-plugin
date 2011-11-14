@@ -9,6 +9,9 @@ import hudson.model.FreeStyleProject;
 import hudson.model.ParametersAction;
 import hudson.model.Result;
 import hudson.model.StringParameterValue;
+import hudson.plugins.mercurial.build.DefaultBuildChooser;
+import hudson.plugins.mercurial.build.PatternMatcher;
+import hudson.plugins.mercurial.build.SingleBranch;
 import hudson.remoting.VirtualChannel;
 import hudson.scm.ChangeLogSet;
 import hudson.scm.ChangeLogSet.Entry;
@@ -47,7 +50,7 @@ public class MercurialSCMTest extends MercurialTestCase {
     public void testBasicOps() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
-                null, null, false));
+                null, false, new DefaultBuildChooser(), new SingleBranch("")));
 
         hg(repo, "init");
         touchAndCommit(repo, "a");
@@ -67,21 +70,21 @@ public class MercurialSCMTest extends MercurialTestCase {
         touchAndCommit(repo, "b-1");
         FreeStyleProject p = createFreeStyleProject();
         // Clone off b.
-        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "b", null,
-                null, null, false));
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
+                null, false, new DefaultBuildChooser(), new SingleBranch("b")));
         buildAndCheck(p, "b-1");
         hg(repo, "update", "--clean", "default");
         touchAndCommit(repo, "default-2");
-        // Changes in default should be ignored.
-        assertFalse(pollSCMChanges(p).hasChanges());
+        assertFalse( "Changes in default should be ignored.", pollSCMChanges(p).hasChanges());
+
         hg(repo, "update", "--clean", "b");
         touchAndCommit(repo, "b-2");
-        // But changes in b should be pulled.
-        assertTrue(pollSCMChanges(p).hasChanges());
+        assertTrue("changes in b should be pulled.", pollSCMChanges(p).hasChanges());
         buildAndCheck(p, "b-2");
+
         // Switch to default branch with an existing workspace.
         p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
-                null, null, false));
+                null, false, new DefaultBuildChooser(), new SingleBranch(null)));
         // Should now consider preexisting changesets in default to be poll
         // triggers.
         assertTrue(pollSCMChanges(p).hasChanges());
@@ -96,18 +99,16 @@ public class MercurialSCMTest extends MercurialTestCase {
     public void testPollingLimitedToModules() throws Exception {
         PollingResult pr;
         FreeStyleProject p = createFreeStyleProject();
-        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null,
-                "dir1 dir2", null, null, false));
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(),
+                "dir1 dir2", null, null, false, new DefaultBuildChooser(), new SingleBranch("")));
         hg(repo, "init");
         touchAndCommit(repo, "dir1/f");
         buildAndCheck(p, "dir1/f");
         touchAndCommit(repo, "dir2/f");
-        pr = pollSCMChanges(p);
-        assertEquals(PollingResult.Change.SIGNIFICANT, pr.change);
+        assertTrue(pollSCMChanges(p).hasChanges());
         buildAndCheck(p, "dir2/f");
         touchAndCommit(repo, "dir3/f");
-        pr = pollSCMChanges(p);
-        assertEquals(PollingResult.Change.NONE, pr.change);
+        assertFalse(pollSCMChanges(p).hasChanges());
         // No support for partial checkouts yet, so workspace will contain
         // everything.
         buildAndCheck(p, "dir3/f");
@@ -120,8 +121,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         hg(repo, "merge");
         new FilePath(repo).child("dir2/f").write("stuff", "UTF-8");
         hg(repo, "commit", "--message", "merged");
-        pr = pollSCMChanges(p);
-        assertEquals(PollingResult.Change.NONE, pr.change);
+        assertFalse(pollSCMChanges(p).hasChanges());
         buildAndCheck(p, "dir4/f");
     }
 
@@ -129,18 +129,16 @@ public class MercurialSCMTest extends MercurialTestCase {
     public void testPollingLimitedToModules2() throws Exception {
         PollingResult pr;
         FreeStyleProject p = createFreeStyleProject();
-        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, "dir1",
-                null, null, false));
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "dir1", null,
+                null, false, new DefaultBuildChooser(), new SingleBranch("")));
         hg(repo, "init");
         touchAndCommit(repo, "starter");
         pollSCMChanges(p);
         buildAndCheck(p, "starter");
         touchAndCommit(repo, "dir2/f");
-        pr = pollSCMChanges(p);
-        assertEquals(PollingResult.Change.NONE, pr.change);
+        assertFalse(pollSCMChanges(p).hasChanges());
         touchAndCommit(repo, "dir1/f");
-        pr = pollSCMChanges(p);
-        assertEquals(PollingResult.Change.SIGNIFICANT, pr.change);
+        assertTrue(pollSCMChanges(p).hasChanges());
         buildAndCheck(p, "dir1/f");
     }
 
@@ -149,7 +147,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         FreeStyleProject p = createFreeStyleProject();
         // Control case: no modules specified.
         p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
-                null, null, false));
+                null, false, new DefaultBuildChooser(), new SingleBranch("")));
         hg(repo, "init");
         touchAndCommit(repo, "dir1/f1");
         p.scheduleBuild2(0).get();
@@ -161,12 +159,13 @@ public class MercurialSCMTest extends MercurialTestCase {
         assertEquals(Collections.singleton("dir2/f1"), new HashSet<String>(
                 entry.getAffectedPaths()));
         assertFalse(it.hasNext());
-        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null,
-                "dir1 extra", null, null, false));
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "dir1 extra",
+                null, null, false, new DefaultBuildChooser(), new SingleBranch("")));
         // dir2/f2 change should be ignored.
         touchAndCommit(repo, "dir1/f2");
         touchAndCommit(repo, "dir2/f2");
-        it = p.scheduleBuild2(0).get().getChangeSet().iterator();
+        ChangeLogSet<? extends Entry> changeSet = p.scheduleBuild2(0).get().getChangeSet();
+        it = changeSet.iterator();
         assertTrue(it.hasNext());
         entry = it.next();
         assertEquals(Collections.singleton("dir1/f2"), new HashSet<String>(
@@ -200,8 +199,8 @@ public class MercurialSCMTest extends MercurialTestCase {
         hg(repo, "branch", "b");
         touchAndCommit(repo, "variant");
         FreeStyleProject p = createFreeStyleProject();
-        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "${BRANCH}",
-                null, null, null, false));
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null,
+                null, null, false, new DefaultBuildChooser(), new SingleBranch("${BRANCH}")));
         // This is not how a real parameterized build runs, but using
         // ParametersDefinitionProperty just looks untestable:
         String log = buildAndCheck(p,
@@ -223,7 +222,7 @@ public class MercurialSCMTest extends MercurialTestCase {
     public void testFileListOmittedForMerges() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
-                null, null, false));
+                null, false, new DefaultBuildChooser(), new SingleBranch("")));
         hg(repo, "init");
         touchAndCommit(repo, "f1");
         p.scheduleBuild2(0).get();
@@ -249,8 +248,8 @@ public class MercurialSCMTest extends MercurialTestCase {
     @Bug(3602)
     public void testSubdirectoryCheckout() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
-        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
-                "repo", null, false));
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null,
+                "repo", null, false, new DefaultBuildChooser(), new SingleBranch("")));
         hg(repo, "init");
         touchAndCommit(repo, "f1");
         buildAndCheck(p, "repo/f1");
@@ -272,13 +271,13 @@ public class MercurialSCMTest extends MercurialTestCase {
         FreeStyleProject three = createFreeStyleProject();
         FreeStyleProject four = createFreeStyleProject();
         one.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
-                null, null, false));
+                null, false, new DefaultBuildChooser(), new SingleBranch("")));
         two.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
-                null, null, false));
-        three.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "b",
-                null, null, null, false));
-        four.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "b", null,
-                null, null, false));
+                null, false, new DefaultBuildChooser(), new SingleBranch("")));
+        three.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
+                null, false, new DefaultBuildChooser(), new SingleBranch("b")));
+        four.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
+                null, false, new DefaultBuildChooser(), new SingleBranch("b")));
 
         hg(repo, "init");
         touchAndCommit(repo, "f1");
@@ -309,7 +308,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         AbstractBuild<?, ?> b;
         FreeStyleProject p = createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
-                null, null, false));
+                null, false, new DefaultBuildChooser(), new SingleBranch("")));
         hg(repo, "init");
         touchAndCommit(repo, "dir1/f1");
         b = p.scheduleBuild2(0).get();
@@ -336,7 +335,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         AbstractBuild<?, ?> b;
         FreeStyleProject p = createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
-                null, null, false));
+                null, false, new DefaultBuildChooser(), new SingleBranch("")));
         hg(repo, "init");
         touchAndCommit(repo, "dir1/f1");
         b = p.scheduleBuild2(0).get();
@@ -371,7 +370,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         PretendSlave s1 = createNoopPretendSlave();
         PretendSlave s2 = createNoopPretendSlave();
         p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
-                null, null, false));
+                null, false, new DefaultBuildChooser(), new SingleBranch("")));
         p.setAssignedNode(s1);
         hg(repo, "init");
         touchAndCommit(repo, "dir1/f1");
@@ -395,7 +394,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         PollingResult pr;
         FreeStyleProject p = createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
-                null, null, false));
+                null, false, new DefaultBuildChooser(), new SingleBranch("")));
         p.setAssignedLabel(null); // Allow roaming
 
         // No builds, no workspace, but an available remote repository
@@ -438,7 +437,7 @@ public class MercurialSCMTest extends MercurialTestCase {
     public void testTrailingUrlWhitespace() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation, repo.getPath() + " ", null,
-                null, null, null, false));
+                null, null, false, new DefaultBuildChooser(), new SingleBranch("")));
         hg(repo, "init");
         touchAndCommit(repo, "dir1/f1");
         AbstractBuild<?, ?> b = p.scheduleBuild2(0).get();
@@ -457,8 +456,8 @@ public class MercurialSCMTest extends MercurialTestCase {
         touchAndCommit(repo, "default-1");
         FreeStyleProject p = createFreeStyleProject();
 
-        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "*", null,
-                null, null, false));
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null,
+                null, null, false, new DefaultBuildChooser(), new PatternMatcher(".*")));
         buildAndCheck(p, "default-1");
 
         hg(repo, "update", "--clean", "init");
@@ -486,11 +485,11 @@ public class MercurialSCMTest extends MercurialTestCase {
         touchAndCommit(repo, "b-1");
 
         FreeStyleProject p1 = createFreeStyleProject();
-        p1.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "b-*", null,
-                null, null, false));
+        p1.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
+                null, false, new DefaultBuildChooser(), new PatternMatcher("b-.*")));
         FreeStyleProject p2 = createFreeStyleProject();
-        p2.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "b-?", null,
-                null, null, false));
+        p2.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
+                null, false, new DefaultBuildChooser(), new PatternMatcher("b-.?")));
 
 
         assertTrue(pollSCMChanges(p1).hasChanges());
@@ -525,8 +524,8 @@ public class MercurialSCMTest extends MercurialTestCase {
         hg(repo, "tag", "init");
 
         FreeStyleProject p = createFreeStyleProject();
-        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "*", null,
-                null, null, false));
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
+                null, false, new DefaultBuildChooser(), new PatternMatcher(".*")));
 
         buildAndCheck(p, "init");
 
@@ -549,8 +548,8 @@ public class MercurialSCMTest extends MercurialTestCase {
         hg(repo, "tag", "init");
 
         FreeStyleProject p = createFreeStyleProject();
-        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "*", null,
-                null, null, false));
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
+                null, false, new DefaultBuildChooser(), new PatternMatcher(".*")));
 
         buildAndCheck(p, "init");
 
@@ -583,8 +582,8 @@ public class MercurialSCMTest extends MercurialTestCase {
         touchAndCommit(repo, "b-2");
 
         FreeStyleProject p = createFreeStyleProject();
-        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "b-1", null,
-                null, null, false));
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
+                null, false, new DefaultBuildChooser(), new SingleBranch("b-1")));
 
         buildAndCheck(p, "b-1"); // First build, will trigger a clone
         assertSingleBranchInWorkspace(p, "b-1");
@@ -620,8 +619,8 @@ public class MercurialSCMTest extends MercurialTestCase {
         touchAndCommit(repo, "default-1");
         FreeStyleProject p = createFreeStyleProject();
 
-        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "*", null,
-                null, null, false));
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
+                null, false, new DefaultBuildChooser(), new PatternMatcher(".*")));
         buildAndCheck(p, "default-1");
 
         hg(repo, "update", "--clean", "init");

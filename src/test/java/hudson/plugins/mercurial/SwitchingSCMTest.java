@@ -2,6 +2,9 @@ package hudson.plugins.mercurial;
 
 import hudson.model.FreeStyleProject;
 import hudson.model.Hudson;
+import hudson.plugins.mercurial.build.DefaultBuildChooser;
+import hudson.plugins.mercurial.build.PatternMatcher;
+import hudson.plugins.mercurial.build.SingleBranch;
 import hudson.tools.ToolProperty;
 
 import java.io.File;
@@ -37,7 +40,7 @@ public class SwitchingSCMTest extends MercurialTestCase {
     public void testSwitchingFromCachedToShared() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
         p.setScm(new MercurialSCM(cachingInstallation, repo.getPath(), null,
-                null, null, null, false));
+                null, null, false, new DefaultBuildChooser(), new SingleBranch("")));
 
         hg(repo, "init");
         touchAndCommit(repo, "a");
@@ -46,7 +49,7 @@ public class SwitchingSCMTest extends MercurialTestCase {
                 .exists());
 
         p.setScm(new MercurialSCM(sharingInstallation, repo.getPath(), null,
-                null, null, null, false));
+                null, null, false, new DefaultBuildChooser(), new SingleBranch("")));
 
         touchAndCommit(repo, "b");
         buildAndCheck(p, "b");
@@ -58,7 +61,7 @@ public class SwitchingSCMTest extends MercurialTestCase {
     public void testSwitchingFromSharedToCached() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
         p.setScm(new MercurialSCM(sharingInstallation, repo.getPath(), null,
-                null, null, null, false));
+                null, null, false, new DefaultBuildChooser(), new SingleBranch("")));
 
         hg(repo, "init");
         touchAndCommit(repo, "a");
@@ -68,7 +71,7 @@ public class SwitchingSCMTest extends MercurialTestCase {
                 .exists());
 
         p.setScm(new MercurialSCM(cachingInstallation, repo.getPath(), null,
-                null, null, null, false));
+                null, null, false, new DefaultBuildChooser(), new SingleBranch("")));
 
         touchAndCommit(repo, "b");
         buildAndCheck(p, "b");

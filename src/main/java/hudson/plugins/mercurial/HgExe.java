@@ -167,25 +167,25 @@ public class HgExe {
     /**
      * Gets the revision ID of the tip of the workspace.
      */
-    public @CheckForNull String tip(FilePath repository) throws IOException, InterruptedException {
-        String id = popen(repository, listener, false, new ArgumentListBuilder("log", "--rev", ".", "--template", "{node}"));
+    public @CheckForNull MercurialTagAction tip(FilePath repository) throws IOException, InterruptedException {
+        String id = popen(repository, listener, false, new ArgumentListBuilder("tip", "--template", "{node}:{branch}"));
         if (!REVISIONID_PATTERN.matcher(id).matches()) {
             listener.error("Expected to get an id but got '" + id + "' instead.");
             return null; // HUDSON-7723
         }
-        return id;
+        return new MercurialTagAction(id.substring(0,40), id.substring(41));
     }
 
     /**
      * Gets the revision ID of the head of the specified branch in workspace.
      */
-    public @CheckForNull String head(FilePath repository, String branch) throws IOException, InterruptedException {
-        String id = popen(repository, listener, false, new ArgumentListBuilder("log", "--rev", branch, "--template", "{node}"));
+    public @CheckForNull MercurialTagAction head(FilePath repository, String branch) throws IOException, InterruptedException {
+        String id = popen(repository, listener, false, new ArgumentListBuilder("log", "--rev", branch, "--template", "{node}:{branch}"));
         if (!REVISIONID_PATTERN.matcher(id).matches()) {
             listener.error("Expected to get an id but got '" + id + "' instead.");
             return null; // HUDSON-7723
         }
-        return id;
+        return new MercurialTagAction(id.substring(0,40), id.substring(41));
     }
 
     public List<String> toArgList() {
@@ -238,5 +238,5 @@ public class HgExe {
     /**
      * Pattern that matches revision ID.
      */
-    private static final Pattern REVISIONID_PATTERN = Pattern.compile("[0-9a-f]{40}");
+    private static final Pattern REVISIONID_PATTERN = Pattern.compile("[0-9a-f]{40}:.*");
 }
