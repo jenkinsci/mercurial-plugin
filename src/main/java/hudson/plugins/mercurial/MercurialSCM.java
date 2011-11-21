@@ -260,7 +260,7 @@ public class MercurialSCM extends SCM implements Serializable {
         try {
             ArgumentListBuilder logCmd = findHgExe(node, listener, false);
             logCmd.add("log", "--style", tmpFile.getRemote());
-            logCmd.add("--rev", branch);
+            logCmd.add("--branch", branch);
             logCmd.add("--no-merges");
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
