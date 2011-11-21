@@ -565,6 +565,27 @@ public class MercurialSCMTest extends MercurialTestCase {
 
     }
 
+    public void testDefaultBranchPatternMatching() throws Exception {
+        hg(repo, "init");
+        touchAndCommit(repo, "init");
+        hg(repo, "tag", "init");
+        touchAndCommit(repo, "f1");
+
+        FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
+                null, false, new DefaultBuildChooser(), new PatternMatcher("d.*")));
+
+        // Check that "d.*" regex matches the default branch
+        assertTrue(pollSCMChanges(p).hasChanges());
+        buildAndCheck(p, "f1");
+
+        hg(repo, "update", "--clean", "init");
+        hg(repo, "branch", "ignore-1");
+        touchAndCommit(repo, "ignore-1");
+
+        assertFalse(pollSCMChanges(p).hasChanges());
+    }
+
     /**
      * Check MercurialSCM to ignore closed branches
      */
