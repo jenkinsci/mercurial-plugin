@@ -313,10 +313,18 @@ public class MercurialSCMTest extends MercurialTestCase {
         touchAndCommit(repo, "dir1/f1");
         b = p.scheduleBuild2(0).get();
         assertTrue(b.getChangeSet().isEmptySet());
+
+        // 3 commits to ensure changelog contains all of them and not just the HEAD
         touchAndCommit(repo, "dir2/f1");
+        touchAndCommit(repo, "dir2/f2");
+        touchAndCommit(repo, "dir2/f3");
         b = p.scheduleBuild2(0).get();
+
         assertChangeSetPaths(
-                Collections.singletonList(Collections.singleton("dir2/f1")), b);
+           Arrays.asList(
+                   Collections.singleton("dir2/f3"),
+                   Collections.singleton("dir2/f2"),
+                   Collections.singleton("dir2/f1")), b);
         touchAndCommit(repo, "dir3/f1");
         b = p.scheduleBuild2(0).get();
         assertChangeSetPaths(
