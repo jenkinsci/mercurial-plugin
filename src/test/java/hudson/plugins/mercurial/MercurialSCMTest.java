@@ -24,6 +24,7 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -325,11 +326,14 @@ public class MercurialSCMTest extends MercurialTestCase {
                    Collections.singleton("dir2/f3"),
                    Collections.singleton("dir2/f2"),
                    Collections.singleton("dir2/f1")), b);
+
         touchAndCommit(repo, "dir3/f1");
         b = p.scheduleBuild2(0).get();
         assertChangeSetPaths(
                 Collections.singletonList(Collections.singleton("dir3/f1")), b);
     }
+
+
 
     /**
      * The change log should be based on comparison with the previous build, not
@@ -351,15 +355,53 @@ public class MercurialSCMTest extends MercurialTestCase {
         b.getWorkspace().deleteRecursive(); // Remove the workspace to force a
                                             // re-clone
         touchAndCommit(repo, "dir2/f1");
+        touchAndCommit(repo, "dir2/f2");
+        touchAndCommit(repo, "dir2/f3");
         b = p.scheduleBuild2(0).get();
+
         assertChangeSetPaths(
-                Collections.singletonList(Collections.singleton("dir2/f1")), b);
+           Arrays.asList(
+                   Collections.singleton("dir2/f3"),
+                   Collections.singleton("dir2/f2"),
+                   Collections.singleton("dir2/f1")), b);
+
         b.getWorkspace().deleteRecursive(); // Remove the workspace to force a
                                             // re-clone
         touchAndCommit(repo, "dir3/f1");
         b = p.scheduleBuild2(0).get();
         assertChangeSetPaths(
                 Collections.singletonList(Collections.singleton("dir3/f1")), b);
+    }
+
+    public void testChangelogWithMerge() throws Exception {
+        AbstractBuild<?, ?> b;
+        FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
+                null, false, new DefaultBuildChooser(), new SingleBranch("")));
+        hg(repo, "init");
+        touchAndCommit(repo, "dir1/f1");
+        b = p.scheduleBuild2(0).get();
+        assertTrue(b.getChangeSet().isEmptySet());
+
+        hg(repo, "branch", "dir2");
+        touchAndCommit(repo, "dir2/f1");
+        touchAndCommit(repo, "dir2/f2");
+        touchAndCommit(repo, "dir2/f3");
+
+        hg(repo, "update", "default");
+        hg(repo, "merge", "dir2");
+        hg(repo, "commit", "--message", "merged");
+        touchAndCommit(repo, "dir1/f2");
+
+        b = p.scheduleBuild2(0).get();
+
+        assertChangeSetPaths(
+           Arrays.asList(
+                   Collections.singleton("dir1/f2"),
+                   Collections.<String>emptySet(),  // merge commit
+                   Collections.singleton("dir2/f3"),
+                   Collections.singleton("dir2/f2"),
+                   Collections.singleton("dir2/f1")), b);
     }
 
     /**

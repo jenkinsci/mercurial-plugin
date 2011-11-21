@@ -493,7 +493,6 @@ public class MercurialSCM extends SCM implements Serializable {
                 args.add("log");
                 args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
                 args.add("--rev", revision.getId() + ":0");
-                args.add("--branch", revision.getBranch());
                 args.add("--follow");
                 args.add("--prune", lastBuild.getId());
 
