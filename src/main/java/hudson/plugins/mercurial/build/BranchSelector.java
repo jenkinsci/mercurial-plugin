@@ -11,6 +11,10 @@ import hudson.util.ArgumentListBuilder;
 import java.io.Serializable;
 
 /**
+ * Plugable strategy to select the Mercurial branches to be monitored by the Job. This component is responsible for
+ * contributing the hg command line and filter incoming branches, so that only a configurable subset of incoming
+ * changesets are considered by the Job an can trigger a new Run.
+ *
  * @author <a href="mailto:nicolas.deloof@cloudbees.com">Nicolas De loof</a>
  */
 public abstract class BranchSelector implements ExtensionPoint, Describable<BranchSelector>, Serializable {
@@ -25,11 +29,25 @@ public abstract class BranchSelector implements ExtensionPoint, Describable<Bran
 
     private static final long serialVersionUID = 1L;
 
+    /**
+     * Add branch selection arguments to the hg command line. This method is used when no Environment is set,
+     * typically on SCM polling
+     */
     public abstract void select(ArgumentListBuilder cmd);
 
+    /**
+     * Add branch selection arguments to the hg command line. This method is used during Build, passing the environment
+     * to adapt the command
+     */
     public abstract void select(ArgumentListBuilder cmd, EnvVars env);
 
+    /**
+     * @return <code>true</code> if the specified branch matches the selection strategy
+     */
     public abstract boolean monitored(String branch);
 
+    /**
+     * @return the default revision to build when no candidate can be extracted from incoming changesets
+     */
     public abstract String getDefaultRevisionToBuild(EnvVars env);
 }
