@@ -9,7 +9,7 @@
   </parent>
 
   <artifactId>mercurial</artifactId>
-  <version>1.38-SNAPSHOT</version>
+  <version>1.38</version>
   <packaging>hpi</packaging>
 
   <name>Jenkins Mercurial plugin</name>
