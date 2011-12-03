@@ -58,6 +58,11 @@ import edu.umd.cs.findbugs.annotations.SuppressWarnings;
  * Mercurial SCM.
  */
 public class MercurialSCM extends SCM implements Serializable {
+    // old fields are left so that old config data can be read in, but
+    // they are deprecated. transient so that they won't show up in XML
+    // when writing back
+    @Deprecated
+    private transient boolean forest;
 
     /**
      * Name of selected installation, if any.
