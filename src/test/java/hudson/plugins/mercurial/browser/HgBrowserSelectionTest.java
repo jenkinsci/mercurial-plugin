@@ -4,7 +4,6 @@ import hudson.model.Descriptor;
 import hudson.model.FreeStyleProject;
 import hudson.plugins.mercurial.MercurialSCM;
 import hudson.scm.RepositoryBrowser;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.List;
 import org.jvnet.hudson.test.Bug;
@@ -32,7 +31,7 @@ public class HgBrowserSelectionTest extends HudsonTestCase {
 
     @Bug(4510)
     @LocalData
-    public void testPickingUpAlternativeBrowser() throws MalformedURLException, Exception {
+    public void testPickingUpAlternativeBrowser() throws Exception {
         FreeStyleProject p = (FreeStyleProject) hudson.getItem("foo");
         MercurialSCM ms = (MercurialSCM) p.getScm();
         final HgBrowser browser = ms.getBrowser();
@@ -43,7 +42,7 @@ public class HgBrowserSelectionTest extends HudsonTestCase {
 
     @Bug(4514)
     @LocalData
-    public void testBrowsersAvailableInDropDown() throws MalformedURLException, Exception {
+    public void testBrowsersAvailableInDropDown() throws Exception {
         FreeStyleProject p = (FreeStyleProject) hudson.getItem("foo");
         MercurialSCM ms = (MercurialSCM) p.getScm();
         final HgBrowser browser = ms.getBrowser();

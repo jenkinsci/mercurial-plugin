@@ -26,7 +26,7 @@ public class RhodeCodeTest extends AbstractBrowserTestBase {
     }
 
     @Test
-    public void testGetFileLink() throws IOException, MalformedURLException {
+    public void testGetFileLink() throws IOException {
         String expected = REPO_URL
                 + "/files/6704efde87541766fadba17f66d04b926cd4d343/rhodecode/public/css/pygments.css";
         browser.getChangeSetLink(changeSet);
@@ -36,7 +36,7 @@ public class RhodeCodeTest extends AbstractBrowserTestBase {
     }
 
     @Test
-    public void testGetDiffLink() throws IOException, MalformedURLException {
+    public void testGetDiffLink() throws IOException {
         String expected = REPO_URL
                 + "/changeset/6704efde87541766fadba17f66d04b926cd4d343#Crhodecode-public-css-pygments.css";
         browser.getChangeSetLink(changeSet);

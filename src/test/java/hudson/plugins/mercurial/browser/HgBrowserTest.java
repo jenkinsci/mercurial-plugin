@@ -10,7 +10,7 @@ import org.junit.Test;
 public class HgBrowserTest {
 
     @Test(expected=UnsupportedOperationException.class)
-    public final void testGetChangeSetLinkMercurialChangeSet() throws MalformedURLException, IOException {
+    public final void testGetChangeSetLinkMercurialChangeSet() throws IOException {
         new HgBrowser("http://abc/").getChangeSetLink(null);
     }
 
