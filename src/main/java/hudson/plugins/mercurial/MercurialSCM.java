@@ -395,26 +395,23 @@ public class MercurialSCM extends SCM implements Serializable {
             } else {
                 e.printStackTrace(listener.error("Failed to determine whether workspace can be reused"));
             }
-            return false;
+            throw new AbortException("Failed to determine whether workspace can be reused");
         }
 
-        boolean success;
         if (canReuseExistingWorkspace) {
-            success = update(build, launcher, repository, listener);
+            update(build, launcher, repository, listener);
         } else {
-            success = clone(build, launcher, repository, listener);
+            clone(build, launcher, repository, listener);
         }
 
-        if (success) {
-            try {
-                determineChanges(build, launcher, listener, changelogFile, repository);
-            } catch (IOException e) {
-                listener.error("Failed to capture change log");
-                e.printStackTrace(listener.getLogger());
-                success = false;
-            }
+        try {
+            determineChanges(build, launcher, listener, changelogFile, repository);
+        } catch (IOException e) {
+            listener.error("Failed to capture change log");
+            e.printStackTrace(listener.getLogger());
+            throw new AbortException("Failed to capture change log");
         }
-        return success;
+        return true;
     }
     
     private boolean canReuseWorkspace(FilePath repo,
@@ -514,7 +511,7 @@ public class MercurialSCM extends SCM implements Serializable {
     /*
      * Updates the current repository.
      */
-    private boolean update(AbstractBuild<?, ?> build, Launcher launcher, FilePath repository, BuildListener listener)
+    private void update(AbstractBuild<?, ?> build, Launcher launcher, FilePath repository, BuildListener listener)
             throws InterruptedException, IOException {
         EnvVars env = build.getEnvironment(listener);
 
@@ -528,24 +525,26 @@ public class MercurialSCM extends SCM implements Serializable {
             } else {
                 e.printStackTrace(listener.error("Failed to pull"));
             }
-            return false;
+            throw new AbortException("Failed to pull");
         } 
 
+        int updateExitCode;
         try {
-            if(hg.run("update", "--clean", "--rev", getBranch(env)).pwd(repository).join()!=0) {
-                listener.error("Failed to update");
-                return false;
-            }
+            updateExitCode = hg.run("update", "--clean", "--rev", getBranch(env)).pwd(repository).join();
         } catch (IOException e) {
             listener.error("Failed to update");
             e.printStackTrace(listener.getLogger());
-            return false;
+            throw new AbortException("Failed to update");
+        }
+        if (updateExitCode != 0) {
+            listener.error("Failed to update");
+            throw new AbortException("Failed to update");
         }
         
         if(clean) {
             if (hg.cleanAll().pwd(repository).join() != 0) {
                 listener.error("Failed to clean unversioned files");
-                return false;
+                throw new AbortException("Failed to clean unversioned files");
             }
         }
 
@@ -553,20 +552,18 @@ public class MercurialSCM extends SCM implements Serializable {
         if (tip != null) {
             build.addAction(new MercurialTagAction(tip));
         }
-
-        return true;
     }
 
     /**
      * Start from scratch and clone the whole repository.
      */
-    private boolean clone(AbstractBuild<?,?> build, Launcher launcher, FilePath repository, BuildListener listener)
+    private void clone(AbstractBuild<?,?> build, Launcher launcher, FilePath repository, BuildListener listener)
             throws InterruptedException, IOException {
         try {
             repository.deleteRecursive();
         } catch (IOException e) {
             e.printStackTrace(listener.error("Failed to clean the repository checkout"));
-            return false;
+            throw new AbortException("Failed to clean the repository checkout");
         }
 
         EnvVars env = build.getEnvironment(listener);
@@ -593,11 +590,9 @@ public class MercurialSCM extends SCM implements Serializable {
             args.add(source);
         }
         args.add(repository.getRemote());
+        int cloneExitCode;
         try {
-            if(hg.run(args).join()!=0) {
-                listener.error("Failed to clone "+source);
-                return false;
-            }
+            cloneExitCode = hg.run(args).join();
         } catch (IOException e) {
             if (causedByMissingHg(e)) {
                 listener.error("Failed to clone " + source + " because hg could not be found;" +
@@ -605,7 +600,11 @@ public class MercurialSCM extends SCM implements Serializable {
             } else {
                 e.printStackTrace(listener.error("Failed to clone "+source));
             }
-            return false;
+            throw new AbortException("Failed to clone "+source);
+        }
+        if(cloneExitCode!=0) {
+            listener.error("Failed to clone "+source);
+            throw new AbortException("Failed to clone "+source);
         }
 
         if (cachedSource != null && cachedSource.isUseCaches() && !cachedSource.isUseSharing()) {
@@ -614,7 +613,7 @@ public class MercurialSCM extends SCM implements Serializable {
                 String hgrcText = hgrc.readToString();
                 if (!hgrcText.contains(cachedSource.getRepoLocation())) {
                     listener.error(".hg/hgrc did not contain " + cachedSource.getRepoLocation() + " as expected:\n" + hgrcText);
-                    return false;
+                    throw new AbortException(".hg/hgrc did not contain " + cachedSource.getRepoLocation() + " as expected:\n" + hgrcText);
                 }
                 hgrc.write(hgrcText.replace(cachedSource.getRepoLocation(), source), null);
             }
@@ -632,8 +631,6 @@ public class MercurialSCM extends SCM implements Serializable {
         if (tip != null) {
             build.addAction(new MercurialTagAction(tip));
         }
-
-        return true;
     }
 
     @Override
