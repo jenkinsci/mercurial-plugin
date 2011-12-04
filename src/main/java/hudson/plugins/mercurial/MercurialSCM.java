@@ -385,14 +385,16 @@ public class MercurialSCM extends SCM implements Serializable {
             success = clone(build, launcher, repository, listener);
         }
 
-        try {
-            determineChanges(build, launcher, listener, changelogFile, repository);
-            return success;
-        } catch (IOException e) {
-            listener.error("Failed to capture change log");
-            e.printStackTrace(listener.getLogger());
-            return false;
-        } 
+        if (success) {
+            try {
+                determineChanges(build, launcher, listener, changelogFile, repository);
+            } catch (IOException e) {
+                listener.error("Failed to capture change log");
+                e.printStackTrace(listener.getLogger());
+                success = false;
+            }
+        }
+        return success;
     }
     
     private boolean canReuseWorkspace(FilePath repo,
