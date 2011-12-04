@@ -1,6 +1,7 @@
 package hudson.plugins.mercurial;
 
 import static java.util.logging.Level.FINE;
+import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
@@ -264,6 +265,13 @@ public class MercurialSCM extends SCM implements Serializable {
 
             MercurialTagAction cur = parsePollingLogOutput(baos, baseline, changedFileNames);
             return new PollingResult(baseline,cur,computeDegreeOfChanges(changedFileNames,output));
+        } catch(IOException e) {
+            if (causedByMissingHg(e)) {
+                listener.error("Failed to compare with remote repository because hg could not be found;" +
+                        " check that you've properly configured your Mercurial installation");
+                throw new AbortException("Failed to compare with remote repository");
+            }
+            throw new IOException("Failed to compare with remote repository", e);
         } finally {
             tmpFile.delete();
         }
@@ -375,8 +383,18 @@ public class MercurialSCM extends SCM implements Serializable {
         final boolean jobShouldUseSharing = mercurialInstallation != null && mercurialInstallation.isUseSharing();
 
         FilePath repository = workspace2Repo(workspace);
-        boolean canReuseExistingWorkspace =
-                canReuseWorkspace(repository, jobShouldUseSharing, build, launcher, listener);
+        boolean canReuseExistingWorkspace;
+        try {
+            canReuseExistingWorkspace = canReuseWorkspace(repository, jobShouldUseSharing, build, launcher, listener);
+        } catch(IOException e) {
+            if (causedByMissingHg(e)) {
+                listener.error("Failed to determine whether workspace can be reused because hg could not be found;" +
+                        " check that you've properly configured your Mercurial installation");
+            } else {
+                e.printStackTrace(listener.error("Failed to determine whether workspace can be reused"));
+            }
+            return false;
+        }
 
         boolean success;
         if (canReuseExistingWorkspace) {
@@ -502,8 +520,12 @@ public class MercurialSCM extends SCM implements Serializable {
         try {
             pull(launcher, repository, listener, new PrintStream(new NullOutputStream()), Computer.currentComputer().getNode(), getBranch(env));
         } catch (IOException e) {
-            listener.error("Failed to pull");
-            e.printStackTrace(listener.getLogger());
+            if (causedByMissingHg(e)) {
+                listener.error("Failed to pull because hg could not be found;" +
+                        " check that you've properly configured your Mercurial installation");
+            } else {
+                e.printStackTrace(listener.error("Failed to pull"));
+            }
             return false;
         } 
 
@@ -575,7 +597,12 @@ public class MercurialSCM extends SCM implements Serializable {
                 return false;
             }
         } catch (IOException e) {
-            e.printStackTrace(listener.error("Failed to clone "+source));
+            if (causedByMissingHg(e)) {
+                listener.error("Failed to clone " + source + " because hg could not be found;" +
+                        " check that you've properly configured your Mercurial installation");
+            } else {
+                e.printStackTrace(listener.error("Failed to clone "+source));
+            }
             return false;
         }
 
@@ -627,6 +654,11 @@ public class MercurialSCM extends SCM implements Serializable {
 
     public String getModules() {
         return modules;
+    }
+
+    private boolean causedByMissingHg(IOException e) {
+        String message = e.getMessage();
+        return message.startsWith("Cannot run program") && message.endsWith("No such file or directory");
     }
 
     static boolean CACHE_LOCAL_REPOS = false;
