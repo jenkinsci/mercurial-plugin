@@ -271,7 +271,9 @@ public class MercurialSCM extends SCM implements Serializable {
                         " check that you've properly configured your Mercurial installation");
                 throw new AbortException("Failed to compare with remote repository");
             }
-            throw new IOException("Failed to compare with remote repository", e);
+            IOException ex = new IOException("Failed to compare with remote repository");
+            ex.initCause(e);
+            throw ex;
         } finally {
             tmpFile.delete();
         }
