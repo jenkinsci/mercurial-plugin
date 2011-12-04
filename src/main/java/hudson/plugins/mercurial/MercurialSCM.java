@@ -93,15 +93,18 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private final boolean clean;
 
+    private final boolean verify;
+
     private HgBrowser browser;
 
     @DataBoundConstructor
-    public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean) {
+    public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean, boolean verify) {
         this.installation = installation;
         this.source = Util.fixEmptyAndTrim(source);
         this.modules = Util.fixNull(modules);
         this.subdir = Util.fixEmptyAndTrim(subdir);
         this.clean = clean;
+        this.verify = verify;
         parseModules();
         branch = Util.fixEmpty(branch);
         if (branch != null && branch.equals("default")) {
@@ -189,6 +192,13 @@ public class MercurialSCM extends SCM implements Serializable {
      */
     public boolean isClean() {
         return clean;
+    }
+
+    /**
+     * True if we want to verify a local repository before updating it
+     */
+    public boolean isVerify() {
+        return verify;
     }
 
     private ArgumentListBuilder findHgExe(AbstractBuild<?,?> build, TaskListener listener, boolean allowDebug) throws IOException, InterruptedException {
@@ -380,7 +390,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
         boolean success;
         if (canReuseExistingWorkspace) {
-            success = update(build, launcher, repository, listener);
+            success = update(build, launcher, repository, listener, changelogFile);
         } else {
             success = clone(build, launcher, repository, listener);
         }
@@ -491,12 +501,61 @@ public class MercurialSCM extends SCM implements Serializable {
         }
     }
 
+    /**
+     * Checks local checkout for corruption or incompleteness, since hg verify doesn't check subrepo we must do so recursively 
+     */
+    private boolean verify(AbstractBuild<?,?> build, Launcher launcher, FilePath repository, BuildListener listener, EnvVars env)
+            throws InterruptedException, IOException
+        {
+        HgExe hgverify = new HgExe(this, launcher, build, listener, env);
+
+        if (hgverify.run("verify", "--noninteractive").pwd(repository).join() != 0)
+            return false;
+
+        if (!repository.child(".hgsub").exists())
+            return true;
+
+        String hgsubStr = repository.child(".hgsub").readToString();
+
+        String[] subArray = hgsubStr.split("=.+\\n");
+
+        for (int arrayCount=0; arrayCount < (subArray.length); ++arrayCount) {
+
+            if (subArray[arrayCount].trim().length() == 0)
+                continue;
+
+            FilePath subPath = new FilePath(repository, subArray[arrayCount].trim());
+
+            // hg verify doesn't detect missing subrepo folders, nor does a FilePath declaration throw
+            // an exception if the path doesn't exists, so we must check it manually
+            if (!subPath.exists())
+            {
+                listener.error("Subrepository '"+subPath.getName()+"' folder does not exist");
+                return false;
+            }
+
+            if (!verify(build, launcher, subPath, listener, env))
+                return false;
+        }
+
+        return true;
+    }
+
     /*
      * Updates the current repository.
      */
-    private boolean update(AbstractBuild<?, ?> build, Launcher launcher, FilePath repository, BuildListener listener)
+    private boolean update(AbstractBuild<?, ?> build, Launcher launcher, FilePath repository, BuildListener listener, File changelogFile)
             throws InterruptedException, IOException {
         EnvVars env = build.getEnvironment(listener);
+
+        try {
+            if (verify && !verify(build, launcher, repository, listener, env))
+                return clone(build, launcher, repository, listener, changelogFile);
+        } catch (IOException e) {
+            listener.error("Failed to verify local checkout");
+            e.printStackTrace(listener.getLogger());
+            return false;
+        }
 
         HgExe hg = new HgExe(this, launcher, build, listener, env);
         try {

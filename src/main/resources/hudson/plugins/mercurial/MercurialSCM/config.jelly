@@ -25,6 +25,9 @@
     <f:entry field="clean" title="${%Clean Build}">
       <f:checkbox/>
     </f:entry>
+    <f:entry field="verify" title="${%Verify}">
+      <f:checkbox/>
+    </f:entry>
     <f:entry field="subdir" title="${%Subdirectory}">
       <f:textbox/>
     </f:entry>
