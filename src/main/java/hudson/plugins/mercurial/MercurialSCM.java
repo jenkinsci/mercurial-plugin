@@ -252,7 +252,11 @@ public class MercurialSCM extends SCM implements Serializable {
             
             ArgumentListBuilder logCmd = findHgExe(node, listener, false);
             logCmd.add("log", "--style", tmpFile.getRemote());
-            logCmd.add("--branch", getBranch());
+            // Note: In order to support older Mercurial Versions including the
+            // one used by Ubuntu 10.04 LTS, using the short option "-b"
+            // instead of "--branch" which was renamed from "--only-branch",
+            // see JENKINS-12048.
+            logCmd.add("-b", getBranch());
             logCmd.add("--no-merges");
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
