@@ -139,7 +139,7 @@ public class MercurialSCM extends SCM implements Serializable {
         parseModules();
         return this;
     }
-
+    
     public String getInstallation() {
         return installation;
     }
@@ -161,6 +161,11 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private String getBranch(EnvVars env) {
         return branch == null ? "default" : env.expand(branch);
+    }
+    
+    public void setBranch(String bname)
+    {
+    	this.branch = bname;
     }
 
     public String getSubdir() {
