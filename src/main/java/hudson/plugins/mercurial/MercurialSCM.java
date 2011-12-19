@@ -87,7 +87,7 @@ public class MercurialSCM extends SCM implements Serializable {
     /**
      * In-repository branch to follow. Null indicates "default".
      */
-    private final String branch;
+    private String branch;
 
     /** Slash-separated subdirectory of the workspace in which the repository will be kept; null for top level. */
     private final String subdir;
