@@ -238,6 +238,8 @@ public class MercurialSCM extends SCM implements Serializable {
 
         PrintStream output = listener.getLogger();
 
+        MercurialInstallation mercurialInstallation = findInstallation(installation);
+
         // XXX do canUpdate check similar to in checkout, and possibly return INCOMPARABLE
 
         // Mercurial requires the style file to be in a file..
@@ -249,11 +251,14 @@ public class MercurialSCM extends SCM implements Serializable {
 
             FilePath repository = workspace2Repo(workspace);
             pull(launcher, repository, listener, output, node,getBranch());
-            
+
             ArgumentListBuilder logCmd = findHgExe(node, listener, false);
             logCmd.add("log", "--style", tmpFile.getRemote());
             logCmd.add("--branch", getBranch());
-            logCmd.add("--no-merges");
+
+            if (!mercurialInstallation.isMergesTrigger()) {
+                logCmd.add("--no-merges");
+            }
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ForkOutputStream fos = new ForkOutputStream(baos, output);
@@ -413,7 +418,7 @@ public class MercurialSCM extends SCM implements Serializable {
         }
         return true;
     }
-    
+
     private boolean canReuseWorkspace(FilePath repo,
             boolean jobShouldUseSharing, AbstractBuild<?,?> build,
             Launcher launcher, BuildListener listener)
@@ -421,12 +426,12 @@ public class MercurialSCM extends SCM implements Serializable {
         if (!new FilePath(repo, ".hg/hgrc").exists()) {
             return false;
         }
-        
+
         boolean jobUsesSharing = new FilePath(repo, ".hg/sharedpath").exists();
         if (jobShouldUseSharing != jobUsesSharing) {
             return false;
         }
-        
+
         EnvVars env = build.getEnvironment(listener);
         HgExe hg = new HgExe(this,launcher,build,listener,env);
         String upstream = hg.config(repo, "paths.default");
@@ -445,7 +450,7 @@ public class MercurialSCM extends SCM implements Serializable {
         if (source.startsWith("file:/") && new File(upstream).toURI().toString().equals(source)) {
             return true;
         }
-        
+
         listener.error(
                 "Workspace reports paths.default as " + upstream +
                 "\nwhich looks different than " + source +
@@ -454,7 +459,7 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     private void determineChanges(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, File changelogFile, FilePath repository) throws IOException, InterruptedException {
-        
+
         AbstractBuild<?, ?> previousBuild = build.getPreviousBuild();
         MercurialTagAction prevTag = previousBuild != null ? previousBuild.getAction(MercurialTagAction.class) : null;
         if (prevTag == null) {
@@ -471,7 +476,7 @@ public class MercurialSCM extends SCM implements Serializable {
             createEmptyChangeLog(changelogFile, listener, "changelog");
             return;
         }
-        
+
         // calc changelog
         final FileOutputStream os = new FileOutputStream(changelogFile);
         try {
@@ -526,7 +531,7 @@ public class MercurialSCM extends SCM implements Serializable {
                 e.printStackTrace(listener.error("Failed to pull"));
             }
             throw new AbortException("Failed to pull");
-        } 
+        }
 
         int updateExitCode;
         try {
@@ -540,7 +545,7 @@ public class MercurialSCM extends SCM implements Serializable {
             listener.error("Failed to update");
             throw new AbortException("Failed to update");
         }
-        
+
         if(clean) {
             if (hg.cleanAll().pwd(repository).join() != 0) {
                 listener.error("Failed to clean unversioned files");

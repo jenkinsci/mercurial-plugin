@@ -30,7 +30,8 @@ import org.jvnet.hudson.test.PretendSlave;
 public class MercurialSCMTest extends MercurialTestCase {
 
     private File repo;
-    protected String hgInstallation = null; // see DebugFlagTest
+    protected String hgInstallation = null;  // see DebugFlagTest
+    protected boolean mergesTrigger = false; // see MergeTriggerSCMTest
 
     protected @Override
     void setUp() throws Exception {
@@ -115,7 +116,11 @@ public class MercurialSCMTest extends MercurialTestCase {
         new FilePath(repo).child("dir2/f").write("stuff", "UTF-8");
         hg(repo, "commit", "--message", "merged");
         pr = pollSCMChanges(p);
-        assertEquals(PollingResult.Change.INSIGNIFICANT, pr.change);
+        if (mergesTrigger) {
+            assertEquals(PollingResult.Change.SIGNIFICANT, pr.change);
+        } else {
+            assertEquals(PollingResult.Change.INSIGNIFICANT, pr.change);
+        }
         buildAndCheck(p, "dir4/f");
     }
 
@@ -424,7 +429,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         pr = pollSCMChanges(p);
         assertPollingResult(PollingResult.Change.SIGNIFICANT, cs4, cs5, pr);
     }
-    
+
     @Bug(11460)
     public void testTrailingUrlWhitespace() throws Exception {
         FreeStyleProject p = createFreeStyleProject();

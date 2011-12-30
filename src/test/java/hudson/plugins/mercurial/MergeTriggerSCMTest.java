@@ -21,6 +21,6 @@ public class MergeTriggerSCMTest extends MercurialSCMTest {
                         new MercurialInstallation(MERGE_TRIGGER_INSTALLATION, "",
                                 "hg", false, true, true, true, Collections
                                         .<ToolProperty<?>> emptyList()));
-        this.ignoreMerges = false;
+        this.mergesTrigger = true;
     }
 }
