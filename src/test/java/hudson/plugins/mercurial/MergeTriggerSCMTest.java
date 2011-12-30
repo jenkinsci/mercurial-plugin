@@ -5,20 +5,22 @@ import hudson.tools.ToolProperty;
 
 import java.util.Collections;
 
-public class DebugFlagTest extends MercurialSCMTest {
+public class MergeTriggerSCMTest extends MercurialSCMTest {
 
-    public static final String DEBUG_INSTALLATION = "debug";
+    public static final String MERGE_TRIGGER_INSTALLATION = "ignoremerges";
 
     protected @Override
     void setUp() throws Exception {
+
+        // Test without ignoring merges
         super.setUp();
-        hgInstallation = DEBUG_INSTALLATION;
+        hgInstallation = MERGE_TRIGGER_INSTALLATION;
         Hudson.getInstance()
                 .getDescriptorByType(MercurialInstallation.DescriptorImpl.class)
                 .setInstallations(
-                        new MercurialInstallation(DEBUG_INSTALLATION, "", "hg",
-                                true, false, false, false, Collections
+                        new MercurialInstallation(MERGE_TRIGGER_INSTALLATION, "",
+                                "hg", false, true, true, true, Collections
                                         .<ToolProperty<?>> emptyList()));
+        this.mergesTrigger = true;
     }
-
 }

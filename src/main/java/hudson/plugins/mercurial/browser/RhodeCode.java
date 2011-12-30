@@ -38,7 +38,7 @@ public class RhodeCode extends HgBrowser {
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * Throws {@link IllegalStateException} when this method is called before at
      * least one call to {@literal getChangeSetLink(MercurialChangeSet)}.
      */
@@ -51,7 +51,7 @@ public class RhodeCode extends HgBrowser {
 
     /**
      * {@inheritDoc}
-     * 
+     *
      * Throws {@link IllegalStateException} when this method is called before at
      * least one call to {@literal getChangeSetLink(MercurialChangeSet)}.
      */
