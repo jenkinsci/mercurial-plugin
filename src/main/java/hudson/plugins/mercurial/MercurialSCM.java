@@ -8,6 +8,7 @@ import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Launcher.ProcStarter;
 import hudson.Util;
+import hudson.model.Action;
 import hudson.model.BuildListener;
 import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
@@ -224,7 +225,7 @@ public class MercurialSCM extends SCM implements Serializable {
         // tag action is added during checkout, so this shouldn't be called, but just in case.
         HgExe hg = new HgExe(this, launcher, build, listener, build.getEnvironment(listener));
         String tip = hg.tip(workspace2Repo(build.getWorkspace()), null);
-        return tip != null ? new MercurialTagAction(tip) : null;
+        return tip != null ? new MercurialTagAction(tip, subdir) : null;
     }
 
     @Override
@@ -249,11 +250,11 @@ public class MercurialSCM extends SCM implements Serializable {
                 throw new IOException("failed to find ID of branch head");
             }
             if (remote.equals(baseline.id)) { // shortcut
-                return new PollingResult(baseline, new MercurialTagAction(remote), Change.NONE);
+                return new PollingResult(baseline, new MercurialTagAction(remote, subdir), Change.NONE);
             }
             Set<String> changedFileNames = parseStatus(hg.popen(repository, listener, false, new ArgumentListBuilder("status", "--rev", baseline.id, "--rev", remote)));
 
-            MercurialTagAction cur = new MercurialTagAction(remote);
+            MercurialTagAction cur = new MercurialTagAction(remote, subdir);
             return new PollingResult(baseline,cur,computeDegreeOfChanges(changedFileNames,output));
         } catch(IOException e) {
             if (causedByMissingHg(e)) {
@@ -423,7 +424,7 @@ public class MercurialSCM extends SCM implements Serializable {
     private void determineChanges(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, File changelogFile, FilePath repository) throws IOException, InterruptedException {
         
         AbstractBuild<?, ?> previousBuild = build.getPreviousBuild();
-        MercurialTagAction prevTag = previousBuild != null ? previousBuild.getAction(MercurialTagAction.class) : null;
+        MercurialTagAction prevTag = previousBuild != null ? findTag(previousBuild) : null;
         if (prevTag == null) {
             listener.getLogger().println("WARN: Revision data for previous build unavailable; unable to determine change log");
             createEmptyChangeLog(changelogFile, listener, "changelog");
@@ -525,7 +526,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
         String tip = hg.tip(repository, null);
         if (tip != null) {
-            build.addAction(new MercurialTagAction(tip));
+            build.addAction(new MercurialTagAction(tip, subdir));
         }
     }
 
@@ -604,21 +605,38 @@ public class MercurialSCM extends SCM implements Serializable {
 
         String tip = hg.tip(repository, null);
         if (tip != null) {
-            build.addAction(new MercurialTagAction(tip));
+            build.addAction(new MercurialTagAction(tip, subdir));
         }
     }
 
     @Override
     public void buildEnvVars(AbstractBuild<?,?> build, Map<String, String> env) {
-        MercurialTagAction a = build.getAction(MercurialTagAction.class);
+        MercurialTagAction a = findTag(build);
         if (a != null) {
             env.put("MERCURIAL_REVISION", a.id);
         }
     }
 
+    private MercurialTagAction findTag(AbstractBuild<?, ?> build) {
+        for (Action action : build.getActions()) {
+            if (action instanceof MercurialTagAction) {
+                MercurialTagAction tag = (MercurialTagAction) action;
+                // JENKINS-12162: differentiate plugins in different subdirs
+                if ((subdir == null && tag.subdir == null) || (subdir != null && subdir.equals(tag.subdir))) {
+                    return tag;
+                }
+            }
+        }
+        return null;
+    }
+
     @Override
     public ChangeLogParser createChangeLogParser() {
         return new MercurialChangeLogParser(_modules);
+    }
+
+    @Override public FilePath getModuleRoot(FilePath workspace, AbstractBuild build) {
+        return workspace2Repo(workspace);
     }
 
     @Override

@@ -1,9 +1,10 @@
 package hudson.plugins.mercurial;
 
-import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Proc;
 import hudson.model.AbstractBuild;
+import hudson.model.Cause.UserCause;
+import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.ParametersAction;
 import hudson.model.Result;
@@ -11,9 +12,11 @@ import hudson.model.StringParameterValue;
 import hudson.scm.ChangeLogSet;
 import hudson.scm.ChangeLogSet.Entry;
 import hudson.scm.PollingResult;
+import hudson.scm.SCM;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -438,6 +441,29 @@ public class MercurialSCMTest extends MercurialTestCase {
                 Collections.singletonList(Collections.singleton("dir3/f1")), b);
     }
 
+    @Bug(12162)
+    public void testChangelogInMultiSCM() throws Exception {
+        FreeStyleProject p = createFreeStyleProject();
+        hg(repo, "init");
+        touchAndCommit(repo, "r1f1");
+        File repo2 = createTmpDir();
+        hg(repo2, "init");
+        touchAndCommit(repo2, "r2f1");
+        p.setScm(new MultiSCM(Arrays.<SCM>asList(
+                new MercurialSCM(hgInstallation, repo.getPath(), null, null, "r1", null, false),
+                new MercurialSCM(hgInstallation, repo2.getPath(), null, null, "r2", null, false))));
+        FreeStyleBuild b = assertBuildStatusSuccess(p.scheduleBuild2(0, new UserCause()).get());
+        touchAndCommit(repo, "r1f2");
+        touchAndCommit(repo2, "r2f2");
+        assertTrue(pollSCMChanges(p).hasChanges());
+        b = assertBuildStatusSuccess(p.scheduleBuild2(0, new UserCause()).get());
+        List<Set<String>> paths = new ArrayList<Set<String>>();
+        // XXX "r1/r1f2" etc. would be preferable; probably requires determineChanges to prepend subdir?
+        paths.add(Collections.singleton("r1f2"));
+        paths.add(Collections.singleton("r2f2"));
+        assertChangeSetPaths(paths, b);
+    }
+
     public void testPolling() throws Exception {
         AbstractBuild<?, ?> b;
         PollingResult pr;
@@ -497,15 +523,15 @@ public class MercurialSCMTest extends MercurialTestCase {
         return createPretendSlave(new NoopFakeLauncher());
     }
 
-    private void assertChangeSetPaths(List<Set<String>> expectedChangeSetPaths,
-            AbstractBuild<?, ?> build) {
+    private void assertChangeSetPaths(List<? extends Set<String>> expectedChangeSetPaths,
+            AbstractBuild<?, ?> build) throws IOException {
         ChangeLogSet<? extends Entry> actualChangeLogSet = build.getChangeSet();
         List<Set<String>> actualChangeSetPaths = new LinkedList<Set<String>>();
         for (Entry entry : actualChangeLogSet) {
             actualChangeSetPaths.add(new LinkedHashSet<String>(entry
                     .getAffectedPaths()));
         }
-        assertEquals(expectedChangeSetPaths, actualChangeSetPaths);
+        assertEquals(build.getLog(99).toString(), expectedChangeSetPaths, actualChangeSetPaths);
     }
 
     private void assertPollingResult(PollingResult.Change expectedChangeDegree,
