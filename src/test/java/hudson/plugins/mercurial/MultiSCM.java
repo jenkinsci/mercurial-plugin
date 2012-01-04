@@ -14,7 +14,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,12 +36,11 @@ class MultiSCM extends SCM {
     }
 
     private static String keyFor(SCM scm, FilePath ws, AbstractBuild<?,?> build) { // JENKINS-12298
-        FilePath[] roots = scm.getModuleRoots(ws, build);
-        String[] rel = new String[roots.length];
-        for (int i = 0; i < roots.length; i++) {
-            rel[i] = roots[i].equals(ws) ? "." : roots[i].getRemote().substring(ws.getRemote().length() + 1);
+        StringBuilder b = new StringBuilder(scm.getType());
+        for (FilePath root : scm.getModuleRoots(ws, build)) {
+            b.append(root.getRemote().substring(ws.getRemote().length()));
         }
-        return scm.getType() + Arrays.toString(rel);
+        return b.toString();
     }
     
     @Override public SCMRevisionState calcRevisionsFromBuild(AbstractBuild<?,?> build, Launcher launcher, TaskListener listener) throws IOException, InterruptedException {
