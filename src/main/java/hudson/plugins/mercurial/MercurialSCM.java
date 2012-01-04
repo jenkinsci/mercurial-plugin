@@ -25,13 +25,11 @@ import hudson.scm.SCM;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.ForkOutputStream;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.Serializable;
@@ -225,11 +223,9 @@ public class MercurialSCM extends SCM implements Serializable {
             throws IOException, InterruptedException {
         // tag action is added during checkout, so this shouldn't be called, but just in case.
         HgExe hg = new HgExe(this, launcher, build, listener, build.getEnvironment(listener));
-        String tip = hg.tip(workspace2Repo(build.getWorkspace()));
+        String tip = hg.tip(workspace2Repo(build.getWorkspace()), null);
         return tip != null ? new MercurialTagAction(tip) : null;
     }
-
-    private static final String FILES_STYLE = "changeset = 'id:{node}\\nfiles:{files}\\n'\n" + "file = '{file}:'";
 
     @Override
     protected PollingResult compareRemoteRevisionWith(AbstractProject<?, ?> project, Launcher launcher, FilePath workspace,
@@ -240,30 +236,24 @@ public class MercurialSCM extends SCM implements Serializable {
 
         // XXX do canUpdate check similar to in checkout, and possibly return INCOMPARABLE
 
-        // Mercurial requires the style file to be in a file..
-        Set<String> changedFileNames = new HashSet<String>();
-        FilePath tmpFile = workspace.createTextTempFile("tmp", "style", FILES_STYLE);
         try {
             // Get the list of changed files.
             Node node = project.getLastBuiltOn(); // HUDSON-5984: ugly but matches what AbstractProject.poll uses
 
             FilePath repository = workspace2Repo(workspace);
             pull(launcher, repository, listener, output, node,getBranch());
-            
-            ArgumentListBuilder logCmd = findHgExe(node, listener, false);
-            logCmd.add("log", "--style", tmpFile.getRemote());
-            logCmd.add("--branch", getBranch());
-            logCmd.add("--no-merges");
 
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ForkOutputStream fos = new ForkOutputStream(baos, output);
+            HgExe hg = new HgExe(this, launcher, node, listener, /*XXX*/new EnvVars());
+            String remote = hg.tip(repository, getBranch());
+            if (remote == null) {
+                throw new IOException("failed to find ID of branch head");
+            }
+            if (remote.equals(baseline.id)) { // shortcut
+                return new PollingResult(baseline, new MercurialTagAction(remote), Change.NONE);
+            }
+            Set<String> changedFileNames = parseStatus(hg.popen(repository, listener, false, new ArgumentListBuilder("status", "--rev", baseline.id, "--rev", remote)));
 
-            logCmd.add("--prune", baseline.id);
-            joinWithPossibleTimeout(
-                    launch(launcher).cmds(logCmd).stdout(fos).pwd(repository),
-                    true, listener);
-
-            MercurialTagAction cur = parsePollingLogOutput(baos, baseline, changedFileNames);
+            MercurialTagAction cur = new MercurialTagAction(remote);
             return new PollingResult(baseline,cur,computeDegreeOfChanges(changedFileNames,output));
         } catch(IOException e) {
             if (causedByMissingHg(e)) {
@@ -274,9 +264,16 @@ public class MercurialSCM extends SCM implements Serializable {
             IOException ex = new IOException("Failed to compare with remote repository");
             ex.initCause(e);
             throw ex;
-        } finally {
-            tmpFile.delete();
         }
+    }
+
+    static Set<String> parseStatus(String status) {
+        Set<String> result = new HashSet<String>();
+        Matcher m = Pattern.compile("(?m)^[ARM] (.+)").matcher(status);
+        while (m.find()) {
+            result.add(m.group(1));
+        }
+        return result;
     }
 
     private void pull(Launcher launcher, FilePath repository, TaskListener listener, PrintStream output, Node node, String branch) throws IOException, InterruptedException {
@@ -336,36 +333,6 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         return affecting;
-    }
-
-    private static Pattern FILES_LINE = Pattern.compile("files:(.*)");
-
-    private MercurialTagAction parsePollingLogOutput(ByteArrayOutputStream output, MercurialTagAction baseline,  Set<String> result) throws IOException {
-        String headId = null; // the tip of the remote revision
-        BufferedReader in = new BufferedReader(new InputStreamReader(
-                new ByteArrayInputStream(output.toByteArray())));
-        String line;
-        while ((line = in.readLine()) != null) {
-            Matcher matcher = FILES_LINE.matcher(line);
-            if (matcher.matches()) {
-                for (String s : matcher.group(1).split(":")) {
-                    if (s.length() > 0) {
-                        result.add(s);
-                    }
-                }
-            }
-            if (line.startsWith("id:")) {
-                String id = line.substring(3);
-                if (headId == null) {
-                    headId = id;
-                }
-            }
-        }
-
-        if (headId==null) {
-            return baseline; // no new revisions found
-        }
-        return new MercurialTagAction(headId);
     }
 
     public static MercurialInstallation findInstallation(String name) {
@@ -548,7 +515,7 @@ public class MercurialSCM extends SCM implements Serializable {
             }
         }
 
-        String tip = hg.tip(repository);
+        String tip = hg.tip(repository, null);
         if (tip != null) {
             build.addAction(new MercurialTagAction(tip));
         }
@@ -627,7 +594,7 @@ public class MercurialSCM extends SCM implements Serializable {
         upArgs.add("--rev", getBranch(env));
         hg.run(upArgs).pwd(repository).join();
 
-        String tip = hg.tip(repository);
+        String tip = hg.tip(repository, null);
         if (tip != null) {
             build.addAction(new MercurialTagAction(tip));
         }
@@ -657,7 +624,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private boolean causedByMissingHg(IOException e) {
         String message = e.getMessage();
-        return message.startsWith("Cannot run program") && message.endsWith("No such file or directory");
+        return message != null && message.startsWith("Cannot run program") && message.endsWith("No such file or directory");
     }
 
     static boolean CACHE_LOCAL_REPOS = false;

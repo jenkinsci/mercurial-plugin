@@ -105,6 +105,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         // No support for partial checkouts yet, so workspace will contain
         // everything.
         buildAndCheck(p, "dir3/f");
+        /* superseded by JENKINS-7594:
         // HUDSON-4972: do not pay attention to merges
         // (reproduce using the pathological scenario, since reproducing the
         // actual scenario
@@ -117,6 +118,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         pr = pollSCMChanges(p);
         assertEquals(PollingResult.Change.INSIGNIFICANT, pr.change);
         buildAndCheck(p, "dir4/f");
+        */
     }
 
     @Bug(6337)
@@ -136,6 +138,61 @@ public class MercurialSCMTest extends MercurialTestCase {
         pr = pollSCMChanges(p);
         assertEquals(PollingResult.Change.SIGNIFICANT, pr.change);
         buildAndCheck(p, "dir1/f");
+    }
+
+    public void testParseStatus() throws Exception {
+        assertEquals(new HashSet<String>(Arrays.asList("whatever", "added", "mo-re", "whatever-c", "initial", "more")), MercurialSCM.parseStatus(
+                  "M whatever\n"
+                + "A added\n"
+                + "A mo-re\n"
+                + "  more\n"
+                + "A whatever-c\n"
+                + "  whatever\n"
+                + "R initial\n"
+                + "R more\n"));
+    }
+
+    @Bug(7594)
+    public void testPollingHonorsBranchMerges() throws Exception {
+        FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null, null, null, false));
+        hg(repo, "init");
+        touchAndCommit(repo, "starter");
+        pollSCMChanges(p);
+        buildAndCheck(p, "starter");
+        hg(repo, "branch", "b");
+        touchAndCommit(repo, "feature");
+        hg(repo, "update", "default");
+        hg(repo, "merge", "b");
+        hg(repo, "commit", "--message", "merged");
+        PollingResult pr = pollSCMChanges(p);
+        assertEquals(PollingResult.Change.SIGNIFICANT, pr.change);
+        buildAndCheck(p, "feature");
+    }
+
+    @Bug(7594)
+    public void testPollingHonorsBranchMergesWithModules() throws Exception {
+        FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, "mod1", null, null, false));
+        hg(repo, "init");
+        touchAndCommit(repo, "starter");
+        pollSCMChanges(p);
+        buildAndCheck(p, "starter");
+        hg(repo, "branch", "mod1dev");
+        touchAndCommit(repo, "mod1/feature");
+        hg(repo, "update", "default");
+        hg(repo, "merge", "mod1dev");
+        hg(repo, "commit", "--message", "merged");
+        PollingResult pr = pollSCMChanges(p);
+        assertEquals(PollingResult.Change.SIGNIFICANT, pr.change);
+        buildAndCheck(p, "mod1/feature");
+        hg(repo, "branch", "mod2dev");
+        touchAndCommit(repo, "mod2/feature");
+        hg(repo, "update", "default");
+        hg(repo, "merge", "mod2dev");
+        hg(repo, "commit", "--message", "merged");
+        pr = pollSCMChanges(p);
+        assertEquals(PollingResult.Change.INSIGNIFICANT, pr.change);
     }
 
     @Bug(4702)
