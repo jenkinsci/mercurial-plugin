@@ -483,8 +483,9 @@ public class MercurialSCM extends SCM implements Serializable {
         EnvVars env = build.getEnvironment(listener);
 
         HgExe hg = new HgExe(this, launcher, build, listener, env);
+        Node node = Computer.currentComputer().getNode(); // XXX why not build.getBuiltOn()?
         try {
-            pull(launcher, repository, listener, new PrintStream(new NullOutputStream()), Computer.currentComputer().getNode(), getBranch(env));
+            pull(launcher, repository, listener, new PrintStream(new NullOutputStream()), node, getBranch(env));
         } catch (IOException e) {
             if (causedByMissingHg(e)) {
                 listener.error("Failed to pull because hg could not be found;" +
@@ -506,6 +507,13 @@ public class MercurialSCM extends SCM implements Serializable {
         if (updateExitCode != 0) {
             listener.error("Failed to update");
             throw new AbortException("Failed to update");
+        }
+        if (build.getNumber() % 100 == 0) {
+            PossiblyCachedRepo cachedSource = cachedSource(node, launcher, listener, true);
+            if (cachedSource != null) {
+                // Periodically recreate hardlinks to the cache to save disk space.
+                hg.run("--config", "extensions.relink=", "relink", cachedSource.getRepoLocation()).pwd(repository).join(); // ignore failures
+            }
         }
         
         if(clean) {
