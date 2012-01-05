@@ -8,13 +8,7 @@ import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Launcher.ProcStarter;
 import hudson.Util;
-import hudson.model.Action;
-import hudson.model.BuildListener;
-import hudson.model.TaskListener;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
-import hudson.model.Computer;
-import hudson.model.Node;
+import hudson.model.*;
 import hudson.plugins.mercurial.browser.HgBrowser;
 import hudson.plugins.mercurial.browser.HgWeb;
 import hudson.scm.ChangeLogParser;
@@ -229,33 +223,34 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     @Override
+    public boolean requiresWorkspaceForPolling() {
+        MercurialInstallation mercurialInstallation = findInstallation(installation);
+        return mercurialInstallation == null || !(mercurialInstallation.isUseCaches() || mercurialInstallation.isUseSharing() );
+    }
+
+    @Override
     protected PollingResult compareRemoteRevisionWith(AbstractProject<?, ?> project, Launcher launcher, FilePath workspace,
             TaskListener listener, SCMRevisionState _baseline) throws IOException, InterruptedException {
         MercurialTagAction baseline = (MercurialTagAction)_baseline;
 
         PrintStream output = listener.getLogger();
 
+        if (!requiresWorkspaceForPolling()) {
+            launcher = Hudson.getInstance().createLauncher(listener);
+            PossiblyCachedRepo possiblyCachedRepo = cachedSource(Hudson.getInstance(), launcher, listener, true);
+            FilePath repositoryCache = new FilePath(new File(possiblyCachedRepo.getRepoLocation()));
+            return compare(launcher, listener, baseline, output, Hudson.getInstance(), repositoryCache);
+        }
         // XXX do canUpdate check similar to in checkout, and possibly return INCOMPARABLE
 
         try {
             // Get the list of changed files.
             Node node = project.getLastBuiltOn(); // HUDSON-5984: ugly but matches what AbstractProject.poll uses
-
             FilePath repository = workspace2Repo(workspace);
+
             pull(launcher, repository, listener, output, node,getBranch());
 
-            HgExe hg = new HgExe(this, launcher, node, listener, /*XXX*/new EnvVars());
-            String remote = hg.tip(repository, getBranch());
-            if (remote == null) {
-                throw new IOException("failed to find ID of branch head");
-            }
-            if (remote.equals(baseline.id)) { // shortcut
-                return new PollingResult(baseline, new MercurialTagAction(remote, subdir), Change.NONE);
-            }
-            Set<String> changedFileNames = parseStatus(hg.popen(repository, listener, false, new ArgumentListBuilder("status", "--rev", baseline.id, "--rev", remote)));
-
-            MercurialTagAction cur = new MercurialTagAction(remote, subdir);
-            return new PollingResult(baseline,cur,computeDegreeOfChanges(changedFileNames,output));
+            return compare(launcher, listener, baseline, output, node, repository);
         } catch(IOException e) {
             if (causedByMissingHg(e)) {
                 listener.error("Failed to compare with remote repository because hg could not be found;" +
@@ -266,6 +261,21 @@ public class MercurialSCM extends SCM implements Serializable {
             ex.initCause(e);
             throw ex;
         }
+    }
+
+    private PollingResult compare(Launcher launcher, TaskListener listener, MercurialTagAction baseline, PrintStream output, Node node, FilePath repository) throws IOException, InterruptedException {
+        HgExe hg = new HgExe(this, launcher, node, listener, /*XXX*/new EnvVars());
+        String remote = hg.tip(repository, getBranch());
+        if (remote == null) {
+            throw new IOException("failed to find ID of branch head");
+        }
+        if (remote.equals(baseline.id)) { // shortcut
+            return new PollingResult(baseline, new MercurialTagAction(remote, subdir), Change.NONE);
+        }
+        Set<String> changedFileNames = parseStatus(hg.popen(repository, listener, false, new ArgumentListBuilder("status", "--rev", baseline.id, "--rev", remote)));
+
+        MercurialTagAction cur = new MercurialTagAction(remote, subdir);
+        return new PollingResult(baseline,cur,computeDegreeOfChanges(changedFileNames,output));
     }
 
     static Set<String> parseStatus(String status) {
