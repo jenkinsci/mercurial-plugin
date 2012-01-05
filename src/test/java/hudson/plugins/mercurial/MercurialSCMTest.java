@@ -493,7 +493,11 @@ public class MercurialSCMTest extends MercurialTestCase {
         // We lost the workspace
         b.getWorkspace().deleteRecursive();
         pr = pollSCMChanges(p);
-        assertPollingResult(PollingResult.Change.INCOMPARABLE, null, null, pr);
+        if (p.getScm().requiresWorkspaceForPolling()) {
+            assertPollingResult(PollingResult.Change.INCOMPARABLE, null, null, pr);
+        } else {
+            assertPollingResult(PollingResult.Change.NONE, cs2, cs2, pr);
+        }
         b = p.scheduleBuild2(0).get();
 
         // Multiple polls
