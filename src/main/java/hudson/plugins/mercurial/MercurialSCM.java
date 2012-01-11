@@ -325,8 +325,9 @@ public class MercurialSCM extends SCM implements Serializable {
         Set<String> affecting = new HashSet<String>();
 
         for (String changedFile : changedFileNames) {
+            String unixChangedFile = changedFile.replace('\\', '/');
             for (String dependency : _modules) {
-                if (changedFile.startsWith(dependency)) {
+                if (unixChangedFile.startsWith(dependency)) {
                     affecting.add(changedFile);
                     break;
                 }

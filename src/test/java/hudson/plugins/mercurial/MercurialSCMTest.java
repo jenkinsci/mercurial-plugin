@@ -143,6 +143,25 @@ public class MercurialSCMTest extends MercurialTestCase {
         buildAndCheck(p, "dir1/f");
     }
 
+    @Bug(12361)
+    public void testPollingLimitedToModules3() throws Exception {
+        PollingResult pr;
+        FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, "dir1/f",
+                null, null, false));
+        hg(repo, "init");
+        touchAndCommit(repo, "starter");
+        pollSCMChanges(p);
+        buildAndCheck(p, "starter");
+        touchAndCommit(repo, "dir1/g");
+        pr = pollSCMChanges(p);
+        assertEquals(PollingResult.Change.INSIGNIFICANT, pr.change);
+        touchAndCommit(repo, "dir1/f");
+        pr = pollSCMChanges(p);
+        assertEquals(PollingResult.Change.SIGNIFICANT, pr.change);
+        buildAndCheck(p, "dir1/f");
+    }
+
     public void testParseStatus() throws Exception {
         assertEquals(new HashSet<String>(Arrays.asList("whatever", "added", "mo-re", "whatever-c", "initial", "more")), MercurialSCM.parseStatus(
                   "M whatever\n"
