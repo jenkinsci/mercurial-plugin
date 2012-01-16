@@ -316,6 +316,31 @@ public class MercurialSCMTest extends MercurialTestCase {
         assertFalse(it.hasNext());
     }
 
+    public void testChangesMergedToRenamedModulesTriggerBuild() throws Exception {
+        hg(repo, "init");
+        touchAndCommit(repo, "alltogether/some_interface", "alltogether/some_class");
+        hg(repo, "branch", "stable");
+        //create a change in a lower branch, which should trigger a build later on
+        touchAndCommit(repo, "alltogether/some_class");
+
+
+        hg(repo, "up", "default");
+        hg(repo, "mv", "alltogether/some_interface", "api/some_interface");
+        hg(repo, "mv", "alltogether/some_class", "impl/some_class");
+        hg(repo, "commit", "--message", "reorganizing repository to properly split api and implementation");
+        String reorganizationCommit = getLastChangesetId(repo);
+
+        FreeStyleProject projectForImplModule = createFreeStyleProject();
+        projectForImplModule.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, "impl", null, null, false));
+        projectForImplModule.scheduleBuild2(0).get();
+
+        hg(repo, "merge", "stable");
+        hg(repo, "commit", "--message", "merge changes from stable branch");
+        String mergeCommit = getLastChangesetId(repo);
+
+        assertPollingResult(PollingResult.Change.SIGNIFICANT, reorganizationCommit, mergeCommit, pollSCMChanges(projectForImplModule));
+    }
+
     @Bug(3602)
     public void testSubdirectoryCheckout() throws Exception {
         FreeStyleProject p = createFreeStyleProject();

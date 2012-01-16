@@ -65,10 +65,14 @@ public abstract class MercurialTestCase extends HudsonTestCase {
 
     protected void touchAndCommit(File repo, String... names) throws Exception {
         for (String name : names) {
-            FilePath toCreate = new FilePath(repo).child(name);
-            toCreate.getParent().mkdirs();
-            toCreate.touch(0);
-            hg(repo, "add", name);
+            FilePath toTouch = new FilePath(repo).child(name);
+            if (!toTouch.exists()) {
+                toTouch.getParent().mkdirs();
+                toTouch.touch(0);
+                hg(repo, "add", name);
+            } else {
+                toTouch.write(toTouch.readToString() + "extra line\n", "UTF-8");
+            }
         }
         hg(repo, "commit", "--message", "added " + Arrays.toString(names));
     }
