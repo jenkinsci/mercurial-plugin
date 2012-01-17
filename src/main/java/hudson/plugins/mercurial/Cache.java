@@ -107,14 +107,14 @@ class Cache {
 
         // hg invocation on master
         // do we need to pass in EnvVars from a build too?
-        HgExe masterHg = new HgExe(config,masterLauncher,master,listener,new EnvVars());        
+        HgExe masterHg = new HgExe(config,masterLauncher,master,listener,new EnvVars());
         
         // Lock the block used to verify we get a cloned repo in the master, 
         // whether if it was previously cloned in a different build or if it's 
         // going to be cloned right now.
         masterLock.lockInterruptibly();
         try {
-            listener.getLogger().println("...acquired master cache lock.");            
+            listener.getLogger().println("Acquired master cache lock.");
 
             if (!masterCache.isDirectory()) {
                 masterCaches.mkdirs();
@@ -126,7 +126,7 @@ class Cache {
             }
         } finally {
             masterLock.unlock();
-            listener.getLogger().println("master cache lock released.");
+            listener.getLogger().println("Master cache lock released.");
         }
 
         if (pullRequired) {
@@ -148,12 +148,12 @@ class Cache {
         
         boolean slaveNodeWasLocked = slaveNodeLock.isLocked();
         if (slaveNodeWasLocked) {
-            listener.getLogger().println("Waiting for slave node lock on hgcache/" + hash + " " + slaveNodeWasLocked + "...");
+            listener.getLogger().println("Waiting for slave node cache lock in " + node.getNodeName() + " on hgcache/" + hash + " " + slaveNodeWasLocked + "...");
         }
         
         slaveNodeLock.lockInterruptibly();
         try {
-            listener.getLogger().println("...acquired cache slave node lock.");            
+            listener.getLogger().println("Acquired slave node cache lock for node " + node.getNodeName() + ".");            
 
             FilePath localCaches = node.getRootPath().child("hgcache");
             FilePath localCache = localCaches.child(hash);
@@ -224,7 +224,7 @@ class Cache {
             
         } finally {
             slaveNodeLock.unlock();
-            listener.getLogger().println("cache slave node lock released.");
+            listener.getLogger().println("Slave node cache lock released for node " + node.getNodeName() + ".");
         }
     }
 
