@@ -104,6 +104,21 @@ public class MercurialSCMTest extends MercurialTestCase {
         assertFalse(pollSCMChanges(p).hasChanges());
     }
 
+    public void testTag() throws Exception {
+        hg(repo, "init");
+        touchAndCommit(repo, "init");
+        hg(repo, "tag", "init");
+        touchAndCommit(repo, "ignored");
+        FreeStyleProject p = createFreeStyleProject();
+        // Clone off b.
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "init", null,
+                null, null, false));
+        buildAndCheck(p, "init");
+        touchAndCommit(repo, "should-be-ignored");
+        // Changes should be ignored.
+        assertFalse(pollSCMChanges(p).hasChanges());
+    }
+
     @Bug(1099)
     public void testPollingLimitedToModules() throws Exception {
         PollingResult pr;
@@ -294,8 +309,8 @@ public class MercurialSCMTest extends MercurialTestCase {
         // ParametersDefinitionProperty just looks untestable:
         String log = buildAndCheck(p, "variant", new ParametersAction(
                 new StringParameterValue("BRANCH", "b")));
-        assertTrue(log, log.contains("--rev b"));
-        assertFalse(log, log.contains("--rev ${BRANCH}"));
+        assertTrue(log, log.contains("--updaterev b"));
+        assertFalse(log, log.contains("--updaterev ${BRANCH}"));
         touchAndCommit(repo, "further-variant");
         // the following assertion commented out as a part of the fix to
         // HUDSON-6126

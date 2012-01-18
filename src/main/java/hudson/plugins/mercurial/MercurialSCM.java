@@ -300,7 +300,7 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     /**
-     * @param revision mercurial revision to be pulled, may be a named branch or changesetId
+     * @param revision mercurial revision to be pulled, may be a named branch, tag or changesetId
      */
     private void pull(Launcher launcher, FilePath repository, TaskListener listener, PrintStream output, Node node, String revision) throws IOException, InterruptedException {
         ArgumentListBuilder cmd = findHgExe(node, listener, false);
@@ -577,18 +577,15 @@ public class MercurialSCM extends SCM implements Serializable {
             if (cachedSource.isUseSharing()) {
                 args.add("--config", "extensions.share=");
                 args.add("share");
-                args.add("--noupdate");
                 args.add(cachedSource.getRepoLocation());
             } else {
                 args.add("clone");
-                args.add("--rev", getBranch(env));
-                args.add("--noupdate");
+                args.add("--updaterev", getBranch(env));
                 args.add(cachedSource.getRepoLocation());
             }
         } else {
             args.add("clone");
-            args.add("--rev", getBranch(env));
-            args.add("--noupdate");
+            args.add("--updaterev", getBranch(env));
             args.add(source);
         }
         args.add(repository.getRemote());
@@ -624,10 +621,13 @@ public class MercurialSCM extends SCM implements Serializable {
                     .pwd(repository).join(); // ignore failures
         }
 
-        ArgumentListBuilder upArgs = new ArgumentListBuilder();
-        upArgs.add("update");
-        upArgs.add("--rev", getBranch(env));
-        hg.run(upArgs).pwd(repository).join();
+        if (cachedSource != null && cachedSource.isUseSharing()) {
+            // Workspace was created using share, so we have to switch to the expected revision/changetset/tag
+            ArgumentListBuilder upArgs = new ArgumentListBuilder();
+            upArgs.add("update");
+            upArgs.add("--rev", getBranch(env));
+            hg.run(upArgs).pwd(repository).join();
+        }
 
         String tip = hg.tip(repository, null);
         if (tip != null) {
