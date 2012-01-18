@@ -1,4 +1,9 @@
 <div>
   Specify the branch name if you'd like to track a specific branch in a repository. Leave this field
-  empty otherwise, to track the "default" branch.
+  empty otherwise, to track the "default" branch. Can be configured as a job parameter using a dynamic expression
+  like <pre>${branch</pre>.
+  <p>
+  You can as well use a changeset ID here (but not a tag), maybe set as a job parameter as <pre>${changeset}</pre>,
+  for the job to build a specific revision. Please note that, in such case, scm polling will not be relevant and
+  should be disabled.
 </div>

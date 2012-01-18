@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.codehaus.plexus.util.StringOutputStream;
 import org.jvnet.hudson.test.HudsonTestCase;
 
 public abstract class MercurialTestCase extends HudsonTestCase {
@@ -54,7 +55,7 @@ public abstract class MercurialTestCase extends HudsonTestCase {
         assertEquals(0, MercurialSCM.launch(launcher).cmds(cmds).pwd(repo).stdout(listener).join());
     }
 
-    private List<String> assembleHgCommand(String[] args) {
+    private List<String> assembleHgCommand(String ... args) {
         List<String> cmds = new ArrayList<String>();
         cmds.add("hg");
         cmds.add("--config");
@@ -71,6 +72,13 @@ public abstract class MercurialTestCase extends HudsonTestCase {
             hg(repo, "add", name);
         }
         hg(repo, "commit", "--message", "added " + Arrays.toString(names));
+    }
+    
+    protected String tip(File repo) throws Exception {
+        List<String> cmds = assembleHgCommand("tip", "--template", "{node}");
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        MercurialSCM.launch(launcher).cmds(cmds).pwd(repo).stdout(out).join();
+        return out.toString();
     }
 
     protected String buildAndCheck(FreeStyleProject p, String name,

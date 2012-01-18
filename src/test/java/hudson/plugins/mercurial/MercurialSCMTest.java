@@ -89,6 +89,21 @@ public class MercurialSCMTest extends MercurialTestCase {
         assertFalse(pollSCMChanges(p).hasChanges());
     }
 
+    public void testChangeSet() throws Exception {
+        hg(repo, "init");
+        touchAndCommit(repo, "init");
+        hg(repo, "tag", "init");
+        String changeSetId = tip(repo);
+        FreeStyleProject p = createFreeStyleProject();
+        // Clone off b.
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), changeSetId, null,
+                null, null, false));
+        buildAndCheck(p, "init");
+        touchAndCommit(repo, "should-be-ignored");
+        // Changes should be ignored.
+        assertFalse(pollSCMChanges(p).hasChanges());
+    }
+
     @Bug(1099)
     public void testPollingLimitedToModules() throws Exception {
         PollingResult pr;
