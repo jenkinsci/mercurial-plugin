@@ -32,7 +32,7 @@ import org.jvnet.hudson.test.PretendSlave;
 
 public class MercurialSCMTest extends MercurialTestCase {
 
-    private File repo;
+    protected File repo;
     protected String hgInstallation = null; // see DebugFlagTest
 
     protected @Override
