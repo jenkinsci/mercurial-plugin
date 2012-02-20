@@ -2,4 +2,4 @@ target
 work
 mercurial.i*
 .settings
-.idea/*
+.idea
