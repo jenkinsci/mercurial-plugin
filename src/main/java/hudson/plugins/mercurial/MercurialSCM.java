@@ -80,22 +80,25 @@ public class MercurialSCM extends SCM implements Serializable {
     /**
      * In-repository branch to follow. Null indicates "default".
      */
-    private final String branch;
+    private String branch;
 
     /** Slash-separated subdirectory of the workspace in which the repository will be kept; null for top level. */
     private final String subdir;
 
     private final boolean clean;
 
+    private final boolean donotignoremerges;
+
     private HgBrowser browser;
 
     @DataBoundConstructor
-    public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean) {
+    public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean, boolean donotignoremerges) {
         this.installation = installation;
         this.source = Util.fixEmptyAndTrim(source);
         this.modules = Util.fixNull(modules);
         this.subdir = Util.fixEmptyAndTrim(subdir);
         this.clean = clean;
+        this.donotignoremerges = donotignoremerges;
         parseModules();
         branch = Util.fixEmpty(branch);
         if (branch != null && branch.equals("default")) {
@@ -132,7 +135,7 @@ public class MercurialSCM extends SCM implements Serializable {
         parseModules();
         return this;
     }
-
+    
     public String getInstallation() {
         return installation;
     }
@@ -154,6 +157,11 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private String getBranch(EnvVars env) {
         return branch == null ? "default" : env.expand(branch);
+    }
+    
+    public void setBranch(String bname)
+    {
+    	this.branch = bname;
     }
 
     public String getSubdir() {
@@ -184,6 +192,11 @@ public class MercurialSCM extends SCM implements Serializable {
     public boolean isClean() {
         return clean;
     }
+
+    public boolean isDonotignoremerges() {
+        return donotignoremerges;
+    }
+
 
     private ArgumentListBuilder findHgExe(AbstractBuild<?,?> build, TaskListener listener, boolean allowDebug) throws IOException, InterruptedException {
         return findHgExe(build.getBuiltOn(), listener, allowDebug);
@@ -249,7 +262,6 @@ public class MercurialSCM extends SCM implements Serializable {
             FilePath repository = workspace2Repo(workspace);
 
             pull(launcher, repository, listener, output, node,getBranch());
-
             return compare(launcher, listener, baseline, output, node, repository);
         } catch(IOException e) {
             if (causedByMissingHg(e)) {
