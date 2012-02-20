@@ -94,15 +94,18 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private final boolean clean;
 
+    private final boolean donotignoremerges;
+
     private HgBrowser browser;
 
     @DataBoundConstructor
-    public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean) {
+    public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean, boolean donotignoremerges) {
         this.installation = installation;
         this.source = Util.fixEmptyAndTrim(source);
         this.modules = Util.fixNull(modules);
         this.subdir = Util.fixEmptyAndTrim(subdir);
         this.clean = clean;
+        this.donotignoremerges = donotignoremerges;
         parseModules();
         branch = Util.fixEmpty(branch);
         if (branch != null && branch.equals("default")) {
@@ -197,6 +200,11 @@ public class MercurialSCM extends SCM implements Serializable {
         return clean;
     }
 
+    public boolean isDonotignoremerges() {
+        return donotignoremerges;
+    }
+
+
     private ArgumentListBuilder findHgExe(AbstractBuild<?,?> build, TaskListener listener, boolean allowDebug) throws IOException, InterruptedException {
         return findHgExe(build.getBuiltOn(), listener, allowDebug);
     }
@@ -258,7 +266,10 @@ public class MercurialSCM extends SCM implements Serializable {
             ArgumentListBuilder logCmd = findHgExe(node, listener, false);
             logCmd.add("log", "--style", tmpFile.getRemote());
             logCmd.add("--branch", getBranch());
-            logCmd.add("--no-merges");
+            if(!donotignoremerges)
+            {
+                logCmd.add("--no-merges");
+            }
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ForkOutputStream fos = new ForkOutputStream(baos, output);
