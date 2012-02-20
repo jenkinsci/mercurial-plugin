@@ -94,7 +94,7 @@ class Cache {
             HgExe masterHg = new HgExe(config,masterLauncher,master,listener,new EnvVars());
 
             if (masterCache.isDirectory()) {
-                if (MercurialSCM.joinWithPossibleTimeout(masterHg.pull().pwd(masterCache), fromPolling, listener) != 0) {
+                if (MercurialSCM.joinWithPossibleTimeout(masterHg.pull().pwd(masterCache), true, listener) != 0) {
                     listener.error("Failed to update " + masterCache);
                     return null;
                 }
