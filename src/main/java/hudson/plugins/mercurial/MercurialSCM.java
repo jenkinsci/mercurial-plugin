@@ -423,8 +423,12 @@ public class MercurialSCM extends SCM implements Serializable {
         }
         if (source.startsWith("file:/") && new File(upstream).toURI().toString().equals(source)) {
             return true;
+        } else if (source.substring(7).equals(upstream)){
+            // #JENKINS-13400
+            // source 'file://' is 7 chars.
+            return true;
         }
-        
+
         listener.error(
                 "Workspace reports paths.default as " + upstream +
                 "\nwhich looks different than " + source +
