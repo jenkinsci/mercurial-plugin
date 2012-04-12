@@ -2,18 +2,17 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>org.jenkins-ci.plugins</groupId>
-    <artifactId>plugin</artifactId>
-    <version>1.400</version>
-    <relativePath />
+    <groupId>org.jvnet.hudson.plugins</groupId>
+    <artifactId>hudson-plugin-parent</artifactId>
+    <version>2.1.2</version>
   </parent>
 
   <artifactId>mercurial</artifactId>
   <version>1.38</version>
   <packaging>hpi</packaging>
 
-  <name>Jenkins Mercurial plugin</name>
-  <description>Integrates Hudson/Jenkins to Mercurial SCM</description>
+  <name>Hudson Mercurial plugin</name>
+  <description>Integrates Hudson to Mercurial SCM</description>
   <url>http://wiki.jenkins-ci.org/display/JENKINS/Mercurial+Plugin</url>
 
   <developers>
@@ -101,12 +100,6 @@
           <groupId>xml-apis</groupId>
           <artifactId>xml-apis</artifactId>
           <version>1.0.b2</version>
-          <scope>provided</scope>
-      </dependency>
-      <dependency>
-          <groupId>org.jenkins-ci.main</groupId>
-          <artifactId>remoting</artifactId>
-          <version>${project.parent.version}</version>
           <scope>provided</scope>
       </dependency>
   </dependencies>

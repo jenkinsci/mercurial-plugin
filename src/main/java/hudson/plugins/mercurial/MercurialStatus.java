@@ -3,16 +3,12 @@ package hudson.plugins.mercurial;
 import com.google.common.collect.Lists;
 import hudson.Extension;
 import hudson.model.AbstractModelObject;
-import hudson.model.UnprotectedRootAction;
-import hudson.Extension;
-import hudson.model.AbstractModelObject;
 import hudson.model.AbstractProject;
 import hudson.model.Hudson;
-import hudson.model.UnprotectedRootAction;
+import hudson.model.RootAction;
 import hudson.scm.SCM;
 import hudson.triggers.SCMTrigger;
 import org.kohsuke.stapler.HttpResponse;
-import org.kohsuke.stapler.HttpResponses;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
@@ -20,7 +16,6 @@ import org.kohsuke.stapler.StaplerResponse;
 import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.net.URISyntaxException;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -29,7 +24,7 @@ import static javax.servlet.http.HttpServletResponse.*;
  * Information screen for the use of Mercurial in Jenkins.
  */
 @Extension
-public class MercurialStatus extends AbstractModelObject implements UnprotectedRootAction {
+public class MercurialStatus extends AbstractModelObject implements RootAction {
     public String getDisplayName() {
         return "Mercurial";
     }
