@@ -10,6 +10,7 @@ import hudson.model.AbstractBuild;
 import hudson.scm.ChangeLogSet;
 import hudson.scm.ChangeLogSet.Entry;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.Set;
 
 public class MultiSCMChangeLogSet extends ChangeLogSet<Entry> {
@@ -22,6 +23,14 @@ public class MultiSCMChangeLogSet extends ChangeLogSet<Entry> {
 		changes = new HashMap<String, ChangeLogSetWrapper>();
         kinds = new HashSet<String>();
 	}
+
+    @Override public Collection<Entry> getLogs() {
+        List<Entry> logs = new LinkedList<Entry>();
+        for (Entry log : this) {
+            logs.add(log);
+        }
+        return logs;
+    }
 
 	public static class ChangeLogSetWrapper {
 		private AbstractBuild build;
