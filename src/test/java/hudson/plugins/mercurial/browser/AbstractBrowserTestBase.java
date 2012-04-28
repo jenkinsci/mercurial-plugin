@@ -4,7 +4,6 @@ import static org.junit.Assert.assertEquals;
 import hudson.plugins.mercurial.MercurialChangeSet;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
 
 import org.junit.Test;
 
@@ -35,9 +34,8 @@ public abstract class AbstractBrowserTestBase {
     /**
      * @param expected
      * @throws IOException
-     * @throws MalformedURLException
      */
-    protected void testGetFileLink(final String expected) throws IOException, MalformedURLException {
+    protected void testGetFileLink(final String expected) throws IOException {
         browser.getChangeSetLink(changeSet);
         assertEquals(expected, browser.getFileLink("src/main/java/hudson/plugins/mercurial/browser/HgBrowser.java").toExternalForm());
     }
@@ -45,9 +43,8 @@ public abstract class AbstractBrowserTestBase {
     /**
      * @param expected
      * @throws IOException
-     * @throws MalformedURLException
      */
-    protected void testGetDiffLink(final String expected) throws IOException, MalformedURLException {
+    protected void testGetDiffLink(final String expected) throws IOException {
         browser.getChangeSetLink(changeSet);
         assertEquals(expected, browser.getDiffLink("src/main/java/hudson/plugins/mercurial/browser/HgBrowser.java").toExternalForm());
     }

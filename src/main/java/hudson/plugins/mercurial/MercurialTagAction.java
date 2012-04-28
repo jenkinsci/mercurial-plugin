@@ -1,6 +1,7 @@
 package hudson.plugins.mercurial;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import hudson.model.AbstractBuild;
 import hudson.scm.SCMRevisionState;
 import org.kohsuke.stapler.export.Exported;
@@ -22,13 +23,24 @@ public class MercurialTagAction extends SCMRevisionState {
      */
     public final String id;
 
-    public MercurialTagAction(@NonNull String id) {
+    /**
+     * Matches {@link MercurialSCM#subdir}.
+     */
+    public final String subdir;
+
+    public MercurialTagAction(@NonNull String id, @Nullable String subdir) {
         this.id = id;
+        this.subdir = subdir;
     }
 
     @Exported(name = "mercurialNodeName")
     public String getId() {
         return id;
+    }
+
+    @Exported
+    public String getSubdir() {
+        return subdir;
     }
 
     /**

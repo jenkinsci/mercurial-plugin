@@ -82,6 +82,17 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
         return rev;
     }
 
+    /**
+     * Gets the globally unique changeset ID.  For general purpose use, use {@link #getNode()}.  This method is intended
+     * for use via reflection by the email-ext plugin.
+     */
+    public String getRevision() {
+        return node;
+    }
+
+    /**
+     * Returns the date of the changeset.  Also used via reflection by the email-ext plugin.
+     */
     @Exported
     public String getDate() {
         return date;
