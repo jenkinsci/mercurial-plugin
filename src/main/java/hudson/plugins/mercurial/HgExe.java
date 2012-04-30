@@ -39,6 +39,7 @@ import hudson.util.ArgumentListBuilder;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -255,7 +256,7 @@ public class HgExe {
         if (pathAsInConfig.equals(pathURL + '/')) {
             return true;
         }
-        if (pathURL.startsWith("file:/") && new File(pathAsInConfig).toURI().toString().equals(pathURL)) {
+        if (pathURL.startsWith("file:/") && URI.create(pathURL).equals(new File(pathAsInConfig).toURI())) {
             return true;
         }
         return false;
