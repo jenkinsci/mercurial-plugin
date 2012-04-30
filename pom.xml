@@ -9,7 +9,7 @@
   </parent>
 
   <artifactId>mercurial</artifactId>
-  <version>1.39-SNAPSHOT</version>
+  <version>1.40-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
   <name>Jenkins Mercurial plugin</name>
@@ -48,6 +48,10 @@
       <system>JIRA</system>
       <url>http://issues.jenkins-ci.org/secure/IssueNavigator.jspa?reset=true&amp;jqlQuery=project+%3D+Jenkins+AND+component+%3D+mercurial+AND+resolution+%3D+Unresolved</url>
   </issueManagement>
+  <ciManagement>
+      <system>jenkins</system>
+      <url>http://ci.jenkins-ci.org/job/plugins_mercurial/</url>
+  </ciManagement>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -56,8 +60,8 @@
 
   <repositories>
     <repository>
-      <id>m.g.o-public</id>
-      <url>http://maven.glassfish.org/content/groups/public/</url>
+      <id>repo.jenkins-ci.org</id>
+      <url>http://repo.jenkins-ci.org/public/</url>
     </repository>
   </repositories>
 
@@ -261,4 +265,12 @@
       </plugins>
   </reporting>
 
-</project>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>repo.jenkins-ci.org</id>
+            <url>http://repo.jenkins-ci.org/public/</url>
+        </pluginRepository>
+    </pluginRepositories>
+</project>  
+

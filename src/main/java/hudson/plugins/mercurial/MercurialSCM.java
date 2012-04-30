@@ -448,7 +448,7 @@ public class MercurialSCM extends SCM implements Serializable {
         ArgumentListBuilder logCommand = findHgExe(build, listener, false).add("log", "--rev", prevTag.getId());
         int exitCode = launch(launcher).cmds(logCommand).envs(env).pwd(repository).join();
         if(exitCode != 0) {
-            listener.error("Previous built revision " + prevTag.getId() + " is not know in this clone; unable to determine change log");
+            listener.error("Previously built revision " + prevTag.getId() + " is not known in this clone; unable to determine change log");
             createEmptyChangeLog(changelogFile, listener, "changelog");
             return;
         }
