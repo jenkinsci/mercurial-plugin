@@ -4,8 +4,7 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>1.400</version>
-    <relativePath />
+    <version>1.420</version>
   </parent>
 
   <artifactId>mercurial</artifactId>
@@ -61,7 +60,6 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <netbeans.hint.jdkPlatform>JDK_1.6</netbeans.hint.jdkPlatform> <!-- HUDSON-8942 / JENKINS-10490 -->
   </properties>
 
   <repositories>
@@ -111,12 +109,6 @@
           <groupId>xml-apis</groupId>
           <artifactId>xml-apis</artifactId>
           <version>1.0.b2</version>
-          <scope>provided</scope>
-      </dependency>
-      <dependency>
-          <groupId>org.jenkins-ci.main</groupId>
-          <artifactId>remoting</artifactId>
-          <version>${project.parent.version}</version>
           <scope>provided</scope>
       </dependency>
   </dependencies>
