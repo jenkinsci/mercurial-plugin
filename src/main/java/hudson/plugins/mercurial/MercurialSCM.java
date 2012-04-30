@@ -79,6 +79,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
     /**
      * In-repository branch to follow. Null indicates "default".
+     * May be as well a changeset ID or tag
      */
     private final String branch;
 
@@ -150,6 +151,13 @@ public class MercurialSCM extends SCM implements Serializable {
      */
     public String getBranch() {
         return branch == null ? "default" : branch;
+    }
+
+    // copy paste form Util.VARIABLE that has private visibility
+    private static final Pattern VARIABLE = Pattern.compile("\\$([A-Za-z0-9_]+|\\{[A-Za-z0-9_]+\\}|\\$)");
+
+    public boolean isBranchSetByEnvironment() {
+        return VARIABLE.matcher(getBranch()).find();
     }
 
     private String getBranch(EnvVars env) {
@@ -248,7 +256,11 @@ public class MercurialSCM extends SCM implements Serializable {
             Node node = project.getLastBuiltOn(); // HUDSON-5984: ugly but matches what AbstractProject.poll uses
             FilePath repository = workspace2Repo(workspace);
 
-            pull(launcher, repository, listener, output, node,getBranch());
+            if (isBranchSetByEnvironment()) {
+                LOGGER.warning("Branch is configured to resolve from a variable, polling will not be relevant");
+                // TODO maybe should throw an exception ?
+            }
+            pull(launcher, repository, listener, output, node, getBranch());
 
             return compare(launcher, listener, baseline, output, node, repository);
         } catch(IOException e) {
@@ -287,10 +299,13 @@ public class MercurialSCM extends SCM implements Serializable {
         return result;
     }
 
-    private void pull(Launcher launcher, FilePath repository, TaskListener listener, PrintStream output, Node node, String branch) throws IOException, InterruptedException {
+    /**
+     * @param revision mercurial revision to be pulled, may be a named branch, tag or changesetId
+     */
+    private void pull(Launcher launcher, FilePath repository, TaskListener listener, PrintStream output, Node node, String revision) throws IOException, InterruptedException {
         ArgumentListBuilder cmd = findHgExe(node, listener, false);
         cmd.add("pull");
-        cmd.add("--rev", branch);
+        cmd.add("--rev", revision);
         PossiblyCachedRepo cachedSource = cachedSource(node, launcher, listener, true);
         if (cachedSource != null) {
             cmd.add(cachedSource.getRepoLocation());
@@ -552,18 +567,15 @@ public class MercurialSCM extends SCM implements Serializable {
             if (cachedSource.isUseSharing()) {
                 args.add("--config", "extensions.share=");
                 args.add("share");
-                args.add("--noupdate");
                 args.add(cachedSource.getRepoLocation());
             } else {
                 args.add("clone");
-                args.add("--rev", getBranch(env));
-                args.add("--noupdate");
+                args.add("--updaterev", getBranch(env));
                 args.add(cachedSource.getRepoLocation());
             }
         } else {
             args.add("clone");
-            args.add("--rev", getBranch(env));
-            args.add("--noupdate");
+            args.add("--updaterev", getBranch(env));
             args.add(source);
         }
         args.add(repository.getRemote());
@@ -599,10 +611,13 @@ public class MercurialSCM extends SCM implements Serializable {
                     .pwd(repository).join(); // ignore failures
         }
 
-        ArgumentListBuilder upArgs = new ArgumentListBuilder();
-        upArgs.add("update");
-        upArgs.add("--rev", getBranch(env));
-        hg.run(upArgs).pwd(repository).join();
+        if (cachedSource != null && cachedSource.isUseSharing()) {
+            // Workspace was created using share, so we have to switch to the expected revision/changetset/tag
+            ArgumentListBuilder upArgs = new ArgumentListBuilder();
+            upArgs.add("update");
+            upArgs.add("--rev", getBranch(env));
+            hg.run(upArgs).pwd(repository).join();
+        }
 
         String tip = hg.tip(repository, null);
         if (tip != null) {
