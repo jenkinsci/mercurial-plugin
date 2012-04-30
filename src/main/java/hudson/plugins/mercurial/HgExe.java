@@ -24,6 +24,7 @@
 package hudson.plugins.mercurial;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import hudson.AbortException;
 import hudson.EnvVars;
@@ -36,6 +37,7 @@ import hudson.model.TaskListener;
 import hudson.util.ArgumentListBuilder;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -236,4 +238,27 @@ public class HgExe {
      * Pattern that matches revision ID.
      */
     private static final Pattern REVISIONID_PATTERN = Pattern.compile("[0-9a-f]{40}");
+
+    /**
+     * Checks whether a normalized path URL matches what a config file requested.
+     * @param pathURL a URL (using {@code file} protocol if local)
+     * @param pathAsInConfig a repository path as in {@link #config} on {@code paths.*}
+     * @return true if the paths are similar, false if they are different locations
+     */
+    static boolean pathEquals(@NonNull String pathURL, @NonNull String pathAsInConfig) {
+        if (pathAsInConfig.equals(pathURL)) {
+            return true;
+        }
+        if ((pathAsInConfig + '/').equals(pathURL)) {
+            return true;
+        }
+        if (pathAsInConfig.equals(pathURL + '/')) {
+            return true;
+        }
+        if (pathURL.startsWith("file:/") && new File(pathAsInConfig).toURI().toString().equals(pathURL)) {
+            return true;
+        }
+        return false;
+    }
+
 }
