@@ -8,7 +8,7 @@
   </parent>
 
   <artifactId>mercurial</artifactId>
-  <version>1.39</version>
+  <version>1.40-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
   <name>Hudson Mercurial plugin</name>
@@ -37,6 +37,12 @@
           <email>david@carrclan.us</email>
       </developer>
   </developers>
+  <licenses>
+      <license>
+          <name>MIT</name>
+          <url>http://www.opensource.org/licenses/mit-license.php</url>
+      </license>
+  </licenses>
 
   <scm>
       <connection>scm:git:git://github.com/jenkinsci/mercurial-plugin.git</connection>
@@ -54,7 +60,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <netbeans.hint.jdkPlatform>JDK_1.6</netbeans.hint.jdkPlatform> <!-- HUDSON-8942 / JENKINS-10490 -->
+    <netbeans.hint.jdkPlatform>JDK_1.6</netbeans.hint.jdkPlatform> <!-- HUDSON-8942 -->
   </properties>
 
   <repositories>
