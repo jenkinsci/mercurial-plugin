@@ -183,9 +183,9 @@ public class HgExe {
      * Gets the revision number of the tip of the workspace.
      * @param rev the revision to identify; defaults to {@code .}, i.e. working copy
      */
-    public @CheckForNull String rev(FilePath repository, @Nullable String rev) throws IOException, InterruptedException {
+    public @CheckForNull String tipNumber(FilePath repository, @Nullable String rev) throws IOException, InterruptedException {
         String id = popen(repository, listener, false, new ArgumentListBuilder("log", "--rev", rev != null ? rev : ".", "--template", "{rev}"));
-        if (!REVISIONID_PATTERN.matcher(id).matches()) {
+        if (!REVISION_NUMBER_PATTERN.matcher(id).matches()) {
             listener.error("Expected to get a revision number but got '" + id + "' instead.");
             return null;
         }
@@ -250,5 +250,5 @@ public class HgExe {
      * Pattern that matches revision ID.
      */
     private static final Pattern NODEID_PATTERN = Pattern.compile("[0-9a-f]{40}");
-    private static final Pattern REVISIONID_PATTERN = Pattern.compile("[0-9]{1,6}");
+    private static final Pattern REVISION_NUMBER_PATTERN = Pattern.compile("[0-9]+");
 }

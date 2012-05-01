@@ -219,8 +219,8 @@ public class MercurialSCM extends SCM implements Serializable {
         // tag action is added during checkout, so this shouldn't be called, but just in case.
         HgExe hg = new HgExe(this, launcher, build, listener, build.getEnvironment(listener));
         String tip = hg.tip(workspace2Repo(build.getWorkspace()), null);
-        String rev = hg.rev(workspace2Repo(build.getWorkspace()), null);
-        return tip != null ? new MercurialTagAction(tip, rev, subdir) : null;
+        String rev = hg.tipNumber(workspace2Repo(build.getWorkspace()), null);
+        return tip != null && rev != null ? new MercurialTagAction(tip, rev, subdir) : null;
     }
 
     @Override
@@ -267,12 +267,15 @@ public class MercurialSCM extends SCM implements Serializable {
     private PollingResult compare(Launcher launcher, TaskListener listener, MercurialTagAction baseline, PrintStream output, Node node, FilePath repository) throws IOException, InterruptedException {
         HgExe hg = new HgExe(this, launcher, node, listener, /*XXX*/new EnvVars());
         String remote = hg.tip(repository, getBranch());
-        String rev = hg.rev(repository, getBranch());
+        String rev = hg.tipNumber(repository, getBranch());
         if (remote == null) {
             throw new IOException("failed to find ID of branch head");
         }
         if (remote.equals(baseline.id)) { // shortcut
             return new PollingResult(baseline, new MercurialTagAction(remote, rev, subdir), Change.NONE);
+        }
+        if (rev == null) {
+            throw new IOException("failed to find revision of branch head");
         }
         Set<String> changedFileNames = parseStatus(hg.popen(repository, listener, false, new ArgumentListBuilder("status", "--rev", baseline.id, "--rev", remote)));
 
@@ -538,7 +541,7 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         String tip = hg.tip(repository, null);
-        String rev = hg.rev(repository, null);
+        String rev = hg.tipNumber(repository, null);
         if (tip != null && rev != null) {
             build.addAction(new MercurialTagAction(tip, rev, subdir));
         }
@@ -618,7 +621,7 @@ public class MercurialSCM extends SCM implements Serializable {
         hg.run(upArgs).pwd(repository).join();
 
         String tip = hg.tip(repository, null);
-        String rev = hg.rev(repository, null);
+        String rev = hg.tipNumber(repository, null);
         if (tip != null && rev != null) {
             build.addAction(new MercurialTagAction(tip, rev, subdir));
         }
@@ -629,7 +632,7 @@ public class MercurialSCM extends SCM implements Serializable {
         MercurialTagAction a = findTag(build);
         if (a != null) {
             env.put("MERCURIAL_REVISION", a.id);
-            env.put("MERCURIAL_CHANGESET_NUMBER", a.rev);
+            env.put("MERCURIAL_REVISION_NUMBER", a.rev);
         }
     }
 
