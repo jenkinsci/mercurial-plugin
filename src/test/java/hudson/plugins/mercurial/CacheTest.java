@@ -2,9 +2,9 @@ package hudson.plugins.mercurial;
 
 import junit.framework.TestCase;
 
-public class CacherTest extends TestCase {
+public class CacheTest extends TestCase {
 
-    public CacherTest(String n) {
+    public CacheTest(String n) {
         super(n);
     }
 
