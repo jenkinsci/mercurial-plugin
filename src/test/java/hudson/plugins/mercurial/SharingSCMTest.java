@@ -20,7 +20,7 @@ public class SharingSCMTest extends MercurialSCMTest {
         Hudson.getInstance()
                 .getDescriptorByType(MercurialInstallation.DescriptorImpl.class)
                 .setInstallations(
-                           new MercurialInstallation(SHARING_INSTALLATION, "",
+                        new MercurialInstallation(SHARING_INSTALLATION, "",
                                 "hg", false, true, true, Collections
                                         .<ToolProperty<?>> emptyList()));
         MercurialSCM.CACHE_LOCAL_REPOS = true;
