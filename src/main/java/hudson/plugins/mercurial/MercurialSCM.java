@@ -271,11 +271,11 @@ public class MercurialSCM extends SCM implements Serializable {
         if (remote == null) {
             throw new IOException("failed to find ID of branch head");
         }
-        if (remote.equals(baseline.id)) { // shortcut
-            return new PollingResult(baseline, new MercurialTagAction(remote, rev, subdir), Change.NONE);
-        }
         if (rev == null) {
             throw new IOException("failed to find revision of branch head");
+        }
+        if (remote.equals(baseline.id)) { // shortcut
+            return new PollingResult(baseline, new MercurialTagAction(remote, rev, subdir), Change.NONE);
         }
         Set<String> changedFileNames = parseStatus(hg.popen(repository, listener, false, new ArgumentListBuilder("status", "--rev", baseline.id, "--rev", remote)));
 
