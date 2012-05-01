@@ -417,19 +417,9 @@ public class MercurialSCM extends SCM implements Serializable {
         if (upstream == null) {
             return false;
         }
-        if (upstream.equals(source)) {
+        if (HgExe.pathEquals(source, upstream)) {
             return true;
         }
-        if ((upstream + '/').equals(source)) {
-            return true;
-        }
-        if (upstream.equals(source + '/')) {
-            return true;
-        }
-        if (source.startsWith("file:/") && new File(upstream).toURI().toString().equals(source)) {
-            return true;
-        }
-        
         listener.error(
                 "Workspace reports paths.default as " + upstream +
                 "\nwhich looks different than " + source +

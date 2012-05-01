@@ -24,6 +24,7 @@
 package hudson.plugins.mercurial;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import hudson.AbortException;
 import hudson.EnvVars;
@@ -36,7 +37,9 @@ import hudson.model.TaskListener;
 import hudson.util.ArgumentListBuilder;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -251,4 +254,26 @@ public class HgExe {
      */
     private static final Pattern NODEID_PATTERN = Pattern.compile("[0-9a-f]{40}");
     private static final Pattern REVISION_NUMBER_PATTERN = Pattern.compile("[0-9]+");
+
+    /**
+     * Checks whether a normalized path URL matches what a config file requested.
+     * @param pathURL a URL (using {@code file} protocol if local)
+     * @param pathAsInConfig a repository path as in {@link #config} on {@code paths.*}
+     * @return true if the paths are similar, false if they are different locations
+     */
+    static boolean pathEquals(@NonNull String pathURL, @NonNull String pathAsInConfig) {
+        if (pathAsInConfig.equals(pathURL)) {
+            return true;
+        }
+        if ((pathAsInConfig + '/').equals(pathURL)) {
+            return true;
+        }
+        if (pathAsInConfig.equals(pathURL + '/')) {
+            return true;
+        }
+        if (pathURL.startsWith("file:/") && URI.create(pathURL).equals(new File(pathAsInConfig).toURI())) {
+            return true;
+        }
+        return false;
+    }
 }
