@@ -41,6 +41,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         repo = createTmpDir();
     }
 
+    @Bug(13329)
     public void testBasicOps() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
@@ -48,9 +49,12 @@ public class MercurialSCMTest extends MercurialTestCase {
 
         hg(repo, "init");
         touchAndCommit(repo, "a");
-        buildAndCheck(p, "a"); // this tests the clone op
+        String log = buildAndCheck(p, "a");
+        assertTrue(log, log.contains(" clone --"));
         touchAndCommit(repo, "b");
-        buildAndCheck(p, "b"); // this tests the update op
+        log = buildAndCheck(p, "b");
+        assertTrue(log, log.contains(" update --"));
+        assertFalse(log, log.contains(" clone --"));
     }
 
     @Bug(4281)

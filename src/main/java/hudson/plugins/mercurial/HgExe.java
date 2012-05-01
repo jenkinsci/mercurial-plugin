@@ -62,6 +62,7 @@ import java.util.regex.Pattern;
  */
 public class HgExe {
     private final ArgumentListBuilder base;
+    private final ArgumentListBuilder baseNoDebug;
     /**
      * Environment variables to invoke hg with.
      */
@@ -77,6 +78,8 @@ public class HgExe {
 
     public HgExe(MercurialSCM scm, Launcher launcher, Node node, TaskListener listener, EnvVars env) throws IOException, InterruptedException {
         base = scm.findHgExe(node, listener, true);
+        // XXX might be more efficient to have a single call returning ArgumentListBuilder[2]?
+        baseNoDebug = scm.findHgExe(node, listener, false);
         this.node = node;
         this.env = env;
         this.launcher = launcher;
@@ -89,8 +92,8 @@ public class HgExe {
         return MercurialSCM.launch(launcher).cmds(args).stdout(listener).envs(env);
     }
 
-    private ArgumentListBuilder seed() {
-        return base.clone();
+    private ArgumentListBuilder seed(boolean allowDebug) {
+        return (allowDebug ? base : baseNoDebug).clone();
     }
 
     public ProcStarter pull() {
@@ -98,7 +101,7 @@ public class HgExe {
     }
 
     public ProcStarter clone(String... args) {
-        return l(seed().add("clone").add(args));
+        return l(seed(true).add("clone").add(args));
     }
 
     public ProcStarter bundleAll(String file) {
@@ -106,7 +109,7 @@ public class HgExe {
     }
 
     public ProcStarter bundle(Collection<String> bases, String file) {
-        ArgumentListBuilder args = seed().add("bundle");
+        ArgumentListBuilder args = seed(true).add("bundle");
         for (String head : bases) {
             args.add("--base", head);
         }
@@ -130,11 +133,11 @@ public class HgExe {
      * Runs arbitrary command.
      */
     public ProcStarter run(String... args) {
-        return l(seed().add(args));
+        return l(seed(true).add(args));
     }
 
     public ProcStarter run(ArgumentListBuilder args) {
-        return l(seed().add(args.toCommandArray()));
+        return l(seed(true).add(args.toCommandArray()));
     }
 
     /**
@@ -207,7 +210,7 @@ public class HgExe {
      */
     public String popen(FilePath repository, TaskListener listener, boolean useTimeout, ArgumentListBuilder args)
             throws IOException, InterruptedException {
-        args = seed().add(args.toCommandArray());
+        args = seed(false).add(args.toCommandArray());
 
         ByteArrayOutputStream rev = new ByteArrayOutputStream();
         if (MercurialSCM.joinWithPossibleTimeout(l(args).pwd(repository).stdout(rev), useTimeout, listener) == 0) {
@@ -237,7 +240,7 @@ public class HgExe {
                 MAP.put(hg.node, m);
             }
 
-            List<String> hgConfig = hg.base.toList();
+            List<String> hgConfig = hg.seed(false).toList();
             Capability cap = m.get(hgConfig);
             if (cap==null)
                 m.put(hgConfig,cap = new Capability());
