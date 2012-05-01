@@ -202,10 +202,6 @@ public class HgExe {
         return popen(repository, listener, false, new ArgumentListBuilder("showconfig", name)).trim();
     }
 
-    public List<String> toArgList() {
-        return base.toList();
-    }
-
     /**
      * Runs the command and captures the output.
      */
@@ -241,7 +237,7 @@ public class HgExe {
                 MAP.put(hg.node, m);
             }
 
-            List<String> hgConfig = hg.toArgList();
+            List<String> hgConfig = hg.base.toList();
             Capability cap = m.get(hgConfig);
             if (cap==null)
                 m.put(hgConfig,cap = new Capability());
