@@ -6,7 +6,7 @@
       <h1>Mercurial Build Data</h1>
 
       <b>Revision:</b>
-      ${it.id}
+      ${it.rev}:${it.id}
     </l:main-panel>
   </l:layout>
 </j:jelly>

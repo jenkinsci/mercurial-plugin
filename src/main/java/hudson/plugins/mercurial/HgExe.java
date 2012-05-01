@@ -169,14 +169,28 @@ public class HgExe {
     }
 
     /**
-     * Gets the revision ID of the tip of the workspace.
+     * Gets the revision ID or node of the tip of the workspace.
+     * A 40-character hexadecimal string
      * @param rev the revision to identify; defaults to {@code .}, i.e. working copy
      */
     public @CheckForNull String tip(FilePath repository, @Nullable String rev) throws IOException, InterruptedException {
         String id = popen(repository, listener, false, new ArgumentListBuilder("log", "--rev", rev != null ? rev : ".", "--template", "{node}"));
-        if (!REVISIONID_PATTERN.matcher(id).matches()) {
+        if (!NODEID_PATTERN.matcher(id).matches()) {
             listener.error("Expected to get an id but got '" + id + "' instead.");
             return null; // HUDSON-7723
+        }
+        return id;
+    }
+
+    /**
+     * Gets the revision number of the tip of the workspace.
+     * @param rev the revision to identify; defaults to {@code .}, i.e. working copy
+     */
+    public @CheckForNull String tipNumber(FilePath repository, @Nullable String rev) throws IOException, InterruptedException {
+        String id = popen(repository, listener, false, new ArgumentListBuilder("log", "--rev", rev != null ? rev : ".", "--template", "{rev}"));
+        if (!REVISION_NUMBER_PATTERN.matcher(id).matches()) {
+            listener.error("Expected to get a revision number but got '" + id + "' instead.");
+            return null;
         }
         return id;
     }
@@ -238,7 +252,8 @@ public class HgExe {
     /**
      * Pattern that matches revision ID.
      */
-    private static final Pattern REVISIONID_PATTERN = Pattern.compile("[0-9a-f]{40}");
+    private static final Pattern NODEID_PATTERN = Pattern.compile("[0-9a-f]{40}");
+    private static final Pattern REVISION_NUMBER_PATTERN = Pattern.compile("[0-9]+");
 
     /**
      * Checks whether a normalized path URL matches what a config file requested.
@@ -261,5 +276,4 @@ public class HgExe {
         }
         return false;
     }
-
 }
