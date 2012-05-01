@@ -332,14 +332,16 @@ public class MercurialSCM extends SCM implements Serializable {
      * Filter out the given file name list by picking up changes that are in the modules we care about.
      */
     private Set<String> dependentChanges(Set<String> changedFileNames) {
-        if (_modules == null) {
-            // Old project created before this feature was added.
-            return changedFileNames;
-        }
-
         Set<String> affecting = new HashSet<String>();
 
         for (String changedFile : changedFileNames) {
+            if (changedFile.startsWith(".hg")) { // .hgignore, .hgtags, ...
+                continue;
+            }
+            if (_modules == null) {
+                affecting.add(changedFile);
+                continue;
+            }
             String unixChangedFile = changedFile.replace('\\', '/');
             for (String dependency : _modules) {
                 if (unixChangedFile.startsWith(dependency)) {

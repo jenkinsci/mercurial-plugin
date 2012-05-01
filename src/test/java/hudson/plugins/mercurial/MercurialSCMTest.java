@@ -162,6 +162,17 @@ public class MercurialSCMTest extends MercurialTestCase {
         buildAndCheck(p, "dir1/f");
     }
 
+    @Bug(13174)
+    public void testPollingIgnoresMetaFiles() throws Exception {
+        FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null, null, null, false));
+        hg(repo, "init");
+        touchAndCommit(repo, "f");
+        buildAndCheck(p, "f");
+        hg(repo, "tag", "mystuff");
+        assertEquals(PollingResult.Change.INSIGNIFICANT, pollSCMChanges(p).change);
+    }
+
     public void testParseStatus() throws Exception {
         assertEquals(new HashSet<String>(Arrays.asList("whatever", "added", "mo-re", "whatever-c", "initial", "more")), MercurialSCM.parseStatus(
                   "M whatever\n"
