@@ -4,6 +4,7 @@ import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.plugins.mercurial.MercurialChangeSet;
 import hudson.scm.RepositoryBrowser;
+import hudson.util.FormValidation;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -12,6 +13,7 @@ import java.net.URL;
 import net.sf.json.JSONObject;
 
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
 /**
@@ -68,6 +70,16 @@ public class BitBucket extends HgBrowser {
 
         public @Override BitBucket newInstance(StaplerRequest req, JSONObject json) throws FormException {
             return req.bindParameters(BitBucket.class,"bitbucket.");
+        }
+
+        public FormValidation doCheckUrl(@QueryParameter String url) {
+            if (url.isEmpty()) {
+                return FormValidation.error("Must enter URL");
+            } else if (url.matches("https?://bitbucket[.]org/[^/]+/[^/]+/")) {
+                return FormValidation.ok();
+            } else {
+                return FormValidation.warning("Possibly incorrect root URL; expected http://bitbucket.org/USERNAME/REPOS/");
+            }
         }
     }
 
