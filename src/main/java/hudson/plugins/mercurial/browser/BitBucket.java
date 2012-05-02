@@ -73,7 +73,7 @@ public class BitBucket extends HgBrowser {
         }
 
         public FormValidation doCheckUrl(@QueryParameter String url) {
-            if (url.isEmpty()) {
+            if (url.length() == 0) {
                 return FormValidation.error("Must enter URL");
             } else if (url.matches("https?://bitbucket[.]org/[^/]+/[^/]+/")) {
                 return FormValidation.ok();
