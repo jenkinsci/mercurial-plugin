@@ -163,7 +163,7 @@ class Cache {
             // bundle.
             String bundleFileName = "xfer-" + node.getNodeName() + ".hg";
             FilePath masterTransfer = masterCache.child(bundleFileName);
-            FilePath localTransfer = localCache.child(bundleFileName);
+            FilePath localTransfer = localCache.child("xfer.hg");
 
             // hg invocation on the slave
             HgExe slaveHg = new HgExe(config,launcher,node,listener,new EnvVars());
@@ -183,7 +183,7 @@ class Cache {
                     }
                     
                     masterTransfer.copyTo(localTransfer);
-                    if (MercurialSCM.joinWithPossibleTimeout(slaveHg.unbundle(bundleFileName).pwd(localCache), fromPolling, listener) != 0) {
+                    if (MercurialSCM.joinWithPossibleTimeout(slaveHg.unbundle("xfer.hg").pwd(localCache), fromPolling, listener) != 0) {
                         listener.error("Failed to unbundle " + localTransfer);
                         return null;
                     }
@@ -210,7 +210,7 @@ class Cache {
                         }
                         
                         masterTransfer.copyTo(localTransfer);
-                        if (MercurialSCM.joinWithPossibleTimeout(slaveHg.unbundle(bundleFileName).pwd(localCache), fromPolling, listener) != 0) {
+                        if (MercurialSCM.joinWithPossibleTimeout(slaveHg.unbundle("xfer.hg").pwd(localCache), fromPolling, listener) != 0) {
                             listener.error("Failed to unbundle " + localTransfer);
                             return null;
                         }
