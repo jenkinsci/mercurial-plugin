@@ -219,7 +219,8 @@ public class MercurialSCM extends SCM implements Serializable {
         // tag action is added during checkout, so this shouldn't be called, but just in case.
         HgExe hg = new HgExe(this, launcher, build, listener, build.getEnvironment(listener));
         String tip = hg.tip(workspace2Repo(build.getWorkspace()), null);
-        return tip != null ? new MercurialTagAction(tip, subdir) : null;
+        String rev = hg.tipNumber(workspace2Repo(build.getWorkspace()), null);
+        return tip != null && rev != null ? new MercurialTagAction(tip, rev, subdir) : null;
     }
 
     @Override
@@ -266,15 +267,19 @@ public class MercurialSCM extends SCM implements Serializable {
     private PollingResult compare(Launcher launcher, TaskListener listener, MercurialTagAction baseline, PrintStream output, Node node, FilePath repository) throws IOException, InterruptedException {
         HgExe hg = new HgExe(this, launcher, node, listener, /*XXX*/new EnvVars());
         String remote = hg.tip(repository, getBranch());
+        String rev = hg.tipNumber(repository, getBranch());
         if (remote == null) {
             throw new IOException("failed to find ID of branch head");
         }
+        if (rev == null) {
+            throw new IOException("failed to find revision of branch head");
+        }
         if (remote.equals(baseline.id)) { // shortcut
-            return new PollingResult(baseline, new MercurialTagAction(remote, subdir), Change.NONE);
+            return new PollingResult(baseline, new MercurialTagAction(remote, rev, subdir), Change.NONE);
         }
         Set<String> changedFileNames = parseStatus(hg.popen(repository, listener, false, new ArgumentListBuilder("status", "--rev", baseline.id, "--rev", remote)));
 
-        MercurialTagAction cur = new MercurialTagAction(remote, subdir);
+        MercurialTagAction cur = new MercurialTagAction(remote, rev, subdir);
         return new PollingResult(baseline,cur,computeDegreeOfChanges(changedFileNames,output));
     }
 
@@ -327,14 +332,16 @@ public class MercurialSCM extends SCM implements Serializable {
      * Filter out the given file name list by picking up changes that are in the modules we care about.
      */
     private Set<String> dependentChanges(Set<String> changedFileNames) {
-        if (_modules == null) {
-            // Old project created before this feature was added.
-            return changedFileNames;
-        }
-
         Set<String> affecting = new HashSet<String>();
 
         for (String changedFile : changedFileNames) {
+            if (changedFile.startsWith(".hg")) { // .hgignore, .hgtags, ...
+                continue;
+            }
+            if (_modules == null) {
+                affecting.add(changedFile);
+                continue;
+            }
             String unixChangedFile = changedFile.replace('\\', '/');
             for (String dependency : _modules) {
                 if (unixChangedFile.startsWith(dependency)) {
@@ -412,19 +419,9 @@ public class MercurialSCM extends SCM implements Serializable {
         if (upstream == null) {
             return false;
         }
-        if (upstream.equals(source)) {
+        if (HgExe.pathEquals(source, upstream)) {
             return true;
         }
-        if ((upstream + '/').equals(source)) {
-            return true;
-        }
-        if (upstream.equals(source + '/')) {
-            return true;
-        }
-        if (source.startsWith("file:/") && new File(upstream).toURI().toString().equals(source)) {
-            return true;
-        }
-        
         listener.error(
                 "Workspace reports paths.default as " + upstream +
                 "\nwhich looks different than " + source +
@@ -446,7 +443,7 @@ public class MercurialSCM extends SCM implements Serializable {
         ArgumentListBuilder logCommand = findHgExe(build, listener, false).add("log", "--rev", prevTag.getId());
         int exitCode = launch(launcher).cmds(logCommand).envs(env).pwd(repository).join();
         if(exitCode != 0) {
-            listener.error("Previous built revision " + prevTag.getId() + " is not know in this clone; unable to determine change log");
+            listener.error("Previously built revision " + prevTag.getId() + " is not known in this clone; unable to determine change log");
             createEmptyChangeLog(changelogFile, listener, "changelog");
             return;
         }
@@ -536,8 +533,9 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         String tip = hg.tip(repository, null);
-        if (tip != null) {
-            build.addAction(new MercurialTagAction(tip, subdir));
+        String rev = hg.tipNumber(repository, null);
+        if (tip != null && rev != null) {
+            build.addAction(new MercurialTagAction(tip, rev, subdir));
         }
     }
 
@@ -614,11 +612,12 @@ public class MercurialSCM extends SCM implements Serializable {
         upArgs.add("--rev", getBranch(env));
         if (hg.run(upArgs).pwd(repository).join() != 0) {
             throw new AbortException("Failed to update " + source + " to rev " + getBranch(env));
-        } else {
-            String tip = hg.tip(repository, null);
-            if (tip != null) {
-                build.addAction(new MercurialTagAction(tip, subdir));
-            }
+        }
+
+        String tip = hg.tip(repository, null);
+        String rev = hg.tipNumber(repository, null);
+        if (tip != null && rev != null) {
+            build.addAction(new MercurialTagAction(tip, rev, subdir));
         }
     }
 
@@ -627,6 +626,7 @@ public class MercurialSCM extends SCM implements Serializable {
         MercurialTagAction a = findTag(build);
         if (a != null) {
             env.put("MERCURIAL_REVISION", a.id);
+            env.put("MERCURIAL_REVISION_NUMBER", a.rev);
         }
     }
 

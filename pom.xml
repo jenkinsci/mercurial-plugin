@@ -4,12 +4,11 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>1.400</version>
-    <relativePath />
+    <version>1.420</version>
   </parent>
 
   <artifactId>mercurial</artifactId>
-  <version>1.39-SNAPSHOT</version>
+  <version>1.40-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
   <name>Jenkins Mercurial plugin</name>
@@ -38,6 +37,12 @@
           <email>david@carrclan.us</email>
       </developer>
   </developers>
+  <licenses>
+      <license>
+          <name>MIT</name>
+          <url>http://www.opensource.org/licenses/mit-license.php</url>
+      </license>
+  </licenses>
 
   <scm>
       <connection>scm:git:git://github.com/jenkinsci/mercurial-plugin.git</connection>
@@ -48,16 +53,19 @@
       <system>JIRA</system>
       <url>http://issues.jenkins-ci.org/secure/IssueNavigator.jspa?reset=true&amp;jqlQuery=project+%3D+Jenkins+AND+component+%3D+mercurial+AND+resolution+%3D+Unresolved</url>
   </issueManagement>
+  <ciManagement>
+      <system>jenkins</system>
+      <url>http://ci.jenkins-ci.org/job/plugins_mercurial/</url>
+  </ciManagement>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <netbeans.hint.jdkPlatform>JDK_1.6</netbeans.hint.jdkPlatform> <!-- HUDSON-8942 / JENKINS-10490 -->
   </properties>
 
   <repositories>
     <repository>
-      <id>m.g.o-public</id>
-      <url>http://maven.glassfish.org/content/groups/public/</url>
+      <id>repo.jenkins-ci.org</id>
+      <url>http://repo.jenkins-ci.org/public/</url>
     </repository>
   </repositories>
 
@@ -101,12 +109,6 @@
           <groupId>xml-apis</groupId>
           <artifactId>xml-apis</artifactId>
           <version>1.0.b2</version>
-          <scope>provided</scope>
-      </dependency>
-      <dependency>
-          <groupId>org.jenkins-ci.main</groupId>
-          <artifactId>remoting</artifactId>
-          <version>${project.parent.version}</version>
           <scope>provided</scope>
       </dependency>
   </dependencies>
@@ -261,4 +263,12 @@
       </plugins>
   </reporting>
 
-</project>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>repo.jenkins-ci.org</id>
+            <url>http://repo.jenkins-ci.org/public/</url>
+        </pluginRepository>
+    </pluginRepositories>
+</project>  
+

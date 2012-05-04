@@ -42,6 +42,7 @@ public class MercurialSCMTest extends MercurialTestCase {
         repo = createTmpDir();
     }
 
+    @Bug(13329)
     public void testBasicOps() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null,
@@ -49,9 +50,12 @@ public class MercurialSCMTest extends MercurialTestCase {
 
         hg(repo, "init");
         touchAndCommit(repo, "a");
-        buildAndCheck(p, "a"); // this tests the clone op
+        String log = buildAndCheck(p, "a");
+        assertTrue(log, log.contains(" clone --"));
         touchAndCommit(repo, "b");
-        buildAndCheck(p, "b"); // this tests the update op
+        log = buildAndCheck(p, "b");
+        assertTrue(log, log.contains(" update --"));
+        assertFalse(log, log.contains(" clone --"));
     }
 
     @Bug(4281)
@@ -161,6 +165,17 @@ public class MercurialSCMTest extends MercurialTestCase {
         pr = pollSCMChanges(p);
         assertEquals(PollingResult.Change.SIGNIFICANT, pr.change);
         buildAndCheck(p, "dir1/f");
+    }
+
+    @Bug(13174)
+    public void testPollingIgnoresMetaFiles() throws Exception {
+        FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, null, null, null, false));
+        hg(repo, "init");
+        touchAndCommit(repo, "f");
+        buildAndCheck(p, "f");
+        hg(repo, "tag", "mystuff");
+        assertEquals(PollingResult.Change.INSIGNIFICANT, pollSCMChanges(p).change);
     }
 
     public void testParseStatus() throws Exception {
@@ -315,6 +330,31 @@ public class MercurialSCMTest extends MercurialTestCase {
         assertEquals(Collections.singleton("f2"),
                 new HashSet<String>(entry.getAffectedPaths()));
         assertFalse(it.hasNext());
+    }
+
+    public void testChangesMergedToRenamedModulesTriggerBuild() throws Exception {
+        hg(repo, "init");
+        touchAndCommit(repo, "alltogether/some_interface", "alltogether/some_class");
+        hg(repo, "branch", "stable");
+        //create a change in a lower branch, which should trigger a build later on
+        touchAndCommit(repo, "alltogether/some_class");
+
+
+        hg(repo, "up", "default");
+        hg(repo, "mv", "alltogether/some_interface", "api/some_interface");
+        hg(repo, "mv", "alltogether/some_class", "impl/some_class");
+        hg(repo, "commit", "--message", "reorganizing repository to properly split api and implementation");
+        String reorganizationCommit = getLastChangesetId(repo);
+
+        FreeStyleProject projectForImplModule = createFreeStyleProject();
+        projectForImplModule.setScm(new MercurialSCM(hgInstallation, repo.getPath(), null, "impl", null, null, false));
+        projectForImplModule.scheduleBuild2(0).get();
+
+        hg(repo, "merge", "stable");
+        hg(repo, "commit", "--message", "merge changes from stable branch");
+        String mergeCommit = getLastChangesetId(repo);
+
+        assertPollingResult(PollingResult.Change.SIGNIFICANT, reorganizationCommit, mergeCommit, pollSCMChanges(projectForImplModule));
     }
 
     @Bug(3602)
