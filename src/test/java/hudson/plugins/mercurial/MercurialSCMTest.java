@@ -3,6 +3,7 @@ package hudson.plugins.mercurial;
 import hudson.Launcher;
 import hudson.Proc;
 import hudson.model.AbstractBuild;
+import hudson.model.Action;
 import hudson.model.Cause.UserCause;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
@@ -580,6 +581,22 @@ public class MercurialSCMTest extends MercurialTestCase {
         touchAndCommit(repo, "dir1/f1");
         AbstractBuild<?, ?> b = p.scheduleBuild2(0).get();
         assertEquals(Result.SUCCESS, b.getResult());
+    }
+    
+    @Bug(12829)
+        public void testNonExistingBranchesDontGenerateMercurialTagActionsInTheBuild() throws Exception {
+        AbstractBuild<?, ?> b;
+        FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation, repo.getPath(), "non-existing-branch", null,
+                null, null, false));
+        hg(repo, "init");
+        touchAndCommit(repo, "dir1/f1");
+        b = p.scheduleBuild2(0).get();
+        for (Action action : b.getActions()) {
+            if (action instanceof MercurialTagAction) {
+                fail("There should not be any MercurialTagAction");
+            }
+        }
     }
 
     private PretendSlave createNoopPretendSlave() throws Exception {
