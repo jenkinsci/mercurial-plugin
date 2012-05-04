@@ -274,12 +274,18 @@ public class MercurialSCM extends SCM implements Serializable {
         if (rev == null) {
             throw new IOException("failed to find revision of branch head");
         }
-        if (remote.equals(baseline.id)) { // shortcut
-            return new PollingResult(baseline, new MercurialTagAction(remote, rev, subdir), Change.NONE);
+        // rollback a baseline to track the revision has been rollback
+        MercurialTagAction cur = new MercurialTagAction(remote, rev, subdir);
+        if ( Integer.parseInt(baseline.rev) > Integer.parseInt(rev)) {
+            baseline = cur;
         }
+
+        if (remote.equals(baseline.id)) { // shortcut
+            return new PollingResult(baseline, cur, Change.NONE);
+        }
+        
         Set<String> changedFileNames = parseStatus(hg.popen(repository, listener, false, new ArgumentListBuilder("status", "--rev", baseline.id, "--rev", remote)));
 
-        MercurialTagAction cur = new MercurialTagAction(remote, rev, subdir);
         return new PollingResult(baseline,cur,computeDegreeOfChanges(changedFileNames,output));
     }
 
