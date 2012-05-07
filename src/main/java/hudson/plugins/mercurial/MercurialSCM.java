@@ -610,7 +610,9 @@ public class MercurialSCM extends SCM implements Serializable {
         ArgumentListBuilder upArgs = new ArgumentListBuilder();
         upArgs.add("update");
         upArgs.add("--rev", getBranch(env));
-        hg.run(upArgs).pwd(repository).join();
+        if (hg.run(upArgs).pwd(repository).join() != 0) {
+            throw new AbortException("Failed to update " + source + " to rev " + getBranch(env));
+        }
 
         String tip = hg.tip(repository, null);
         String rev = hg.tipNumber(repository, null);
