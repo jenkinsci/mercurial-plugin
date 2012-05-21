@@ -293,7 +293,7 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     private void pull(Launcher launcher, FilePath repository, TaskListener listener, PrintStream output, Node node, String branch) throws IOException, InterruptedException {
-        ArgumentListBuilder cmd = findHgExe(node, listener, false);
+        ArgumentListBuilder cmd = findHgExe(node, listener, true);
         cmd.add("pull");
         cmd.add("--rev", branch);
         PossiblyCachedRepo cachedSource = cachedSource(node, launcher, listener, true);
@@ -440,7 +440,7 @@ public class MercurialSCM extends SCM implements Serializable {
         }
         EnvVars env = build.getEnvironment(listener);
 
-        ArgumentListBuilder logCommand = findHgExe(build, listener, false).add("log", "--rev", prevTag.getId());
+        ArgumentListBuilder logCommand = findHgExe(build, listener, true).add("log", "--rev", prevTag.getId());
         int exitCode = launch(launcher).cmds(logCommand).envs(env).pwd(repository).join();
         if(exitCode != 0) {
             listener.error("Previously built revision " + prevTag.getId() + " is not known in this clone; unable to determine change log");
