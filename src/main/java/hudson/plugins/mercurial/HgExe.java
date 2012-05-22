@@ -94,10 +94,6 @@ public class HgExe {
         return run("pull");
     }
 
-    public ProcStarter pull(String branch) {
-        return run("pull", "--branch", branch);
-    }
-
     public ProcStarter clone(String... args) {
         return l(seed().add("clone").add(args));
     }
