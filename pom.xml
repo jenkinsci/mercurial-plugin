@@ -8,7 +8,7 @@
   </parent>
 
   <artifactId>mercurial</artifactId>
-  <version>1.40-SNAPSHOT</version>
+  <version>1.40</version>
   <packaging>hpi</packaging>
 
   <name>Jenkins Mercurial plugin</name>
