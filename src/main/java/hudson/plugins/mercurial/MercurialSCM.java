@@ -335,7 +335,7 @@ public class MercurialSCM extends SCM implements Serializable {
         Set<String> affecting = new HashSet<String>();
 
         for (String changedFile : changedFileNames) {
-            if (changedFile.startsWith(".hg")) { // .hgignore, .hgtags, ...
+            if (changedFile.matches("[.]hg(ignore|tags)")) {
                 continue;
             }
             if (_modules == null) {
