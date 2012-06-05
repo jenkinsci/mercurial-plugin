@@ -1,5 +1,6 @@
 package hudson.plugins.mercurial;
 
+import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Proc;
 import hudson.model.AbstractBuild;
@@ -26,6 +27,7 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 
 import org.jvnet.hudson.test.Bug;
 import org.jvnet.hudson.test.FakeLauncher;
@@ -378,6 +380,26 @@ public class MercurialSCMTest extends MercurialTestCase {
         assertEquals(Collections.singleton("f3"),
                 new HashSet<String>(entry.getAffectedPaths()));
         assertFalse(it.hasNext());
+    }
+
+    public void testClean() throws Exception {
+        FreeStyleProject p = createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, null, null, null, true));
+        hg(repo, "init");
+        touchAndCommit(repo, "f1");
+        buildAndCheck(p, "f1");
+        FilePath ws = p.getLastBuild().getWorkspace();
+        ws.child("junk1").write("junk", null);
+        ws.child("junk2").write("junk", null);
+        // from Hg 1.3 changelog: "update: don't unlink added files when -C/--clean is specified"
+        hg(new File(ws.getRemote()), "add", "junk2");
+        touchAndCommit(repo, "f2");
+        buildAndCheck(p, "f2");
+        Set<String> kids = new TreeSet<String>();
+        for (FilePath kid : ws.list()) {
+            kids.add(kid.getName());
+        }
+        assertEquals("[.hg, f1, f2]", kids.toString());
     }
 
     public void testMultipleProjectsForSingleSource() throws Exception {
