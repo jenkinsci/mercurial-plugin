@@ -1,6 +1,5 @@
 package hudson.plugins.mercurial;
 
-import com.google.common.collect.Lists;
 import hudson.Extension;
 import hudson.model.AbstractModelObject;
 import hudson.model.AbstractProject;
@@ -16,6 +15,7 @@ import org.kohsuke.stapler.StaplerResponse;
 import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
@@ -43,7 +43,7 @@ public class MercurialStatus extends AbstractModelObject implements RootAction {
     }
 
     public HttpResponse doNotifyCommit(@QueryParameter(required=true) String url) throws ServletException, IOException {
-        final List<AbstractProject<?,?>> projects = Lists.newArrayList();
+        final List<AbstractProject<?,?>> projects = new ArrayList<AbstractProject<?,?>>();
         boolean scmFound = false,
                 triggerFound = false,
                 urlFound = false;
