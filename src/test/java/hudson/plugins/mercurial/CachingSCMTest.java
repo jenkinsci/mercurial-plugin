@@ -7,12 +7,10 @@ import java.util.Collections;
 
 public class CachingSCMTest extends MercurialSCMTest {
 
-    public static final String CACHING_INSTALLATION = "caching";
+    private static final String CACHING_INSTALLATION = "caching";
 
-    protected @Override
-    void setUp() throws Exception {
+    protected @Override void setUp() throws Exception {
         super.setUp();
-        hgInstallation = CACHING_INSTALLATION;
         Hudson.getInstance()
                 .getDescriptorByType(MercurialInstallation.DescriptorImpl.class)
                 .setInstallations(
@@ -20,6 +18,10 @@ public class CachingSCMTest extends MercurialSCMTest {
                                 "hg", false, true, false, Collections
                                         .<ToolProperty<?>> emptyList()));
         MercurialSCM.CACHE_LOCAL_REPOS = true;
+    }
+
+    @Override protected String hgInstallation() {
+        return CACHING_INSTALLATION;
     }
 
 }

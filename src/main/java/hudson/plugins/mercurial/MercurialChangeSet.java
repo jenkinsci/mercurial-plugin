@@ -273,6 +273,7 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
     /** |xmlescape handles a few cases that |escape does not */
     static final String CHANGELOG_TEMPLATE =
             "<changeset node='{node}' author='{author|xmlescape}' rev='{rev}' date='{date}'>" +
+            // XXX {file_adds} and {file_dels} seem to be far slower to process than {files}
             "<msg>{desc|xmlescape}</msg><added>{file_adds|stringify|xmlescape}</added><deleted>{file_dels|stringify|xmlescape}</deleted>" +
             "<files>{files|stringify|xmlescape}</files><parents>{parents}</parents></changeset>\\n";
 }

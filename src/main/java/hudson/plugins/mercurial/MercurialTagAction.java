@@ -24,18 +24,29 @@ public class MercurialTagAction extends SCMRevisionState {
     public final String id;
 
     /**
+     * Integer revision number. The repository-local changeset number.
+     */
+    public final String rev;
+
+    /**
      * Matches {@link MercurialSCM#subdir}.
      */
     public final String subdir;
 
-    public MercurialTagAction(@NonNull String id, @Nullable String subdir) {
+    public MercurialTagAction(@NonNull String id, @NonNull String rev, @Nullable String subdir) {
         this.id = id;
+        this.rev = rev;
         this.subdir = subdir;
     }
 
     @Exported(name = "mercurialNodeName")
     public String getId() {
         return id;
+    }
+
+    @Exported(name = "mercurialRevisionNumber")
+    public String getRev() {
+        return rev;
     }
 
     @Exported

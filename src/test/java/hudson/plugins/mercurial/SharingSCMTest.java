@@ -7,12 +7,10 @@ import java.util.Collections;
 
 public class SharingSCMTest extends MercurialSCMTest {
 
-    public static final String SHARING_INSTALLATION = "sharing";
+    private static final String SHARING_INSTALLATION = "sharing";
 
-    protected @Override
-    void setUp() throws Exception {
+    protected @Override void setUp() throws Exception {
         super.setUp();
-        hgInstallation = SHARING_INSTALLATION;
         Hudson.getInstance()
                 .getDescriptorByType(MercurialInstallation.DescriptorImpl.class)
                 .setInstallations(
@@ -21,4 +19,9 @@ public class SharingSCMTest extends MercurialSCMTest {
                                         .<ToolProperty<?>> emptyList()));
         MercurialSCM.CACHE_LOCAL_REPOS = true;
     }
+
+    @Override protected String hgInstallation() {
+        return SHARING_INSTALLATION;
+    }
+
 }

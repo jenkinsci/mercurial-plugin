@@ -174,7 +174,7 @@ class Cache {
         if (!source.endsWith("/")) {
             source += "/";
         }
-        Matcher m = Pattern.compile(".+[/]([^/]+)[/]?").matcher(source);
+        Matcher m = Pattern.compile(".+[/]([^/:]+)(:\\d+)?[/]?").matcher(source);
         BigInteger hash;
         try {
             hash = new BigInteger(1, MessageDigest.getInstance("SHA-1").digest(source.getBytes("UTF-8")));
