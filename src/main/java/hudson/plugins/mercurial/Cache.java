@@ -43,7 +43,8 @@ class Cache {
     /**
      * Mutual exclusion to the access to the cache.
      */
-    private final ReentrantLock lock = new ReentrantLock(true);
+    private final ReentrantLock masterLock = new ReentrantLock(true);
+    private final Map<String, ReentrantLock> slaveNodesLocksMap = new HashMap<String, ReentrantLock>();
 
     private Cache(String remote, String hash) {
         this.remote = remote;
@@ -62,6 +63,21 @@ class Cache {
     }
 
     /**
+     * Gets a lock for the given slave node.
+     * @param node Name of the slave node.
+     * @return The {@link ReentrantLock} instance.
+     */
+    private synchronized ReentrantLock getLockForSlaveNode(String node) {
+        ReentrantLock lock = slaveNodesLocksMap.get(node);
+        if (lock == null) {
+            slaveNodesLocksMap.put(node, lock = new ReentrantLock(true));
+        }
+    
+        return lock;
+    }
+    
+
+    /**
      * Returns a local hg repository cache of the remote repository specified in the given {@link MercurialSCM}
      * on the given {@link Node}, fully updated to the tip of the current remote repository.
      *
@@ -73,16 +89,11 @@ class Cache {
      */
     @CheckForNull FilePath repositoryCache(MercurialSCM config, Node node, Launcher launcher, TaskListener listener, boolean fromPolling)
             throws IOException, InterruptedException {
-        boolean wasLocked = lock.isLocked();
-        if (wasLocked) {
-            listener.getLogger().println("Waiting for lock on hgcache/" + hash + " " + lock + "...");
+        boolean masterWasLocked = masterLock.isLocked();
+        if (masterWasLocked) {
+            listener.getLogger().println("Waiting for master lock on hgcache/" + hash + " " + masterLock + "...");
         }
 
-        lock.lockInterruptibly();
-        try {
-            if (wasLocked) {
-                listener.getLogger().println("...acquired cache lock.");
-            }
             // Always update master cache first.
             Node master = Hudson.getInstance();
             FilePath masterCaches = master.getRootPath().child("hgcache");
@@ -93,6 +104,12 @@ class Cache {
             // do we need to pass in EnvVars from a build too?
             HgExe masterHg = new HgExe(config,masterLauncher,master,listener,new EnvVars());
 
+        // Lock the block used to verify we end up having a cloned repo in the master,
+        // whether if it was previously cloned in a different build or if it's 
+        // going to be cloned right now.
+        masterLock.lockInterruptibly();
+        try {
+            listener.getLogger().println("Acquired master cache lock.");
             if (masterCache.isDirectory()) {
                 if (MercurialSCM.joinWithPossibleTimeout(masterHg.pull().pwd(masterCache), true, listener) != 0) {
                     listener.error("Failed to update " + masterCache);
@@ -105,13 +122,38 @@ class Cache {
                     return null;
                 }
             }
+        } finally {
+            masterLock.unlock();
+            listener.getLogger().println("Master cache lock released.");
+        }
             if (node == master) {
                 return masterCache;
             }
             // Not on master, so need to create/update local cache as well.
+
+        // We are in a slave node that will need also an updated local cache: clone it or 
+        // pull pending changes, if any. This can be safely done in parallel in
+        // different slave nodes for a given repo, so we'll use different
+        // node-specific locks to achieve this.
+        ReentrantLock slaveNodeLock = getLockForSlaveNode(node.getNodeName());
+        
+        boolean slaveNodeWasLocked = slaveNodeLock.isLocked();
+        if (slaveNodeWasLocked) {
+            listener.getLogger().println("Waiting for slave node cache lock in " + node.getNodeName() + " on hgcache/" + hash + " " + slaveNodeWasLocked + "...");
+        }
+        
+        slaveNodeLock.lockInterruptibly();
+        try {
+            listener.getLogger().println("Acquired slave node cache lock for node " + node.getNodeName() + ".");            
+
             FilePath localCaches = node.getRootPath().child("hgcache");
             FilePath localCache = localCaches.child(hash);
-            FilePath masterTransfer = masterCache.child("xfer.hg");
+            
+            // Bundle name is node-specific, as we may have more than one
+            // node being updated in parallel, and each one will use its own
+            // bundle.
+            String bundleFileName = "xfer-" + node.getNodeName() + ".hg";
+            FilePath masterTransfer = masterCache.child(bundleFileName);
             FilePath localTransfer = localCache.child("xfer.hg");
             try {
                 // hg invocation on the slave
@@ -131,7 +173,7 @@ class Cache {
                         // to actually exclude those head sets, but not a big deal. (Hg 1.5 fixes that but leaves
                         // a major bug that if no csets are selected, the whole repo will be bundled; fortunately
                         // this case should be caught by equality check above.)
-                        if (MercurialSCM.joinWithPossibleTimeout(masterHg.bundle(localHeads,"xfer.hg").
+                        if (MercurialSCM.joinWithPossibleTimeout(masterHg.bundle(localHeads,bundleFileName).
                                 pwd(masterCache), fromPolling, listener) != 0) {
                             listener.error("Failed to send outgoing changes");
                             return null;
@@ -139,7 +181,7 @@ class Cache {
                     }
                 } else {
                     // Need to transfer entire repo.
-                    if (MercurialSCM.joinWithPossibleTimeout(masterHg.bundleAll("xfer.hg").pwd(masterCache), fromPolling, listener) != 0) {
+                    if (MercurialSCM.joinWithPossibleTimeout(masterHg.bundleAll(bundleFileName).pwd(masterCache), fromPolling, listener) != 0) {
                         listener.error("Failed to bundle repo");
                         return null;
                     }
@@ -162,7 +204,8 @@ class Cache {
             }
             return localCache;
         } finally {
-            lock.unlock();
+            slaveNodeLock.unlock();
+            listener.getLogger().println("Slave node cache lock released for node " + node.getNodeName() + ".");
         }
     }
 
