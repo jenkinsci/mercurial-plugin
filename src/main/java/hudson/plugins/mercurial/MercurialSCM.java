@@ -583,13 +583,13 @@ public class MercurialSCM extends SCM implements Serializable {
                 listener.error("Failed to clone " + source + " because hg could not be found;" +
                         " check that you've properly configured your Mercurial installation");
             } else {
-                e.printStackTrace(listener.error("Failed to clone "+source));
+                e.printStackTrace(listener.error(Messages.MercurialSCM_failed_to_clone(source)));
             }
-            throw new AbortException("Failed to clone "+source);
+            throw new AbortException(Messages.MercurialSCM_failed_to_clone(source));
         }
         if(cloneExitCode!=0) {
-            listener.error("Failed to clone "+source);
-            throw new AbortException("Failed to clone "+source);
+            listener.error(Messages.MercurialSCM_failed_to_clone(source));
+            throw new AbortException(Messages.MercurialSCM_failed_to_clone(source));
         }
 
         if (cachedSource != null && cachedSource.isUseCaches() && !cachedSource.isUseSharing()) {

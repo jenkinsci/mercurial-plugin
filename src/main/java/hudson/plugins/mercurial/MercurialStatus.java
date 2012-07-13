@@ -31,7 +31,7 @@ import static javax.servlet.http.HttpServletResponse.*;
 @Extension
 public class MercurialStatus extends AbstractModelObject implements UnprotectedRootAction {
     public String getDisplayName() {
-        return "Mercurial";
+        return Messages.MercurialStatus_mercurial();
     }
 
     public String getSearchUrl() {
