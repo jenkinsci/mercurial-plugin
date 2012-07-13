@@ -192,7 +192,7 @@ public class HgExe {
     public @CheckForNull String tipNumber(FilePath repository, @Nullable String rev) throws IOException, InterruptedException {
         String id = popen(repository, listener, false, new ArgumentListBuilder("log", "--rev", rev != null ? rev : ".", "--template", "{rev}"));
         if (!REVISION_NUMBER_PATTERN.matcher(id).matches()) {
-            listener.error("Expected to get a revision number but got '" + id + "' instead.");
+            listener.error(Messages.HgExe_expected_to_get_a_revision_number_but_got_instead(id));
             return null;
         }
         return id;
