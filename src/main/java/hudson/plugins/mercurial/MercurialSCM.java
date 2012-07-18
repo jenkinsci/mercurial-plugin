@@ -254,8 +254,7 @@ public class MercurialSCM extends SCM implements Serializable {
             return compare(launcher, listener, baseline, output, node, repository);
         } catch(IOException e) {
             if (causedByMissingHg(e)) {
-                listener.error("Failed to compare with remote repository because hg could not be found;" +
-                        " check that you've properly configured your Mercurial installation");
+                listener.error(Messages.MercurialSCM_failed_to_compare_with_remote_repository());
                 throw new AbortException("Failed to compare with remote repository");
             }
             IOException ex = new IOException("Failed to compare with remote repository");
