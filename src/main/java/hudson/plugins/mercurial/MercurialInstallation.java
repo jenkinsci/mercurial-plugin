@@ -124,7 +124,7 @@ public class MercurialInstallation extends ToolInstallation implements
         }
 
         public String getDisplayName() {
-            return "Mercurial";
+            return Messages.MercurialInstallation_mercurial();
         }
 
         @Override
