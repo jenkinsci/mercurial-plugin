@@ -319,11 +319,11 @@ public class MercurialSCM extends SCM implements Serializable {
         LOGGER.log(FINE, "Dependent changed file names: {0}", depchanges);
 
         if (depchanges.isEmpty()) {
-            output.println("Non-dependent changes detected");
+            output.println(Messages.MercurialSCM_non_dependent_changes_detected());
             return Change.INSIGNIFICANT;
         }
 
-        output.println("Dependent changes detected");
+        output.println(Messages.MercurialSCM_dependent_changes_detected());
         return Change.SIGNIFICANT;
     }
 
