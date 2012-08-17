@@ -50,7 +50,7 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
      */
     @Exported
     public User getAuthor() {
-        return User.get(author);
+        return User.getByCommitName(author);
     }
 
     /**
