@@ -87,15 +87,18 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private final boolean clean;
 
+    private final boolean verify;
+
     private HgBrowser browser;
 
     @DataBoundConstructor
-    public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean) {
+    public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean, boolean verify) {
         this.installation = installation;
         this.source = Util.fixEmptyAndTrim(source);
         this.modules = Util.fixNull(modules);
         this.subdir = Util.fixEmptyAndTrim(subdir);
         this.clean = clean;
+        this.verify = verify;
         parseModules();
         branch = Util.fixEmpty(branch);
         if (branch != null && branch.equals("default")) {
@@ -183,6 +186,13 @@ public class MercurialSCM extends SCM implements Serializable {
      */
     public boolean isClean() {
         return clean;
+    }
+
+    /**
+     * True if we want to verify a local repository before updating it
+     */
+    public boolean isVerify() {
+        return verify;
     }
 
     private ArgumentListBuilder findHgExe(AbstractBuild<?,?> build, TaskListener listener, boolean allowDebug) throws IOException, InterruptedException {
@@ -299,6 +309,7 @@ public class MercurialSCM extends SCM implements Serializable {
         if (cachedSource != null) {
             cmd.add(cachedSource.getRepoLocation());
         }
+
         joinWithPossibleTimeout(
                 launch(launcher).cmds(cmd).stdout(output).pwd(repository),
                 true, listener);
@@ -381,6 +392,15 @@ public class MercurialSCM extends SCM implements Serializable {
                 e.printStackTrace(listener.error("Failed to determine whether workspace can be reused"));
             }
             throw new AbortException("Failed to determine whether workspace can be reused");
+        }
+
+        try {
+            if (canReuseExistingWorkspace && verify && !verify(build, launcher, repository, listener))
+                canReuseExistingWorkspace = false;
+        } catch (IOException e) {
+            listener.error("Failed to verify local checkout");
+            e.printStackTrace(listener.getLogger());
+            throw new AbortException("Failed to verify local checkout ");
         }
 
         if (canReuseExistingWorkspace) {
@@ -481,6 +501,47 @@ public class MercurialSCM extends SCM implements Serializable {
         } finally {
             os.close();
         }
+    }
+
+    /**
+     * Checks local checkout for corruption or incompleteness, since hg verify doesn't check subrepo we must do so recursively
+     */
+    private boolean verify(AbstractBuild<?,?> build, Launcher launcher, FilePath repository, BuildListener listener)
+            throws InterruptedException, IOException
+        {
+        EnvVars env = build.getEnvironment(listener);
+        HgExe hgverify = new HgExe(this, launcher, build, listener, env);
+
+        if (hgverify.run("verify", "--noninteractive").pwd(repository).join() != 0)
+            return false;
+
+        if (!repository.child(".hgsub").exists())
+            return true;
+
+        String hgsubStr = repository.child(".hgsub").readToString();
+
+        String[] subArray = hgsubStr.split("\\s*=\\s*\\S+\\s*");
+
+        for (int arrayCount=0; arrayCount < (subArray.length); ++arrayCount) {
+
+            if (subArray[arrayCount].trim().length() == 0)
+                continue;
+
+            FilePath subPath = new FilePath(repository, subArray[arrayCount].trim());
+
+            // hg verify doesn't detect missing subrepo folders, nor does a FilePath declaration throw
+            // an exception if the path doesn't exists, so we must check it manually
+            if (!subPath.exists())
+            {
+                listener.error("Subrepository '"+subPath.getName()+"' folder does not exist");
+                return false;
+            }
+
+            if (!verify(build, launcher, subPath, listener))
+                return false;
+        }
+
+        return true;
     }
 
     /*
