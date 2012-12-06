@@ -246,7 +246,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
         try {
             // Get the list of changed files.
-            Node node = project.getLastBuiltOn(); // HUDSON-5984: ugly but matches what AbstractProject.poll uses
+            Node node = project.getLastBuiltOn(); // JENKINS-5984: ugly but matches what AbstractProject.poll uses; though compare JENKINS-14247
             FilePath repository = workspace2Repo(workspace);
 
             pull(launcher, repository, listener, output, node,getBranch());
