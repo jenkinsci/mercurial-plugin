@@ -506,7 +506,7 @@ public class MercurialSCM extends SCM implements Serializable {
         } 
         if (pullExitCode != 0) {
             listener.error("Failed to update");
-            //throw new AbortException("Failed to update");
+            throw new AbortException("Failed to update");
         }        
 
         int updateExitCode;
