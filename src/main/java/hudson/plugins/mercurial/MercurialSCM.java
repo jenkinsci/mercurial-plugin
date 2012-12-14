@@ -291,7 +291,7 @@ public class MercurialSCM extends SCM implements Serializable {
         return result;
     }
 
-    private void pull(Launcher launcher, FilePath repository, TaskListener listener, PrintStream output, Node node, String branch) throws IOException, InterruptedException {
+    private int pull(Launcher launcher, FilePath repository, TaskListener listener, PrintStream output, Node node, String branch) throws IOException, InterruptedException {
         ArgumentListBuilder cmd = findHgExe(node, listener, true);
         cmd.add("pull");
         cmd.add("--rev", branch);
@@ -299,9 +299,9 @@ public class MercurialSCM extends SCM implements Serializable {
         if (cachedSource != null) {
             cmd.add(cachedSource.getRepoLocation());
         }
-        joinWithPossibleTimeout(
+        return joinWithPossibleTimeout(
                 launch(launcher).cmds(cmd).stdout(output).pwd(repository),
-                true, listener);
+                true, listener); 
     }
 
     static int joinWithPossibleTimeout(ProcStarter proc, boolean useTimeout, final TaskListener listener) throws IOException, InterruptedException {
@@ -492,8 +492,9 @@ public class MercurialSCM extends SCM implements Serializable {
 
         HgExe hg = new HgExe(this, launcher, build, listener, env);
         Node node = Computer.currentComputer().getNode(); // XXX why not build.getBuiltOn()?
+        int pullExitCode = 0;
         try {
-            pull(launcher, repository, listener, new PrintStream(new NullOutputStream()), node, getBranch(env));
+            pullExitCode = pull(launcher, repository, listener, new PrintStream(new NullOutputStream()), node, getBranch(env));
         } catch (IOException e) {
             if (causedByMissingHg(e)) {
                 listener.error("Failed to pull because hg could not be found;" +
@@ -503,6 +504,10 @@ public class MercurialSCM extends SCM implements Serializable {
             }
             throw new AbortException("Failed to pull");
         } 
+        if (pullExitCode != 0) {
+            listener.error("Failed to update");
+            //throw new AbortException("Failed to update");
+        }        
 
         int updateExitCode;
         try {
