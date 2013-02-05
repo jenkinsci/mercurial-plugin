@@ -10,6 +10,7 @@ import hudson.model.AbstractProject;
 import hudson.model.Hudson;
 import hudson.model.UnprotectedRootAction;
 import hudson.scm.SCM;
+import hudson.security.ACL;
 import hudson.triggers.SCMTrigger;
 import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.HttpResponses;
@@ -25,6 +26,8 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import static javax.servlet.http.HttpServletResponse.*;
+import org.acegisecurity.context.SecurityContext;
+import org.acegisecurity.context.SecurityContextHolder;
 /**
  * Information screen for the use of Mercurial in Jenkins.
  */
@@ -48,6 +51,17 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
     }
 
     public HttpResponse doNotifyCommit(@QueryParameter(required=true) String url) throws ServletException, IOException {
+        // run in high privilege to see all the projects anonymous users don't see.
+        // this is safe because we only initiate polling.
+        SecurityContext securityContext = ACL.impersonate(ACL.SYSTEM);
+        try {
+            return handleNotifyCommit(url);
+        } finally {
+            SecurityContextHolder.setContext(securityContext);
+        }
+    }
+    
+    private HttpResponse handleNotifyCommit(String url) throws ServletException, IOException {
         final List<AbstractProject<?,?>> projects = Lists.newArrayList();
         boolean scmFound = false,
                 triggerFound = false,
