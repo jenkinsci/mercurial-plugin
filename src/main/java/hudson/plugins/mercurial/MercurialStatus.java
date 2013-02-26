@@ -1,5 +1,6 @@
 package hudson.plugins.mercurial;
 
+import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 import hudson.Extension;
 import hudson.model.AbstractModelObject;
@@ -21,8 +22,10 @@ import org.kohsuke.stapler.StaplerResponse;
 import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static javax.servlet.http.HttpServletResponse.*;
@@ -49,19 +52,59 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
     public String getUrlName() {
         return "mercurial";
     }
+    
+    private static int getPort(URI uri) {
+        int port = uri.getPort();
+        if ( port < 0 ){
+            String scheme = uri.getScheme();
+            if ( scheme.equals("http") ){
+                port = 80;
+            } else if ( scheme.equals("https") ) {
+                port = 443;
+            } else if ( scheme.equals("ssh") ) {
+                port = 22;
+            }
+        }
+        return port;
+    }
+    
+    static boolean looselyMatches(URI notifyUri, String repository) {
+        boolean result = false;
+        try {
+            URI repositoryUri = new URI(repository);
+            result = Objects.equal(notifyUri.getScheme(), repositoryUri.getScheme()) 
+                && Objects.equal(notifyUri.getHost(), repositoryUri.getHost()) 
+                && getPort(notifyUri) == getPort(repositoryUri)
+                && Objects.equal(notifyUri.getPath(), repositoryUri.getPath())
+                && Objects.equal(notifyUri.getQuery(), repositoryUri.getQuery());
+        } catch ( URISyntaxException ex ) {
+            LOGGER.log(Level.SEVERE, "could not parse repository uri " + repository, ex);
+        }
+        return result;
+    }
 
-    public HttpResponse doNotifyCommit(@QueryParameter(required=true) String url) throws ServletException, IOException {
+    public HttpResponse doNotifyCommit(@QueryParameter(required=true) final String url) throws ServletException, IOException {
         // run in high privilege to see all the projects anonymous users don't see.
         // this is safe because we only initiate polling.
         SecurityContext securityContext = ACL.impersonate(ACL.SYSTEM);
         try {
-            return handleNotifyCommit(url);
+            return handleNotifyCommit(new URI(url));
+        } catch ( URISyntaxException ex ) {
+            LOGGER.log(Level.WARNING, "could not parse notify uri " + url, ex);
+            return new HttpResponse() {
+                public void generateResponse(StaplerRequest req, StaplerResponse rsp, Object node) throws IOException, ServletException {
+                    rsp.setStatus(SC_BAD_REQUEST);
+                    rsp.setContentType("text/plain");
+                    PrintWriter w = rsp.getWriter();
+                    w.println("malformed notify url: " + url);
+                }
+            };
         } finally {
             SecurityContextHolder.setContext(securityContext);
         }
     }
     
-    private HttpResponse handleNotifyCommit(String url) throws ServletException, IOException {
+    private HttpResponse handleNotifyCommit(URI url) throws ServletException, IOException {
         final List<AbstractProject<?,?>> projects = Lists.newArrayList();
         boolean scmFound = false,
                 triggerFound = false,
@@ -72,7 +115,7 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
 
             MercurialSCM hg = (MercurialSCM) scm;
             String repository = hg.getSource();
-            if (url.equals(repository)) urlFound = true; else continue;
+            if (looselyMatches(url, repository)) urlFound = true; else continue;
             SCMTrigger trigger = project.getTrigger(SCMTrigger.class);
             if (trigger!=null) triggerFound = true; else continue;
 
