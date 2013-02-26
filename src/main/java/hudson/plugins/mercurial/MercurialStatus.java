@@ -4,9 +4,6 @@ import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 import hudson.Extension;
 import hudson.model.AbstractModelObject;
-import hudson.model.UnprotectedRootAction;
-import hudson.Extension;
-import hudson.model.AbstractModelObject;
 import hudson.model.AbstractProject;
 import hudson.model.Hudson;
 import hudson.model.UnprotectedRootAction;
@@ -45,7 +42,6 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
     }
 
     public String getIconFileName() {
-        // TODO
         return null;
     }
 
@@ -90,15 +86,7 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
         try {
             return handleNotifyCommit(new URI(url));
         } catch ( URISyntaxException ex ) {
-            LOGGER.log(Level.WARNING, "could not parse notify uri " + url, ex);
-            return new HttpResponse() {
-                public void generateResponse(StaplerRequest req, StaplerResponse rsp, Object node) throws IOException, ServletException {
-                    rsp.setStatus(SC_BAD_REQUEST);
-                    rsp.setContentType("text/plain");
-                    PrintWriter w = rsp.getWriter();
-                    w.println("malformed notify url: " + url);
-                }
-            };
+            throw HttpResponses.error(SC_BAD_REQUEST, ex);
         } finally {
             SecurityContextHolder.setContext(securityContext);
         }
@@ -119,7 +107,7 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
             SCMTrigger trigger = project.getTrigger(SCMTrigger.class);
             if (trigger!=null) triggerFound = true; else continue;
 
-            LOGGER.info("Triggering the polling of "+project.getFullDisplayName());
+            LOGGER.log(Level.INFO, "Triggering the polling of {0}", project.getFullDisplayName());
             trigger.run();
             projects.add(project);
         }
