@@ -239,8 +239,10 @@ public class MercurialSCM extends SCM implements Serializable {
         if (!requiresWorkspaceForPolling()) {
             launcher = Hudson.getInstance().createLauncher(listener);
             PossiblyCachedRepo possiblyCachedRepo = cachedSource(Hudson.getInstance(), launcher, listener, true);
-            FilePath repositoryCache = new FilePath(new File(possiblyCachedRepo.getRepoLocation()));
-            return compare(launcher, listener, baseline, output, Hudson.getInstance(), repositoryCache);
+            if (possiblyCachedRepo != null) {
+                FilePath repositoryCache = new FilePath(new File(possiblyCachedRepo.getRepoLocation()));
+                return compare(launcher, listener, baseline, output, Hudson.getInstance(), repositoryCache);
+            }
         }
         // XXX do canUpdate check similar to in checkout, and possibly return INCOMPARABLE
 
