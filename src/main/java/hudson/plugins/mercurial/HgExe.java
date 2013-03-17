@@ -72,8 +72,8 @@ public class HgExe {
     public final TaskListener listener;
     private final Capability capability;
 
-    public HgExe(MercurialSCM scm, Launcher launcher, AbstractBuild build, TaskListener listener, EnvVars env) throws IOException, InterruptedException {
-        this(scm,launcher,build.getBuiltOn(),listener,env);
+    public HgExe(MercurialSCM scm, Launcher launcher, AbstractBuild build, TaskListener listener) throws IOException, InterruptedException {
+        this(scm,launcher,build.getBuiltOn(),listener,build.getEnvironment(listener));
     }
 
     public HgExe(MercurialSCM scm, Launcher launcher, Node node, TaskListener listener, EnvVars env) throws IOException, InterruptedException {
