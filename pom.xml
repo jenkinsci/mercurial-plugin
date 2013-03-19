@@ -36,6 +36,11 @@
           <name>David M. Carr</name>
           <email>david@carrclan.us</email>
       </developer>
+      <developer>
+          <id>willemv</id>
+          <name>Willem Verstraeten</name>
+          <email>willem.verstraeten@gmail.com</email>
+      </developer>
   </developers>
   <licenses>
       <license>
