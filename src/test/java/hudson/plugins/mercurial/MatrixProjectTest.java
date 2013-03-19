@@ -88,12 +88,12 @@ public class MatrixProjectTest extends MercurialTestCase {
 
 
     private PretendSlave createPretendSlave(String slaveName) throws Exception {
-        PretendSlave slave = new PretendSlave(slaveName, this.createTmpDir().getPath(), "", createComputerLauncher(null), new NoopFakeLaunher());
+        PretendSlave slave = new PretendSlave(slaveName, this.createTmpDir().getPath(), "", createComputerLauncher(null), new NoopFakeLauncher());
         hudson.addNode(slave);
         return slave;
     }
 
-    private static class NoopFakeLaunher implements FakeLauncher {
+    private static class NoopFakeLauncher implements FakeLauncher {
         public Proc onLaunch(Launcher.ProcStarter p) throws IOException {
             return null;
         }
