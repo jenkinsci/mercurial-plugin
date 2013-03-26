@@ -1,6 +1,5 @@
 package hudson.plugins.mercurial;
 
-import com.google.common.base.Charsets;
 import static java.util.logging.Level.FINE;
 import hudson.AbortException;
 import hudson.EnvVars;
@@ -26,7 +25,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.net.MalformedURLException;
@@ -44,7 +42,6 @@ import net.sf.json.JSONObject;
 import org.apache.commons.io.output.NullOutputStream;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.framework.io.WriterOutputStream;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.SuppressWarnings;
@@ -454,9 +451,9 @@ public class MercurialSCM extends SCM implements Serializable {
         // calc changelog
         final FileOutputStream os = new FileOutputStream(changelogFile);
         try {
-            os.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n".getBytes(Charsets.UTF_8));
+            os.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n".getBytes("UTF-8"));
             try {
-                os.write("<changesets>\n".getBytes(Charsets.UTF_8));
+                os.write("<changesets>\n".getBytes("UTF-8"));
                 ArgumentListBuilder args = findHgExe(build, listener, false);
                 args.add("log");
                 args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
@@ -474,7 +471,7 @@ public class MercurialSCM extends SCM implements Serializable {
                     throw new IOException("Failure detected while running hg log to determine change log");
                 }
             } finally {
-                os.write("</changesets>".getBytes(Charsets.UTF_8));
+                os.write("</changesets>".getBytes("UTF-8"));
             }
         } finally {
             os.close();
