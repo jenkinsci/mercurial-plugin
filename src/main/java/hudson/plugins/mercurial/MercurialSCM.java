@@ -8,6 +8,7 @@ import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Launcher.ProcStarter;
 import hudson.Util;
+import hudson.matrix.MatrixRun;
 import hudson.model.*;
 import hudson.plugins.mercurial.browser.HgBrowser;
 import hudson.plugins.mercurial.browser.HgWeb;
@@ -215,7 +216,7 @@ public class MercurialSCM extends SCM implements Serializable {
     public SCMRevisionState calcRevisionsFromBuild(AbstractBuild<?, ?> build, Launcher launcher, TaskListener listener)
             throws IOException, InterruptedException {
         // tag action is added during checkout, so this shouldn't be called, but just in case.
-        HgExe hg = new HgExe(this, launcher, build, listener, build.getEnvironment(listener));
+        HgExe hg = new HgExe(this, launcher, build, listener);
         String tip = hg.tip(workspace2Repo(build.getWorkspace()), null);
         String rev = hg.tipNumber(workspace2Repo(build.getWorkspace()), null);
         return tip != null && rev != null ? new MercurialTagAction(tip, rev, subdir) : null;
@@ -384,14 +385,15 @@ public class MercurialSCM extends SCM implements Serializable {
             throw new AbortException("Failed to determine whether workspace can be reused");
         }
 
+        String revToBuild = getRevToBuild(build, build.getEnvironment(listener));
         if (canReuseExistingWorkspace) {
-            update(build, launcher, repository, listener);
+            update(build, launcher, repository, listener, revToBuild);
         } else {
-            clone(build, launcher, repository, listener);
+            clone(build, launcher, repository, listener, revToBuild);
         }
 
         try {
-            determineChanges(build, launcher, listener, changelogFile, repository);
+            determineChanges(build, launcher, listener, changelogFile, repository, revToBuild);
         } catch (IOException e) {
             listener.error("Failed to capture change log");
             e.printStackTrace(listener.getLogger());
@@ -407,14 +409,13 @@ public class MercurialSCM extends SCM implements Serializable {
         if (!new FilePath(repo, ".hg/hgrc").exists()) {
             return false;
         }
-        
+
         boolean jobUsesSharing = new FilePath(repo, ".hg/sharedpath").exists();
         if (jobShouldUseSharing != jobUsesSharing) {
             return false;
         }
         
-        EnvVars env = build.getEnvironment(listener);
-        HgExe hg = new HgExe(this,launcher,build,listener,env);
+        HgExe hg = new HgExe(this,launcher,build,listener);
         String upstream = hg.config(repo, "paths.default");
         if (upstream == null) {
             return false;
@@ -429,8 +430,7 @@ public class MercurialSCM extends SCM implements Serializable {
         return false;
     }
 
-    private void determineChanges(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, File changelogFile, FilePath repository) throws IOException, InterruptedException {
-        
+    private void determineChanges(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, File changelogFile, FilePath repository, String revToBuild) throws IOException, InterruptedException {
         AbstractBuild<?, ?> previousBuild = build.getPreviousBuild();
         MercurialTagAction prevTag = previousBuild != null ? findTag(previousBuild) : null;
         if (prevTag == null) {
@@ -457,7 +457,7 @@ public class MercurialSCM extends SCM implements Serializable {
                 ArgumentListBuilder args = findHgExe(build, listener, false);
                 args.add("log");
                 args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
-                args.add("--rev", getBranch(env) + ":0");
+                args.add("--rev", revToBuild + ":0");
                 args.add("--follow");
                 args.add("--prune", prevTag.getId());
                 args.add("--encoding", "UTF-8");
@@ -478,17 +478,12 @@ public class MercurialSCM extends SCM implements Serializable {
         }
     }
 
-    /*
-     * Updates the current repository.
-     */
-    private void update(AbstractBuild<?, ?> build, Launcher launcher, FilePath repository, BuildListener listener)
-            throws InterruptedException, IOException {
-        EnvVars env = build.getEnvironment(listener);
-
-        HgExe hg = new HgExe(this, launcher, build, listener, env);
+    private void update(AbstractBuild<?, ?> build, Launcher launcher, FilePath repository, BuildListener listener, String toRevision)
+            throws IOException, InterruptedException {
+        HgExe hg = new HgExe(this, launcher, build, listener);
         Node node = Computer.currentComputer().getNode(); // XXX why not build.getBuiltOn()?
         try {
-            pull(launcher, repository, listener, new PrintStream(new NullOutputStream()), node, getBranch(env));
+            pull(launcher, repository, listener, new PrintStream(new NullOutputStream()), node, toRevision);
         } catch (IOException e) {
             if (causedByMissingHg(e)) {
                 listener.error("Failed to pull because hg could not be found;" +
@@ -497,11 +492,11 @@ public class MercurialSCM extends SCM implements Serializable {
                 e.printStackTrace(listener.error("Failed to pull"));
             }
             throw new AbortException("Failed to pull");
-        } 
+        }
 
         int updateExitCode;
         try {
-            updateExitCode = hg.run("update", "--clean", "--rev", getBranch(env)).pwd(repository).join();
+            updateExitCode = hg.run("update", "--clean", "--rev", toRevision).pwd(repository).join();
         } catch (IOException e) {
             listener.error("Failed to update");
             e.printStackTrace(listener.getLogger());
@@ -518,7 +513,7 @@ public class MercurialSCM extends SCM implements Serializable {
                 hg.run("--config", "extensions.relink=", "relink", cachedSource.getRepoLocation()).pwd(repository).join(); // ignore failures
             }
         }
-        
+
         if(clean) {
             if (hg.cleanAll().pwd(repository).join() != 0) {
                 listener.error("Failed to clean unversioned files");
@@ -533,10 +528,22 @@ public class MercurialSCM extends SCM implements Serializable {
         }
     }
 
+    private String getRevToBuild(AbstractBuild<?, ?> build, EnvVars env) {
+        String revToBuild = getBranch(env);
+        if (build instanceof MatrixRun) {
+            MatrixRun matrixRun = (MatrixRun) build;
+            MercurialTagAction parentRevision = matrixRun.getParentBuild().getAction(MercurialTagAction.class);
+            if (parentRevision != null && parentRevision.getId() != null) {
+                revToBuild = parentRevision.getId();
+            }
+        }
+        return revToBuild;
+    }
+
     /**
      * Start from scratch and clone the whole repository.
      */
-    private void clone(AbstractBuild<?,?> build, Launcher launcher, FilePath repository, BuildListener listener)
+    private void clone(AbstractBuild<?, ?> build, Launcher launcher, FilePath repository, BuildListener listener, String toRevision)
             throws InterruptedException, IOException {
         try {
             repository.deleteRecursive();
@@ -558,13 +565,13 @@ public class MercurialSCM extends SCM implements Serializable {
                 args.add(cachedSource.getRepoLocation());
             } else {
                 args.add("clone");
-                args.add("--rev", getBranch(env));
+                args.add("--rev", toRevision);
                 args.add("--noupdate");
                 args.add(cachedSource.getRepoLocation());
             }
         } else {
             args.add("clone");
-            args.add("--rev", getBranch(env));
+            args.add("--rev", toRevision);
             args.add("--noupdate");
             args.add(source);
         }
@@ -603,9 +610,9 @@ public class MercurialSCM extends SCM implements Serializable {
 
         ArgumentListBuilder upArgs = new ArgumentListBuilder();
         upArgs.add("update");
-        upArgs.add("--rev", getBranch(env));
+        upArgs.add("--rev", toRevision);
         if (hg.run(upArgs).pwd(repository).join() != 0) {
-            throw new AbortException("Failed to update " + source + " to rev " + getBranch(env));
+            throw new AbortException("Failed to update " + source + " to rev " + toRevision);
         }
 
         String tip = hg.tip(repository, null);
