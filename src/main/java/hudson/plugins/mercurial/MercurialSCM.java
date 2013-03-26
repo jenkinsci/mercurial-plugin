@@ -1,5 +1,6 @@
 package hudson.plugins.mercurial;
 
+import com.google.common.base.Charsets;
 import static java.util.logging.Level.FINE;
 import hudson.AbortException;
 import hudson.EnvVars;
@@ -453,33 +454,27 @@ public class MercurialSCM extends SCM implements Serializable {
         // calc changelog
         final FileOutputStream os = new FileOutputStream(changelogFile);
         try {
+            os.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n".getBytes(Charsets.UTF_8));
             try {
-                os.write("<changesets>\n".getBytes());
+                os.write("<changesets>\n".getBytes(Charsets.UTF_8));
                 ArgumentListBuilder args = findHgExe(build, listener, false);
                 args.add("log");
                 args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
                 args.add("--rev", getBranch(env) + ":0");
                 args.add("--follow");
                 args.add("--prune", prevTag.getId());
+                args.add("--encoding", "UTF-8");
+                args.add("--encodingmode", "replace");
 
                 ByteArrayOutputStream errorLog = new ByteArrayOutputStream();
 
-                // mercurial produces text in the platform default encoding, so we need to
-                // convert it back to UTF-8
-                WriterOutputStream o = new WriterOutputStream(new OutputStreamWriter(os, "UTF-8"), Computer.currentComputer().getDefaultCharset());
-                int r;
-                try {
-                    r = launch(launcher).cmds(args).envs(env)
-                            .stdout(new ForkOutputStream(o,errorLog)).pwd(repository).join();
-                } finally {
-                    o.flush(); // make sure to commit all output
-                }
+                int r = launch(launcher).cmds(args).envs(env).stdout(new ForkOutputStream(os, errorLog)).pwd(repository).join();
                 if(r!=0) {
                     Util.copyStream(new ByteArrayInputStream(errorLog.toByteArray()), listener.getLogger());
                     throw new IOException("Failure detected while running hg log to determine change log");
                 }
             } finally {
-                os.write("</changesets>".getBytes());
+                os.write("</changesets>".getBytes(Charsets.UTF_8));
             }
         } finally {
             os.close();
