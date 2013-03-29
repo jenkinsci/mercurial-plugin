@@ -55,9 +55,12 @@ public class MercurialStatusTest {
       assertFalse( MercurialStatus.looselyMatches(new URI("ssh://somehost/path"), "http://somehost/path") );
       assertFalse( MercurialStatus.looselyMatches(new URI("ssh://somehost/path"), "ssh://somehost/other/path") );
       assertFalse( MercurialStatus.looselyMatches(new URI("ssh://somehost/path"), "ssh://somehost/other/path") );
+      assertFalse( MercurialStatus.looselyMatches(new URI("ssh://somehost/path"), null) );
       assertFalse( MercurialStatus.looselyMatches(new URI("http://somehost/path"), "http://somehost/") );
       assertFalse( MercurialStatus.looselyMatches(new URI("http://somehost/path"), "http://somehost/path?query=test") );
       assertFalse( MercurialStatus.looselyMatches(new URI("http://somehost/path"), "http://somehost:81/path") );
+      assertFalse( MercurialStatus.looselyMatches(new URI("http://somehost/path"), null) );
+      assertFalse( MercurialStatus.looselyMatches(new URI("https://somehost/path"), null) );
   }
   
 }
