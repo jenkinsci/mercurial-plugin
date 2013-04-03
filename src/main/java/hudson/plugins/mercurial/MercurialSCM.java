@@ -508,7 +508,7 @@ public class MercurialSCM extends SCM implements Serializable {
         }
         if (build.getNumber() % 100 == 0) {
             PossiblyCachedRepo cachedSource = cachedSource(node, launcher, listener, true);
-            if (cachedSource != null) {
+            if (cachedSource != null && !cachedSource.isUseSharing()) {
                 // Periodically recreate hardlinks to the cache to save disk space.
                 hg.run("--config", "extensions.relink=", "relink", cachedSource.getRepoLocation()).pwd(repository).join(); // ignore failures
             }
