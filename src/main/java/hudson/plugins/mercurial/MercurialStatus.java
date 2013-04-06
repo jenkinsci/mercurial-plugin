@@ -107,7 +107,8 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
             MercurialSCM hg = (MercurialSCM) scm;
             String repository = hg.getSource();
             if (repository == null) {
-                LOGGER.log(Level.WARNING, "project " + project.getDisplayName() + " is using source control but does not identify a repository");
+                LOGGER.log(Level.FINE, "project " + project.getDisplayName() + " is using source control but does not identify a repository");
+                continue;
             }
             LOGGER.log(Level.INFO, "url == " + url + " repository == " + repository);
             if (looselyMatches(url, repository)) urlFound = true; else continue;
