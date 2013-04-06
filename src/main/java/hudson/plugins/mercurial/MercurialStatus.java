@@ -65,9 +65,6 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
     }
     
     static boolean looselyMatches(URI notifyUri, String repository) {
-        if (repository == null) {
-          return false;
-        }
         boolean result = false;
         try {
             URI repositoryUri = new URI(repository);
