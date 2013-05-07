@@ -1,17 +1,17 @@
 package hudson.plugins.mercurial;
 
-import hudson.model.Hudson;
 import hudson.tools.ToolProperty;
 
 import java.util.Collections;
+import org.junit.Before;
 
-public class SharingSCMTest extends MercurialSCMTest {
+public class SharingSCMTest extends SCMTestBase {
 
     private static final String SHARING_INSTALLATION = "sharing";
 
-    protected @Override void setUp() throws Exception {
+    @Override @Before public void setUp() throws Exception {
         super.setUp();
-        Hudson.getInstance()
+        j.jenkins
                 .getDescriptorByType(MercurialInstallation.DescriptorImpl.class)
                 .setInstallations(
                         new MercurialInstallation(SHARING_INSTALLATION, "",

@@ -13,35 +13,44 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
+import static org.junit.Assert.*;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+import org.jvnet.hudson.test.JenkinsRule;
 
-public class MatrixProjectTest extends MercurialTestCase {
+public class MatrixProjectTest {
+
+    @Rule public JenkinsRule j = new JenkinsRule();
+    @Rule public MercurialRule m = new MercurialRule(j);
+    @Rule public TemporaryFolder tmp = new TemporaryFolder();
+    @Rule public TemporaryFolder tmp2 = new TemporaryFolder();
     private File repo;
     private MatrixProject matrixProject;
 
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
-        repo = createTmpDir();
+    @Before public void setUp() throws Exception {
+        repo = tmp.getRoot();
 
         createPretendSlave("slave_one");
         createPretendSlave("slave_two");
 
-        matrixProject = createMatrixProject("matrix_test");
+        matrixProject = j.createMatrixProject("matrix_test");
         matrixProject.setScm(new MercurialSCM(null, repo.getPath(), null, null, null, null, false));
         matrixProject.setAxes(new AxisList(new LabelAxis("label", Arrays.asList("slave_one", "slave_two"))));
 
-        hg(repo, "init");
-        touchAndCommit(repo, "a");
+        m.hg(repo, "init");
+        m.touchAndCommit(repo, "a");
     }
 
-    public void testAllRunsBuildSameRevisionOnClone() throws Exception {
+    @Test public void allRunsBuildSameRevisionOnClone() throws Exception {
         assertAllMatrixRunsBuildSameMercurialRevision();
     }
 
-    public void testAllRunsBuildSameRevisionOnUpdate() throws Exception {
+    @Test public void allRunsBuildSameRevisionOnUpdate() throws Exception {
         //schedule an initial build, to test update behavior later in the test
-        assertBuildStatusSuccess(matrixProject.scheduleBuild2(0, new Cause.UserCause(), new Action[0]));
-        touchAndCommit(repo, "ab");
+        j.assertBuildStatusSuccess(matrixProject.scheduleBuild2(0));
+        m.touchAndCommit(repo, "ab");
 
         assertAllMatrixRunsBuildSameMercurialRevision();
     }
@@ -49,7 +58,7 @@ public class MatrixProjectTest extends MercurialTestCase {
     private void assertAllMatrixRunsBuildSameMercurialRevision() throws Exception {
         //set the second slave offline, to give us the opportunity to push changes to the original Mercurial repository
         //between the scheduling of the build and the actual run.
-        Node slaveTwo = hudson.getNode("slave_two");
+        Node slaveTwo = j.jenkins.getNode("slave_two");
         slaveTwo.toComputer().setTemporarilyOffline(true, null);
 
         final CountDownLatch firstBuild = new CountDownLatch(1);
@@ -62,17 +71,17 @@ public class MatrixProjectTest extends MercurialTestCase {
             }
         });
 
-        Future<MatrixBuild> matrixBuildFuture = matrixProject.scheduleBuild2(0, new Cause.UserCause(), new Action[]{});
+        Future<MatrixBuild> matrixBuildFuture = matrixProject.scheduleBuild2(0);
         firstBuild.await();
 
         //push an extra commit to the central repository
-        touchAndCommit(repo, "b");
+        m.touchAndCommit(repo, "b");
 
         //let the second slave start the build that was scheduled before this commit
         slaveTwo.toComputer().setTemporarilyOffline(false, null);
 
         MatrixBuild r = matrixBuildFuture.get();
-        this.assertBuildStatus(Result.SUCCESS, r);
+        j.assertBuildStatus(Result.SUCCESS, r);
         List<MatrixRun> runs = r.getRuns();
         Set<String> builtIds = new HashSet<String>();
         for (MatrixRun run : runs) {
@@ -88,8 +97,8 @@ public class MatrixProjectTest extends MercurialTestCase {
 
 
     private PretendSlave createPretendSlave(String slaveName) throws Exception {
-        PretendSlave slave = new PretendSlave(slaveName, this.createTmpDir().getPath(), "", createComputerLauncher(null), new NoopFakeLauncher());
-        hudson.addNode(slave);
+        PretendSlave slave = new PretendSlave(slaveName, tmp2.getRoot().getAbsolutePath(), "", j.createComputerLauncher(null), new NoopFakeLauncher());
+        j.jenkins.addNode(slave);
         return slave;
     }
 

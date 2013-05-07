@@ -4,19 +4,27 @@ import hudson.model.FreeStyleProject;
 import hudson.model.Hudson;
 import hudson.tools.ToolProperty;
 
+import static org.junit.Assert.*;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
+import org.jvnet.hudson.test.JenkinsRule;
+
 import java.io.File;
 import java.util.Collections;
 
-public class SwitchingSCMTest extends MercurialTestCase {
+public class SwitchingSCMTest {
 
+    @Rule public JenkinsRule j = new JenkinsRule();
+    @Rule public MercurialRule m = new MercurialRule(j);
+    @Rule public TemporaryFolder tmp = new TemporaryFolder();
     private File repo;
     protected String cachingInstallation = "caching";
     protected String sharingInstallation = "sharing";
 
-    protected @Override
-    void setUp() throws Exception {
-        super.setUp();
-        repo = createTmpDir();
+    @Before public void setUp() throws Exception {
+        repo = tmp.getRoot();
 
         Hudson.getInstance()
                 .getDescriptorByType(MercurialInstallation.DescriptorImpl.class)
@@ -34,35 +42,35 @@ public class SwitchingSCMTest extends MercurialTestCase {
         MercurialSCM.CACHE_LOCAL_REPOS = true;
     }
 
-    public void testSwitchingFromCachedToShared() throws Exception {
-        FreeStyleProject p = createFreeStyleProject();
+    @Test public void switchingFromCachedToShared() throws Exception {
+        FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(cachingInstallation, repo.getPath(), null,
                 null, null, null, false));
 
-        hg(repo, "init");
-        touchAndCommit(repo, "a");
-        buildAndCheck(p, "a");
+        m.hg(repo, "init");
+        m.touchAndCommit(repo, "a");
+        m.buildAndCheck(p, "a");
         assertFalse(p.getSomeWorkspace().child(".hg").child("sharedpath")
                 .exists());
 
         p.setScm(new MercurialSCM(sharingInstallation, repo.getPath(), null,
                 null, null, null, false));
 
-        touchAndCommit(repo, "b");
-        buildAndCheck(p, "b");
+        m.touchAndCommit(repo, "b");
+        m.buildAndCheck(p, "b");
         assertTrue(p.getSomeWorkspace().child(".hg").child("sharedpath")
                 .exists());
 
     }
 
     public void testSwitchingFromSharedToCached() throws Exception {
-        FreeStyleProject p = createFreeStyleProject();
+        FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(sharingInstallation, repo.getPath(), null,
                 null, null, null, false));
 
-        hg(repo, "init");
-        touchAndCommit(repo, "a");
-        buildAndCheck(p, "a");
+        m.hg(repo, "init");
+        m.touchAndCommit(repo, "a");
+        m.buildAndCheck(p, "a");
 
         assertTrue(p.getSomeWorkspace().child(".hg").child("sharedpath")
                 .exists());
@@ -70,8 +78,8 @@ public class SwitchingSCMTest extends MercurialTestCase {
         p.setScm(new MercurialSCM(cachingInstallation, repo.getPath(), null,
                 null, null, null, false));
 
-        touchAndCommit(repo, "b");
-        buildAndCheck(p, "b");
+        m.touchAndCommit(repo, "b");
+        m.buildAndCheck(p, "b");
         assertFalse(p.getSomeWorkspace().child(".hg").child("sharedpath")
                 .exists());
 
