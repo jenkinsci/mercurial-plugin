@@ -1,15 +1,12 @@
 package hudson.plugins.mercurial;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.*;
+import org.junit.Test;
 import org.jvnet.hudson.test.Bug;
 
-public class CacheTest extends TestCase {
+public class CacheTest {
 
-    public CacheTest(String n) {
-        super(n);
-    }
-
-    public void testHashSource() throws Exception {
+    @Test public void hashSource() throws Exception {
         assertEquals("5439A9B4063BB8F4885037E71B5079E1913DB6CA-core-main", Cache.hashSource("http://hg.netbeans.org/core-main/"));
         assertEquals("5439A9B4063BB8F4885037E71B5079E1913DB6CA-core-main", Cache.hashSource("http://hg.netbeans.org/core-main"));
         assertEquals("5731708C5EEAF9F1320B57D5F6A21E85EA5ADF2D-project", Cache.hashSource("ssh://dude@math.utexas.edu/some/project/"));
@@ -17,7 +14,7 @@ public class CacheTest extends TestCase {
     }
 
     @Bug(12544)
-    public void testHashSource2() throws Exception {
+    @Test public void hashSource2() throws Exception {
         assertEquals("DA7E6A4632009859A61A551999EE2109EBB69267-ronaldradial", Cache.hashSource("http://ronaldradial:8000/"));
     }
 
