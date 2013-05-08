@@ -8,7 +8,9 @@ import hudson.model.Action;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.ParametersAction;
+import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Result;
+import hudson.model.StringParameterDefinition;
 import hudson.model.StringParameterValue;
 import hudson.scm.ChangeLogSet;
 import hudson.scm.ChangeLogSet.Entry;
@@ -300,6 +302,28 @@ public abstract class SCMTestBase {
         // assertTrue(pollSCMChanges(p));
         m.buildAndCheck(p, "further-variant", new ParametersAction(
                 new StringParameterValue("BRANCH", "b")));
+    }
+
+    @Bug(9686)
+    @Test public void pollingExpandsParameterDefaults() throws Exception {
+        m.hg(repo, "init");
+        m.touchAndCommit(repo, "trunk");
+        m.hg(repo, "update", "null");
+        m.hg(repo, "branch", "b");
+        m.touchAndCommit(repo, "variant");
+        FreeStyleProject p = j.createFreeStyleProject();
+        p.addProperty(new ParametersDefinitionProperty(new StringParameterDefinition("branch", "default")));
+        p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), "${branch}", null, null, null, false));
+        String log = m.buildAndCheck(p, "trunk", new ParametersAction(new StringParameterValue("branch", "default")));
+        assertTrue(log, log.contains("--rev default"));
+        /* XXX cannot behave sensibly when workspace contains a branch build because the *current* trunk revision will be seen as new; would need to compare to all historical build records, or keep a separate workspace per branch:
+        log = m.buildAndCheck(p, "variant", new ParametersAction(new StringParameterValue("branch", "b")));
+        assertTrue(log, log.contains("--rev b"));
+        */
+        assertEquals(PollingResult.Change.NONE, m.pollSCMChanges(p).change);
+        m.hg(repo, "update", "default");
+        m.touchAndCommit(repo, "trunk2");
+        assertEquals(PollingResult.Change.SIGNIFICANT, m.pollSCMChanges(p).change);
     }
 
     @Bug(6517)

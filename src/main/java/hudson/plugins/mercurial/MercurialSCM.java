@@ -151,6 +151,25 @@ public class MercurialSCM extends SCM implements Serializable {
         return branch == null ? "default" : branch;
     }
 
+    /**
+     * Same as {@link #getBranch()} but with <em>default</em> values of parameters expanded.
+     */
+    private String getBranchExpanded(AbstractProject<?,?> project) {
+        EnvVars env = new EnvVars();
+        ParametersDefinitionProperty params = project.getProperty(ParametersDefinitionProperty.class);
+        if (params != null) {
+            for (ParameterDefinition param : params.getParameterDefinitions()) {
+                if (param instanceof StringParameterDefinition) {
+                    String dflt = ((StringParameterDefinition) param).getDefaultValue();
+                    if (dflt != null) {
+                        env.put(param.getName(), dflt);
+                    }
+                }
+            }
+        }
+        return getBranch(env);
+    }
+
     private String getBranch(EnvVars env) {
         return branch == null ? "default" : env.expand(branch);
     }
@@ -242,7 +261,7 @@ public class MercurialSCM extends SCM implements Serializable {
                 throw new IOException("Could not use cache to poll for changes. See error messages above for more details");
             }
             FilePath repositoryCache = new FilePath(new File(possiblyCachedRepo.getRepoLocation()));
-            return compare(launcher, listener, baseline, output, Hudson.getInstance(), repositoryCache);
+            return compare(launcher, listener, baseline, output, Hudson.getInstance(), repositoryCache, project);
         }
         // XXX do canUpdate check similar to in checkout, and possibly return INCOMPARABLE
 
@@ -251,9 +270,9 @@ public class MercurialSCM extends SCM implements Serializable {
             Node node = project.getLastBuiltOn(); // JENKINS-5984: ugly but matches what AbstractProject.poll uses; though compare JENKINS-14247
             FilePath repository = workspace2Repo(workspace);
 
-            pull(launcher, repository, listener, output, node,getBranch());
+            pull(launcher, repository, listener, output, node, getBranchExpanded(project));
 
-            return compare(launcher, listener, baseline, output, node, repository);
+            return compare(launcher, listener, baseline, output, node, repository, project);
         } catch(IOException e) {
             if (causedByMissingHg(e)) {
                 listener.error(Messages.MercurialSCM_failed_to_compare_with_remote_repository());
@@ -265,10 +284,11 @@ public class MercurialSCM extends SCM implements Serializable {
         }
     }
 
-    private PollingResult compare(Launcher launcher, TaskListener listener, MercurialTagAction baseline, PrintStream output, Node node, FilePath repository) throws IOException, InterruptedException {
+    private PollingResult compare(Launcher launcher, TaskListener listener, MercurialTagAction baseline, PrintStream output, Node node, FilePath repository, AbstractProject<?,?> project) throws IOException, InterruptedException {
         HgExe hg = new HgExe(this, launcher, node, listener, /*XXX*/new EnvVars());
-        String remote = hg.tip(repository, getBranch());
-        String rev = hg.tipNumber(repository, getBranch());
+        String _branch = getBranchExpanded(project);
+        String remote = hg.tip(repository, _branch);
+        String rev = hg.tipNumber(repository, _branch);
         if (remote == null) {
             throw new IOException("failed to find ID of branch head");
         }
