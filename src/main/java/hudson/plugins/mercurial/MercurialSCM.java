@@ -644,14 +644,19 @@ public class MercurialSCM extends SCM implements Serializable {
 
     @Override
     public void buildEnvVars(AbstractBuild<?,?> build, Map<String, String> env) {
+        buildEnvVarsFromActionable(build, env);
+    }
+
+    protected void buildEnvVarsFromActionable(Actionable build, Map<String, String> env) {
         MercurialTagAction a = findTag(build);
         if (a != null) {
             env.put("MERCURIAL_REVISION", a.id);
+            env.put("MERCURIAL_REVISION_SHORT", a.getShortId());
             env.put("MERCURIAL_REVISION_NUMBER", a.rev);
         }
     }
 
-    private MercurialTagAction findTag(AbstractBuild<?, ?> build) {
+    private MercurialTagAction findTag(Actionable build) {
         for (Action action : build.getActions()) {
             if (action instanceof MercurialTagAction) {
                 MercurialTagAction tag = (MercurialTagAction) action;
