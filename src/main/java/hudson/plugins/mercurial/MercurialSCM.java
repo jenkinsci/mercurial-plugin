@@ -144,6 +144,9 @@ public class MercurialSCM extends SCM implements Serializable {
     public String getSource() {
         return source;
     }
+    public String getSource(EnvVars env) {
+        return env.expand(source);
+    }
 
     /**
      * In-repository branch to follow. Never null.
@@ -169,7 +172,7 @@ public class MercurialSCM extends SCM implements Serializable {
     public HgBrowser getBrowser() {
         if (browser == null) {
             try {
-                return new HgWeb(source); // #2406
+                return new HgWeb(getSource( )); // #2406
             } catch (MalformedURLException x) {
                 // forget it
             }
@@ -418,12 +421,12 @@ public class MercurialSCM extends SCM implements Serializable {
         if (upstream == null) {
             return false;
         }
-        if (HgExe.pathEquals(source, upstream)) {
+        if (HgExe.pathEquals(getSource( env ), upstream)) {
             return true;
         }
         listener.error(
                 "Workspace reports paths.default as " + upstream +
-                "\nwhich looks different than " + source +
+                "\nwhich looks different than " + getSource( env ) +
                 "\nso falling back to fresh clone rather than incremental update");
         return false;
     }
@@ -571,7 +574,7 @@ public class MercurialSCM extends SCM implements Serializable {
             args.add("clone");
             args.add("--rev", getBranch(env));
             args.add("--noupdate");
-            args.add(source);
+            args.add(getSource( env ));
         }
         args.add(repository.getRemote());
         int cloneExitCode;
@@ -579,16 +582,16 @@ public class MercurialSCM extends SCM implements Serializable {
             cloneExitCode = hg.run(args).join();
         } catch (IOException e) {
             if (causedByMissingHg(e)) {
-                listener.error("Failed to clone " + source + " because hg could not be found;" +
+                listener.error("Failed to clone " + getSource( env ) + " because hg could not be found;" +
                         " check that you've properly configured your Mercurial installation");
             } else {
-                e.printStackTrace(listener.error(Messages.MercurialSCM_failed_to_clone(source)));
+                e.printStackTrace(listener.error(Messages.MercurialSCM_failed_to_clone(getSource( env ))));
             }
-            throw new AbortException(Messages.MercurialSCM_failed_to_clone(source));
+            throw new AbortException(Messages.MercurialSCM_failed_to_clone(getSource( env )));
         }
         if(cloneExitCode!=0) {
-            listener.error(Messages.MercurialSCM_failed_to_clone(source));
-            throw new AbortException(Messages.MercurialSCM_failed_to_clone(source));
+            listener.error(Messages.MercurialSCM_failed_to_clone(getSource( env )));
+            throw new AbortException(Messages.MercurialSCM_failed_to_clone(getSource( env )));
         }
 
         if (cachedSource != null && cachedSource.isUseCaches() && !cachedSource.isUseSharing()) {
@@ -599,7 +602,7 @@ public class MercurialSCM extends SCM implements Serializable {
                     listener.error(".hg/hgrc did not contain " + cachedSource.getRepoLocation() + " as expected:\n" + hgrcText);
                     throw new AbortException(".hg/hgrc did not contain " + cachedSource.getRepoLocation() + " as expected:\n" + hgrcText);
                 }
-                hgrc.write(hgrcText.replace(cachedSource.getRepoLocation(), source), null);
+                hgrc.write(hgrcText.replace(cachedSource.getRepoLocation(), getSource( env )), null);
             }
             // Passing --rev disables hardlinks, so we need to recreate them:
             hg.run("--config", "extensions.relink=", "relink", cachedSource.getRepoLocation())
@@ -610,7 +613,7 @@ public class MercurialSCM extends SCM implements Serializable {
         upArgs.add("update");
         upArgs.add("--rev", getBranch(env));
         if (hg.run(upArgs).pwd(repository).join() != 0) {
-            throw new AbortException("Failed to update " + source + " to rev " + getBranch(env));
+            throw new AbortException("Failed to update " + getSource( env ) + " to rev " + getBranch(env));
         }
 
         String tip = hg.tip(repository, null);
