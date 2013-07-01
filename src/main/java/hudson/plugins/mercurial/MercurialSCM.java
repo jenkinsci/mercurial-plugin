@@ -438,6 +438,8 @@ public class MercurialSCM extends SCM implements Serializable {
             return false;
         }
         
+        EnvVars env = build.getEnvironment(listener);
+        
         HgExe hg = new HgExe(this,launcher,build,listener);
         String upstream = hg.config(repo, "paths.default");
         if (upstream == null) {
