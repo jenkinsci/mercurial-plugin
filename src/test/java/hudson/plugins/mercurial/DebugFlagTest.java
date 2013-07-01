@@ -1,17 +1,17 @@
 package hudson.plugins.mercurial;
 
-import hudson.model.Hudson;
 import hudson.tools.ToolProperty;
 
 import java.util.Collections;
+import org.junit.Before;
 
-public class DebugFlagTest extends MercurialSCMTest {
+public class DebugFlagTest extends SCMTestBase {
 
     private static final String DEBUG_INSTALLATION = "debug";
 
-    protected @Override void setUp() throws Exception {
+    @Override @Before public void setUp() throws Exception {
         super.setUp();
-        Hudson.getInstance()
+        j.jenkins
                 .getDescriptorByType(MercurialInstallation.DescriptorImpl.class)
                 .setInstallations(
                         new MercurialInstallation(DEBUG_INSTALLATION, "", "hg",

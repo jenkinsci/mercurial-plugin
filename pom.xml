@@ -4,11 +4,11 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>1.466</version>
+    <version>1.480.3</version>
   </parent>
 
   <artifactId>mercurial</artifactId>
-  <version>1.45-SNAPSHOT</version>
+  <version>1.47-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
   <name>Jenkins Mercurial plugin</name>
@@ -35,6 +35,11 @@
           <id>davidmc24</id>
           <name>David M. Carr</name>
           <email>david@carrclan.us</email>
+      </developer>
+      <developer>
+          <id>willemv</id>
+          <name>Willem Verstraeten</name>
+          <email>willem.verstraeten@gmail.com</email>
       </developer>
   </developers>
   <licenses>
@@ -129,7 +134,7 @@
           <plugin>
               <groupId>org.codehaus.mojo</groupId>
               <artifactId>animal-sniffer-maven-plugin</artifactId>
-              <version>1.7</version>
+              <version>1.9</version>
               <executions>
                   <execution>
                       <phase>package</phase>

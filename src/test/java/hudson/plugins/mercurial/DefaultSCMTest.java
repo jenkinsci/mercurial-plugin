@@ -24,23 +24,10 @@
 
 package hudson.plugins.mercurial;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import org.junit.Test;
-import static org.junit.Assert.*;
+public class DefaultSCMTest extends SCMTestBase {
 
-public class MercurialSCMTest {
-
-    @Test public void parseStatus() throws Exception {
-        assertEquals(new HashSet<String>(Arrays.asList("whatever", "added", "mo-re", "whatever-c", "initial", "more")), MercurialSCM.parseStatus(
-                  "M whatever\n"
-                + "A added\n"
-                + "A mo-re\n"
-                + "  more\n"
-                + "A whatever-c\n"
-                + "  whatever\n"
-                + "R initial\n"
-                + "R more\n"));
+    @Override protected String hgInstallation() {
+        return null;
     }
 
 }

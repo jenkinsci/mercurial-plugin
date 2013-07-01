@@ -5,9 +5,7 @@ import hudson.Launcher;
 import hudson.model.Action;
 import hudson.model.FreeStyleBuild;
 import hudson.model.TaskListener;
-import hudson.model.Cause.UserCause;
 import hudson.model.FreeStyleProject;
-import hudson.model.Hudson;
 import hudson.scm.PollingResult;
 import hudson.util.StreamTaskListener;
 
@@ -21,37 +19,50 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.jvnet.hudson.test.HudsonTestCase;
+import static org.junit.Assert.*;
+import org.junit.Assume;
+import org.junit.internal.AssumptionViolatedException;
+import org.junit.rules.ExternalResource;
 
-public abstract class MercurialTestCase extends HudsonTestCase {
+import org.jvnet.hudson.test.JenkinsRule;
+
+public final class MercurialRule extends ExternalResource {
 
     private TaskListener listener;
-    private Launcher launcher;
 
-    protected @Override
-    void setUp() throws Exception {
-        super.setUp();
+    private final JenkinsRule j;
+
+    public MercurialRule(JenkinsRule j) {
+        this.j = j;
+    }
+
+    @Override protected void before() throws Exception {
         listener = new StreamTaskListener(System.out, Charset.defaultCharset());
-        launcher = Hudson.getInstance().createLauncher(listener);
         try {
-            hg("--version");
+            if (new ProcessBuilder("hg", "--version").start().waitFor() != 0) {
+                throw new AssumptionViolatedException("hg --version signaled an error");
+            }
         } catch(IOException ioe) {
             String message = ioe.getMessage();
             if(message.startsWith("Cannot run program \"hg\"") && message.endsWith("No such file or directory")) {
-                fail("hg is not available; please check that your PATH environment variable is properly configured");
+                throw new AssumptionViolatedException("hg is not available; please check that your PATH environment variable is properly configured");
             }
-            throw new Exception("Failed to check availability of hg", ioe);
+            Assume.assumeNoException(ioe); // failed to check availability of hg
         }
     }
 
-    protected final void hg(String... args) throws Exception {
-        List<String> cmds = assembleHgCommand(args);
-        assertEquals(0, MercurialSCM.launch(launcher).cmds(cmds).stdout(listener).join());
+    private Launcher launcher() {
+        return j.jenkins.createLauncher(listener);
     }
 
-    protected final void hg(File repo, String... args) throws Exception {
+    public void hg(String... args) throws Exception {
         List<String> cmds = assembleHgCommand(args);
-        assertEquals(0, MercurialSCM.launch(launcher).cmds(cmds).pwd(repo).stdout(listener).join());
+        assertEquals(0, MercurialSCM.launch(launcher()).cmds(cmds).stdout(listener).join());
+    }
+
+    public void hg(File repo, String... args) throws Exception {
+        List<String> cmds = assembleHgCommand(args);
+        assertEquals(0, MercurialSCM.launch(launcher()).cmds(cmds).pwd(repo).stdout(listener).join());
     }
 
     private List<String> assembleHgCommand(String[] args) {
@@ -63,7 +74,7 @@ public abstract class MercurialTestCase extends HudsonTestCase {
         return cmds;
     }
 
-    protected void touchAndCommit(File repo, String... names) throws Exception {
+    public void touchAndCommit(File repo, String... names) throws Exception {
         for (String name : names) {
             FilePath toTouch = new FilePath(repo).child(name);
             if (!toTouch.exists()) {
@@ -77,10 +88,9 @@ public abstract class MercurialTestCase extends HudsonTestCase {
         hg(repo, "commit", "--message", "added " + Arrays.toString(names));
     }
 
-    protected String buildAndCheck(FreeStyleProject p, String name,
+    public String buildAndCheck(FreeStyleProject p, String name,
             Action... actions) throws Exception {
-        FreeStyleBuild b = assertBuildStatusSuccess(p.scheduleBuild2(0,
-                new UserCause(), actions).get());
+        FreeStyleBuild b = j.assertBuildStatusSuccess(p.scheduleBuild2(0, null, actions).get());
         // for (String line : b.getLog(Integer.MAX_VALUE)) {
         // System.err.println(">> " + line);
         // }
@@ -97,12 +107,12 @@ public abstract class MercurialTestCase extends HudsonTestCase {
         return log;
     }
 
-    protected PollingResult pollSCMChanges(FreeStyleProject p) {
+    public PollingResult pollSCMChanges(FreeStyleProject p) {
         return p.poll(new StreamTaskListener(System.out, Charset
                 .defaultCharset()));
     }
 
-    protected String getLastChangesetId(File repo) throws Exception {
+    public String getLastChangesetId(File repo) throws Exception {
         List<String> cmds = new ArrayList<String>();
         cmds.add("hg");
         cmds.add("log");
@@ -111,7 +121,7 @@ public abstract class MercurialTestCase extends HudsonTestCase {
         cmds.add("{node}");
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         TaskListener nodeListener = new StreamTaskListener(baos);
-        assertEquals(0, MercurialSCM.launch(launcher).cmds(cmds).pwd(repo)
+        assertEquals(0, MercurialSCM.launch(launcher()).cmds(cmds).pwd(repo)
                 .stdout(nodeListener).stderr(baos).join());
         return baos.toString();
     }
