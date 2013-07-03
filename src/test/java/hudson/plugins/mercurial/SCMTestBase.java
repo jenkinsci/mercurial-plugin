@@ -680,6 +680,36 @@ public abstract class SCMTestBase {
             return null;
         }
     }
+    
+    @Bug(15806)
+    @Test public void testPullReturnCode() throws Exception {
+        File repo2 = tmp.newFolder();
+
+        m.hg(repo, "init");
+        m.hg(repo2, "init");
+        m.touchAndCommit(repo, "init");
+        m.touchAndCommit(repo2, "init");
+        m.hg(repo, "tag", "init");
+        m.hg(repo2, "tag", "init");
+
+        m.hg(repo2, "clone", repo.toString(), repo.toString() + "-working");
+
+        // delete repo 1 
+        repo.delete();
+
+
+        // do sample build where pull should fail
+        FreeStyleProject p = j.createFreeStyleProject();
+        MercurialSCM a = new MercurialSCM(hgInstallation(), repo2.getPath(), null, null, null, null, false);
+        p.setScm(a);
+
+        AbstractBuild<?, ?> b = p.scheduleBuild2(0).get();
+        
+        Thread.sleep(1000);
+   
+        assertEquals(Result.SUCCESS, b.getResult()); 
+
+    }
 
     /* XXX the following will pass, but canUpdate is not going to work without further changes:
     public void testParameterizedBuildsSource() throws Exception {
