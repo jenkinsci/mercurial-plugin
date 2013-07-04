@@ -58,6 +58,7 @@ public class MercurialStatusTest {
       assertFalse( MercurialStatus.looselyMatches(new URI("http://somehost/path"), "http://somehost/") );
       assertFalse( MercurialStatus.looselyMatches(new URI("http://somehost/path"), "http://somehost/path?query=test") );
       assertFalse( MercurialStatus.looselyMatches(new URI("http://somehost/path"), "http://somehost:81/path") );
+      assertTrue( MercurialStatus.looselyMatches(new URI("/var/hg/stuff"), "/var/hg/stuff") );
   }
   
 }

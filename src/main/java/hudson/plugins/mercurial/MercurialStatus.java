@@ -53,11 +53,11 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
         int port = uri.getPort();
         if ( port < 0 ){
             String scheme = uri.getScheme();
-            if ( scheme.equals("http") ){
+            if ("http".equals(scheme)){
                 port = 80;
-            } else if ( scheme.equals("https") ) {
+            } else if ("https".equals(scheme)) {
                 port = 443;
-            } else if ( scheme.equals("ssh") ) {
+            } else if ("ssh".equals(scheme)) {
                 port = 22;
             }
         }
