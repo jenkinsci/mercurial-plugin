@@ -63,12 +63,20 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
         }
         return port;
     }
+
+	private static String getScheme(URI uri) {
+		String scheme = uri.getScheme();
+		if (scheme == null) {
+			return "file";
+		}
+		return scheme;
+	}
     
     static boolean looselyMatches(URI notifyUri, String repository) {
         boolean result = false;
         try {
             URI repositoryUri = new URI(repository);
-            result = Objects.equal(notifyUri.getScheme(), repositoryUri.getScheme()) 
+            result = Objects.equal(getScheme(notifyUri), getScheme(repositoryUri))
                 && Objects.equal(notifyUri.getHost(), repositoryUri.getHost()) 
                 && getPort(notifyUri) == getPort(repositoryUri)
                 && Objects.equal(notifyUri.getPath(), repositoryUri.getPath())
