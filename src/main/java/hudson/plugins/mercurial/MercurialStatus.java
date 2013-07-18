@@ -110,7 +110,7 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
             LOGGER.log(Level.INFO, "url == " + url + " repository == " + repository);
             if (looselyMatches(url, repository)) urlFound = true; else continue;
             SCMTrigger trigger = project.getTrigger(SCMTrigger.class);
-            if (trigger!=null) triggerFound = true; else continue;
+            if (trigger!=null && !trigger.isIgnorePostCommitHooks()) triggerFound = true; else continue;
 
             LOGGER.log(Level.INFO, "Triggering the polling of {0}", project.getFullDisplayName());
             trigger.run();
@@ -120,7 +120,7 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
         final String msg;
         if (!scmFound)  msg = "No mercurial jobs found";
         else if (!urlFound) msg = "No mercurial jobs using repository: " + url;
-        else if (!triggerFound) msg = "Jobs found but they aren't configured for polling";
+        else if (!triggerFound) msg = "Jobs found but they are not configured for polling or are ignoring post-commit hooks";
         else msg = null;
 
         return new HttpResponse() {
