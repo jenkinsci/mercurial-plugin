@@ -316,7 +316,7 @@ public abstract class SCMTestBase {
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), "${branch}", null, null, null, false));
         String log = m.buildAndCheck(p, "trunk", new ParametersAction(new StringParameterValue("branch", "default")));
         assertTrue(log, log.contains("--rev default"));
-        /* XXX cannot behave sensibly when workspace contains a branch build because the *current* trunk revision will be seen as new; would need to compare to all historical build records, or keep a separate workspace per branch:
+        /* TODO cannot behave sensibly when workspace contains a branch build because the *current* trunk revision will be seen as new; would need to compare to all historical build records, or keep a separate workspace per branch:
         log = m.buildAndCheck(p, "variant", new ParametersAction(new StringParameterValue("branch", "b")));
         assertTrue(log, log.contains("--rev b"));
         */
@@ -559,7 +559,7 @@ public abstract class SCMTestBase {
         assertTrue(m.pollSCMChanges(p).hasChanges());
         b = j.assertBuildStatusSuccess(p.scheduleBuild2(0).get());
         List<Set<String>> paths = new ArrayList<Set<String>>();
-        // XXX "r1/r1f2" etc. would be preferable; probably requires determineChanges to prepend subdir?
+        // TODO "r1/r1f2" etc. would be preferable; probably requires determineChanges to prepend subdir?
         paths.add(Collections.singleton("r1f2"));
         paths.add(Collections.singleton("r2f2"));
         assertChangeSetPaths(paths, b);
@@ -681,7 +681,7 @@ public abstract class SCMTestBase {
         }
     }
 
-    /* XXX the following will pass, but canUpdate is not going to work without further changes:
+    /* TODO the following will pass, but canUpdate is not going to work without further changes:
     public void testParameterizedBuildsSource() throws Exception {
         p = createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation, "${REPO}", null, null, null, false, false));
@@ -691,7 +691,7 @@ public abstract class SCMTestBase {
     }
      */
 
-    /* XXX not yet supported; not sure how to expand var in MercurialSCM.createChangeLogParser:
+    /* TODO not yet supported; not sure how to expand var in MercurialSCM.createChangeLogParser:
     public void testParameterizedBuildsModules() throws Exception {
         hg(repo, "init");
         touchAndCommit(repo, "trunk", "dir1/f", "dir2/f");

@@ -215,7 +215,7 @@ public class MercurialSCM extends SCM implements Serializable {
     ArgumentListBuilder findHgExe(Node node, TaskListener listener, boolean allowDebug) throws IOException, InterruptedException {
         for (MercurialInstallation inst : MercurialInstallation.allInstallations()) {
             if (inst.getName().equals(installation)) {
-                // XXX what about forEnvironment?
+                // TODO what about forEnvironment?
                 ArgumentListBuilder b = new ArgumentListBuilder(inst.executableWithSubstitution(
                         inst.forNode(node, listener).getHome()));
                 if (allowDebug && inst.getDebug()) {
@@ -263,7 +263,7 @@ public class MercurialSCM extends SCM implements Serializable {
             FilePath repositoryCache = new FilePath(new File(possiblyCachedRepo.getRepoLocation()));
             return compare(launcher, listener, baseline, output, Hudson.getInstance(), repositoryCache, project);
         }
-        // XXX do canUpdate check similar to in checkout, and possibly return INCOMPARABLE
+        // TODO do canUpdate check similar to in checkout, and possibly return INCOMPARABLE
 
         try {
             // Get the list of changed files.
@@ -285,7 +285,7 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     private PollingResult compare(Launcher launcher, TaskListener listener, MercurialTagAction baseline, PrintStream output, Node node, FilePath repository, AbstractProject<?,?> project) throws IOException, InterruptedException {
-        HgExe hg = new HgExe(this, launcher, node, listener, /*XXX*/new EnvVars());
+        HgExe hg = new HgExe(this, launcher, node, listener, /*TODO*/new EnvVars());
         String _branch = getBranchExpanded(project);
         String remote = hg.tip(repository, _branch);
         String rev = hg.tipNumber(repository, _branch);
@@ -501,7 +501,7 @@ public class MercurialSCM extends SCM implements Serializable {
     private void update(AbstractBuild<?, ?> build, Launcher launcher, FilePath repository, BuildListener listener, String toRevision)
             throws IOException, InterruptedException {
         HgExe hg = new HgExe(this, launcher, build, listener);
-        Node node = Computer.currentComputer().getNode(); // XXX why not build.getBuiltOn()?
+        Node node = Computer.currentComputer().getNode(); // TODO why not build.getBuiltOn()?
         try {
             pull(launcher, repository, listener, new PrintStream(new NullOutputStream()), node, toRevision);
         } catch (IOException e) {
