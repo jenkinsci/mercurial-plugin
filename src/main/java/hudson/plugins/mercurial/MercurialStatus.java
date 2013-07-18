@@ -19,6 +19,7 @@ import org.kohsuke.stapler.StaplerResponse;
 import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
@@ -53,22 +54,30 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
         int port = uri.getPort();
         if ( port < 0 ){
             String scheme = uri.getScheme();
-            if ( scheme.equals("http") ){
+            if ("http".equals(scheme)){
                 port = 80;
-            } else if ( scheme.equals("https") ) {
+            } else if ("https".equals(scheme)) {
                 port = 443;
-            } else if ( scheme.equals("ssh") ) {
+            } else if ("ssh".equals(scheme)) {
                 port = 22;
             }
         }
         return port;
     }
+
+	private static String getScheme(URI uri) {
+		String scheme = uri.getScheme();
+		if (scheme == null) {
+			return "file";
+		}
+		return scheme;
+	}
     
     static boolean looselyMatches(URI notifyUri, String repository) {
         boolean result = false;
         try {
             URI repositoryUri = new URI(repository);
-            result = Objects.equal(notifyUri.getScheme(), repositoryUri.getScheme()) 
+            result = Objects.equal(getScheme(notifyUri), getScheme(repositoryUri))
                 && Objects.equal(notifyUri.getHost(), repositoryUri.getHost()) 
                 && getPort(notifyUri) == getPort(repositoryUri)
                 && Objects.equal(notifyUri.getPath(), repositoryUri.getPath())
@@ -110,7 +119,7 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
             LOGGER.log(Level.INFO, "url == " + url + " repository == " + repository);
             if (looselyMatches(url, repository)) urlFound = true; else continue;
             SCMTrigger trigger = project.getTrigger(SCMTrigger.class);
-            if (trigger!=null) triggerFound = true; else continue;
+			if (trigger!=null && !doesIgnorePostCommitHooks(trigger)) triggerFound = true; else continue;
 
             LOGGER.log(Level.INFO, "Triggering the polling of {0}", project.getFullDisplayName());
             trigger.run();
@@ -120,7 +129,7 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
         final String msg;
         if (!scmFound)  msg = "No mercurial jobs found";
         else if (!urlFound) msg = "No mercurial jobs using repository: " + url;
-        else if (!triggerFound) msg = "Jobs found but they aren't configured for polling";
+        else if (!triggerFound) msg = "Jobs found but they aren't configured for polling or are configured to ignore post-commit hooks";
         else msg = null;
 
         return new HttpResponse() {
@@ -140,5 +149,27 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
         };
     }
 
-    private static final Logger LOGGER = Logger.getLogger(MercurialStatus.class.getName());
+	private boolean doesIgnorePostCommitHooks(SCMTrigger trigger) {
+		if (IS_IGNORE_POST_COMMIT_HOOKS_METHOD == null) { return false; }
+
+		try {
+			return (Boolean) IS_IGNORE_POST_COMMIT_HOOKS_METHOD.invoke(trigger, (Object[]) null);
+		} catch (Exception e) {
+			LOGGER.log(Level.WARNING, "Failure when calling isIgnorePostCommitHooks", e);
+			return false;
+		}
+	}
+
+	private static final Logger LOGGER = Logger.getLogger(MercurialStatus.class.getName());
+	private static final Method IS_IGNORE_POST_COMMIT_HOOKS_METHOD;
+
+	static {
+		Method method = null;
+		try {
+			method = SCMTrigger.class.getMethod("isIgnorePostCommitHooks", (Class[]) null);
+		} catch (Exception ignore) {
+			// we're running in an older Jenkins version which doesn't have this method
+		}
+		IS_IGNORE_POST_COMMIT_HOOKS_METHOD = method;
+	}
 }
