@@ -28,19 +28,16 @@ import static org.junit.Assert.*;
 import org.junit.Test;
 
 public class HgExeTest {
-
     @Test public void pathEquals() {
         assertTrue(HgExe.pathEquals("http://nowhere.net/hg/", "http://nowhere.net/hg/"));
         assertTrue(HgExe.pathEquals("http://nowhere.net/hg", "http://nowhere.net/hg/"));
         assertTrue(HgExe.pathEquals("http://nowhere.net/hg/", "http://nowhere.net/hg"));
         assertTrue(HgExe.pathEquals("http://nowhere.net/hg", "http://nowhere.net/hg"));
         assertFalse(HgExe.pathEquals("https://nowhere.net/hg/", "http://nowhere.net/hg/"));
-        assertTrue(HgExe.pathEquals("file:/var/hg/stuff", "/var/hg/stuff"));
-        assertTrue(HgExe.pathEquals("file:///var/hg/stuff", "/var/hg/stuff"));
-        assertFalse(HgExe.pathEquals("file:/var/hg/stuff", "/var/hg/other"));
-        assertTrue(HgExe.pathEquals("/var/hg/stuff", "file:/var/hg/stuff"));
-        assertTrue(HgExe.pathEquals("/var/hg/stuff", "file:///var/hg/stuff"));
-        assertFalse(HgExe.pathEquals("/var/hg/other", "file:/var/hg/stuff"));
+        if (  org.apache.commons.lang.SystemUtils.IS_OS_UNIX ) {
+            assertTrue(HgExe.pathEquals("file:/var/hg/stuff", "/var/hg/stuff"));
+            assertTrue(HgExe.pathEquals("file:///var/hg/stuff", "/var/hg/stuff"));
+            assertFalse(HgExe.pathEquals("file:/var/hg/stuff", "/var/hg/other"));
+        }
     }
-
 }
