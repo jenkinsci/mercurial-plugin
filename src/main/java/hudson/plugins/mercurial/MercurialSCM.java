@@ -184,6 +184,10 @@ public class MercurialSCM extends SCM implements Serializable {
     public String getSubdir(EnvVars env) {
         return env.expand( subdir );
     }
+    
+    public String getSubdir( ) {
+        return subdir;
+    }
 
     private FilePath workspace2Repo(FilePath workspace, EnvVars env) {
         return getSubdir(env) != null ? workspace.child(getSubdir(env)) : workspace;
