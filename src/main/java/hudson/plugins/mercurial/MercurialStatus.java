@@ -99,18 +99,27 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
                 urlFound = false;
         for (AbstractProject<?,?> project : Hudson.getInstance().getAllItems(AbstractProject.class)) {
             SCM scm = project.getScm();
-            if (scm instanceof MercurialSCM) scmFound = true; else continue;
+            if (!(scm instanceof MercurialSCM)) {
+                continue;
+            }
+            scmFound = true;
 
             MercurialSCM hg = (MercurialSCM) scm;
             String repository = hg.getSource();
             if (repository == null) {
-                LOGGER.log(Level.FINE, "project " + project.getDisplayName() + " is using source control but does not identify a repository");
+                LOGGER.log(Level.FINE, "project {0} is using source control but does not identify a repository", project.getDisplayName());
                 continue;
             }
-            LOGGER.log(Level.INFO, "url == " + url + " repository == " + repository);
-            if (looselyMatches(url, repository)) urlFound = true; else continue;
+            LOGGER.log(Level.INFO, "url == {0} repository == {1}", new Object[] {url, repository});
+            if (!looselyMatches(url, repository)) {
+                continue;
+            }
+            urlFound = true;
             SCMTrigger trigger = project.getTrigger(SCMTrigger.class);
-            if (trigger!=null) triggerFound = true; else continue;
+            if (trigger == null || trigger.isIgnorePostCommitHooks()) {
+                continue;
+            }
+            triggerFound = true;
 
             LOGGER.log(Level.INFO, "Triggering the polling of {0}", project.getFullDisplayName());
             trigger.run();
@@ -118,10 +127,15 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
         }
 
         final String msg;
-        if (!scmFound)  msg = "No mercurial jobs found";
-        else if (!urlFound) msg = "No mercurial jobs using repository: " + url;
-        else if (!triggerFound) msg = "Jobs found but they aren't configured for polling";
-        else msg = null;
+        if (!scmFound) {
+            msg = "No Mercurial jobs found";
+        } else if (!urlFound) {
+            msg = "No Mercurial jobs found using repository: " + url;
+        } else if (!triggerFound) {
+            msg = "Jobs found but they are not configured for polling or are ignoring post-commit hooks";
+        } else {
+            msg = null;
+        }
 
         return new HttpResponse() {
             public void generateResponse(StaplerRequest req, StaplerResponse rsp, Object node) throws IOException, ServletException {

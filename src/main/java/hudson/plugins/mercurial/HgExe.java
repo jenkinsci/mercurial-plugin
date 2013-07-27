@@ -78,7 +78,7 @@ public class HgExe {
 
     public HgExe(MercurialSCM scm, Launcher launcher, Node node, TaskListener listener, EnvVars env) throws IOException, InterruptedException {
         base = scm.findHgExe(node, listener, true);
-        // XXX might be more efficient to have a single call returning ArgumentListBuilder[2]?
+        // TODO might be more efficient to have a single call returning ArgumentListBuilder[2]?
         baseNoDebug = scm.findHgExe(node, listener, false);
         this.node = node;
         this.env = env;
