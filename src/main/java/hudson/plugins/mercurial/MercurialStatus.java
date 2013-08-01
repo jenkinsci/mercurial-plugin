@@ -78,7 +78,7 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
         boolean result = false;
         try {
             URI repositoryUri = new URI(repository);
-            result = Objects.equal(getScheme(notifyUri), getScheme(repositoryUri))
+            result = getScheme(notifyUri).equals(getScheme(repositoryUri))
                 && Objects.equal(notifyUri.getHost(), repositoryUri.getHost()) 
                 && getPort(notifyUri) == getPort(repositoryUri)
                 && Objects.equal(notifyUri.getPath(), repositoryUri.getPath())
