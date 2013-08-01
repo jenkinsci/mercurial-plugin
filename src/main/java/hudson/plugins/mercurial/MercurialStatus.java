@@ -16,6 +16,7 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
+import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -64,6 +65,7 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
         return port;
     }
 
+	@Nonnull
 	private static String getScheme(URI uri) {
 		String scheme = uri.getScheme();
 		if (scheme == null) {
