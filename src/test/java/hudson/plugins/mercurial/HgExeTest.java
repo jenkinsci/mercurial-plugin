@@ -38,6 +38,9 @@ public class HgExeTest {
             assertTrue(HgExe.pathEquals("file:/var/hg/stuff", "/var/hg/stuff"));
             assertTrue(HgExe.pathEquals("file:///var/hg/stuff", "/var/hg/stuff"));
             assertFalse(HgExe.pathEquals("file:/var/hg/stuff", "/var/hg/other"));
+            assertTrue(HgExe.pathEquals("/var/hg/stuff", "file:/var/hg/stuff"));
+            assertTrue(HgExe.pathEquals("/var/hg/stuff", "file:///var/hg/stuff"));
+            assertFalse(HgExe.pathEquals("/var/hg/other", "file:/var/hg/stuff"));
         }
     }
 }
