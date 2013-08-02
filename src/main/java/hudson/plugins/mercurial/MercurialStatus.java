@@ -16,6 +16,7 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
+import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -53,22 +54,31 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
         int port = uri.getPort();
         if ( port < 0 ){
             String scheme = uri.getScheme();
-            if ( scheme.equals("http") ){
+            if ("http".equals(scheme)){
                 port = 80;
-            } else if ( scheme.equals("https") ) {
+            } else if ("https".equals(scheme)) {
                 port = 443;
-            } else if ( scheme.equals("ssh") ) {
+            } else if ("ssh".equals(scheme)) {
                 port = 22;
             }
         }
         return port;
     }
+
+	@Nonnull
+	private static String getScheme(URI uri) {
+		String scheme = uri.getScheme();
+		if (scheme == null) {
+			return "file";
+		}
+		return scheme;
+	}
     
     static boolean looselyMatches(URI notifyUri, String repository) {
         boolean result = false;
         try {
             URI repositoryUri = new URI(repository);
-            result = Objects.equal(notifyUri.getScheme(), repositoryUri.getScheme()) 
+            result = getScheme(notifyUri).equals(getScheme(repositoryUri))
                 && Objects.equal(notifyUri.getHost(), repositoryUri.getHost()) 
                 && getPort(notifyUri) == getPort(repositoryUri)
                 && Objects.equal(notifyUri.getPath(), repositoryUri.getPath())

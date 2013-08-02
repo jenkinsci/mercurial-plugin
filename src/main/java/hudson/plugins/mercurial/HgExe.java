@@ -273,6 +273,9 @@ public class HgExe {
         if (pathURL.startsWith("file:/") && URI.create(pathURL).equals(new File(pathAsInConfig).toURI())) {
             return true;
         }
+        if (pathAsInConfig.startsWith("file:/") && URI.create(pathAsInConfig).equals(new File(pathURL).toURI())) {
+            return true;
+        }
         return false;
     }
 }
