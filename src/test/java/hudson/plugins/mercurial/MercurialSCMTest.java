@@ -24,12 +24,18 @@
 
 package hudson.plugins.mercurial;
 
-import java.util.Arrays;
-import java.util.HashSet;
+import hudson.model.Action;
+import hudson.model.Actionable;
 import org.junit.Test;
-import static org.junit.Assert.*;
+
+import java.io.IOException;
+import java.util.*;
+
+import static org.junit.Assert.assertEquals;
 
 public class MercurialSCMTest {
+
+    public static final String EXPECTED_SHORT_ID = "123456789012";
 
     @Test public void parseStatus() throws Exception {
         assertEquals(new HashSet<String>(Arrays.asList("whatever", "added", "mo-re", "whatever-c", "initial", "more")), MercurialSCM.parseStatus(
@@ -43,4 +49,41 @@ public class MercurialSCMTest {
                 + "R more\n"));
     }
 
+    @Test public void buildEnvVarsSetsShortId() throws IOException {
+        Map < String, String > actualEnvironment = new HashMap<String, String>();
+
+        createMercurialSCM().buildEnvVarsFromActionable(createActionable(), actualEnvironment);
+
+        assertEquals(EXPECTED_SHORT_ID, actualEnvironment.get("MERCURIAL_REVISION_SHORT"));
+    }
+
+    private MercurialSCM createMercurialSCM() {
+        return new MercurialSCM("","","", "", "", null, true);
+    }
+
+    private Actionable createActionable() {
+        List<Action> expectedActions = Arrays.asList((Action) new MercurialTagAction(EXPECTED_SHORT_ID + "1627e63489b4096a8858e559a456", "rev", null));
+        return new ActionableTestDouble(expectedActions);
+    }
+
+    private class ActionableTestDouble extends Actionable {
+        private List<Action> expectedActions = new ArrayList<Action>();
+
+        public ActionableTestDouble(List<Action> expectedActions) {
+            this.expectedActions = expectedActions;
+        }
+
+        public String getDisplayName() {
+            throw new RuntimeException();
+        }
+
+        public String getSearchUrl() {
+            throw new RuntimeException();
+        }
+
+        @Override
+        public synchronized List<Action> getActions() {
+            return expectedActions;
+        }
+    }
 }
