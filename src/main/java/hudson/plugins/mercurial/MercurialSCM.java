@@ -748,7 +748,9 @@ public class MercurialSCM extends SCM implements Serializable {
                 MercurialTagAction tag = (MercurialTagAction) action;
                 // JENKINS-12162: differentiate plugins in different getSubdir()s
                 EnvVars env = new EnvVars( e );
-                if ((getSubdir(env) == null && tag.getSubdir() == null) || (getSubdir(env) != null && getSubdir(env).equals(tag.getSubdir()))) {
+                String ourSubDir = getSubdir( env );
+                String tagSubDir = tag.getSubdir( );
+                if ((ourSubDir == null && tagSubDir == null) || (ourSubDir != null && ourSubDir.equals(tagSubDir))) {
                     return tag;
                 }
             }
