@@ -529,12 +529,13 @@ public class MercurialSCM extends SCM implements Serializable {
         if (upstream == null) {
             return false;
         }
-        if (HgExe.pathEquals(getSource( env ), upstream)) {
+        String source = getSource( env );
+        if (HgExe.pathEquals(source, upstream)) {
             return true;
         }
         listener.error(
                 "Workspace reports paths.default as " + upstream +
-                "\nwhich looks different than " + getSource( env ) +
+                "\nwhich looks different than " + source +
                 "\nso falling back to fresh clone rather than incremental update");
         return false;
     }
