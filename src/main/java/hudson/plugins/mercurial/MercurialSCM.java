@@ -147,7 +147,7 @@ public class MercurialSCM extends SCM implements Serializable {
     public String getSource() {
         return source;
     }
-    public String getSource(EnvVars env) {
+    private String getSource(EnvVars env) {
         return env.expand(source);
     }
 
