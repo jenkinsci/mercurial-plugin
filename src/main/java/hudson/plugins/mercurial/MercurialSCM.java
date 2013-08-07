@@ -181,7 +181,7 @@ public class MercurialSCM extends SCM implements Serializable {
         return branch == null ? "default" : env.expand(branch);
     }
 
-    public String getSubdir(EnvVars env) {
+    private String getSubdir(EnvVars env) {
         return env.expand( subdir );
     }
     
