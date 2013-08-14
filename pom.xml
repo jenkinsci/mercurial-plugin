@@ -11,6 +11,9 @@
     <name>Jenkins Mercurial plugin</name>
     <description>Allows Jenkins to check out projects from the Mercurial SCM.</description>
     <url>http://wiki.jenkins-ci.org/display/JENKINS/Mercurial+Plugin</url>
+    <properties>
+        <maven-hpi-plugin.version>1.96</maven-hpi-plugin.version> <!-- TODO can remove when based on 1.509.3 -->
+    </properties>
     <developers>
         <developer>
             <id>jglick</id>
@@ -45,9 +48,9 @@
         </license>
     </licenses>
     <scm>
-        <connection>scm:git:git://github.com/jenkinsci/${artifactId}-plugin.git</connection>
-        <developerConnection>scm:git:git@github.com:jenkinsci/${artifactId}-plugin.git</developerConnection>
-        <url>https://github.com/jenkinsci/${artifactId}-plugin</url>
+        <connection>scm:git:git://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
+        <developerConnection>scm:git:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>
+        <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
     </scm>
     <issueManagement>
         <system>JIRA</system>
