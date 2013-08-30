@@ -653,6 +653,7 @@ public class MercurialSCM extends SCM implements Serializable {
             env.put("MERCURIAL_REVISION", a.id);
             env.put("MERCURIAL_REVISION_SHORT", a.getShortId());
             env.put("MERCURIAL_REVISION_NUMBER", a.rev);
+            env.put("MERCURIAL_BRANCH", getBranch());
         }
     }
 
