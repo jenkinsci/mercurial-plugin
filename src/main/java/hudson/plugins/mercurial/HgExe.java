@@ -87,21 +87,40 @@ public class HgExe {
         this.capability = Capability.get(this);
     }
 
-    private ProcStarter l(ArgumentListBuilder args) {
+    /**
+     * Prepares to start the Mercurial command.
+     * @param args some arguments as created by {@link #seed} and then appended to
+     * @return a process starter with the correct launcher, arguments, listener, and environment variables configured
+     */
+    public ProcStarter launch(ArgumentListBuilder args) {
         // set the default stdout
         return MercurialSCM.launch(launcher).cmds(args).stdout(listener).envs(env);
     }
 
-    private ArgumentListBuilder seed(boolean allowDebug) {
+    /**
+     * Starts creating an argument list.
+     * Initially adds only the Mercurial executable itself, possibly with a debug flag.
+     * @param allowDebug whether to add a debug flag if the configured installation requested it
+     * @return a builder
+     */
+    public ArgumentListBuilder seed(boolean allowDebug) {
         return (allowDebug ? base : baseNoDebug).clone();
     }
 
+    @Deprecated
+    /**
+     * @deprecated Unused, since we need more control over the argument list in order to support credentials.
+     */
     public ProcStarter pull() {
         return run("pull");
     }
 
+    @Deprecated
+    /**
+     * @deprecated Unused, since we need more control over the argument list in order to support credentials.
+     */
     public ProcStarter clone(String... args) {
-        return l(seed(true).add("clone").add(args));
+        return launch(seed(true).add("clone").add(args));
     }
 
     public ProcStarter bundleAll(String file) {
@@ -114,7 +133,7 @@ public class HgExe {
             args.add("--base", head);
         }
         args.add(file);
-        return l(args);
+        return launch(args);
     }
 
     public ProcStarter init(FilePath path) {
@@ -133,11 +152,15 @@ public class HgExe {
      * Runs arbitrary command.
      */
     public ProcStarter run(String... args) {
-        return l(seed(true).add(args));
+        return launch(seed(true).add(args));
     }
 
+    /**
+     * @deprecated Use {@link #seed} and {@link #launch} instead.
+     */
+    @Deprecated
     public ProcStarter run(ArgumentListBuilder args) {
-        return l(seed(true).add(args.toCommandArray()));
+        return launch(seed(true).add(args.toCommandArray()));
     }
 
     /**
@@ -213,7 +236,7 @@ public class HgExe {
         args = seed(false).add(args.toCommandArray());
 
         ByteArrayOutputStream rev = new ByteArrayOutputStream();
-        if (MercurialSCM.joinWithPossibleTimeout(l(args).pwd(repository).stdout(rev), useTimeout, listener) == 0) {
+        if (MercurialSCM.joinWithPossibleTimeout(launch(args).pwd(repository).stdout(rev), useTimeout, listener) == 0) {
             return rev.toString();
         } else {
             listener.error("Failed to run " + args.toStringWithQuote());

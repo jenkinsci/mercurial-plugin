@@ -15,6 +15,9 @@
   <f:entry field="source" title="${%Repository URL}">
     <f:textbox/>
   </f:entry>
+  <f:entry field="credentialsId" title="${%Credentials}">
+    <f:select/>
+  </f:entry>
   <f:entry field="branch" title="${%Branch}">
     <f:textbox/>
   </f:entry>

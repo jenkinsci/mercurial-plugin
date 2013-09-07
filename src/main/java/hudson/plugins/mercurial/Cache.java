@@ -1,5 +1,8 @@
 package hudson.plugins.mercurial;
 
+import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
+import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
+import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.EnvVars;
@@ -8,6 +11,7 @@ import hudson.Launcher;
 import hudson.model.Hudson;
 import hudson.model.Node;
 import hudson.model.TaskListener;
+import hudson.util.ArgumentListBuilder;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -35,6 +39,8 @@ class Cache {
      */
     private final String remote;
 
+    private final StandardUsernameCredentials credentials;
+
     /**
      * Hashed value of {@link #remote} that only contains characters that are safe as a directory name.
      */
@@ -46,18 +52,19 @@ class Cache {
     private final ReentrantLock masterLock = new ReentrantLock(true);
     private final Map<String, ReentrantLock> slaveNodesLocksMap = new HashMap<String, ReentrantLock>();
 
-    private Cache(String remote, String hash) {
+    private Cache(String remote, String hash, StandardUsernameCredentials credentials) {
         this.remote = remote;
         this.hash = hash;
+        this.credentials = credentials;
     }
 
     private static final Map<String, Cache> CACHES = new HashMap<String, Cache>();
 
-    public synchronized static @NonNull Cache fromURL(String remote) {
-        String h = hashSource(remote);
+    public synchronized static @NonNull Cache fromURL(String remote, StandardUsernameCredentials credentials) {
+        String h = hashSource(remote, credentials);
         Cache cache = CACHES.get(h);
         if (cache == null) {
-            CACHES.put(h, cache = new Cache(remote, h));
+            CACHES.put(h, cache = new Cache(remote, h, credentials));
         }
         return cache;
     }
@@ -110,14 +117,25 @@ class Cache {
         masterLock.lockInterruptibly();
         try {
             listener.getLogger().println("Acquired master cache lock.");
+            // TODO use getCredentials()
             if (masterCache.isDirectory()) {
-                if (MercurialSCM.joinWithPossibleTimeout(masterHg.pull().pwd(masterCache), true, listener) != 0) {
+                ArgumentListBuilder args = masterHg.seed(true).add("pull");
+                if (credentials instanceof UsernamePasswordCredentials) {
+                    args.addMasked(MercurialSCM.getSourceWithCredentials(remote, (StandardUsernamePasswordCredentials) credentials));
+                }
+                if (MercurialSCM.joinWithPossibleTimeout(masterHg.launch(args).pwd(masterCache), true, listener) != 0) {
                     listener.error("Failed to update " + masterCache);
                     return null;
                 }
             } else {
                 masterCaches.mkdirs();
-                if (MercurialSCM.joinWithPossibleTimeout(masterHg.clone("--noupdate", remote, masterCache.getRemote()), fromPolling, listener) != 0) {
+                ArgumentListBuilder args = masterHg.seed(true).add("clone").add("--noupdate");
+                if (credentials instanceof UsernamePasswordCredentials) {
+                    args.addMasked(MercurialSCM.getSourceWithCredentials(remote, (StandardUsernamePasswordCredentials) credentials));
+                } else {
+                    args.add(remote);
+                }
+                if (MercurialSCM.joinWithPossibleTimeout(masterHg.launch(args.add(masterCache.getRemote())), fromPolling, listener) != 0) {
                     listener.error("Failed to clone " + remote);
                     return null;
                 }
@@ -213,18 +231,19 @@ class Cache {
     /**
      * Hash a URL into a string that only contains characters that are safe as directory names.
      */
-    static String hashSource(String source) {
+    static String hashSource(String source, StandardUsernameCredentials credentials) {
         if (!source.endsWith("/")) {
             source += "/";
         }
         Matcher m = Pattern.compile(".+[/]([^/:]+)(:\\d+)?[/]?").matcher(source);
+        String digestible = credentials == null ? source : source + '#' + credentials.getId();
         BigInteger hash;
         try {
-            hash = new BigInteger(1, MessageDigest.getInstance("SHA-1").digest(source.getBytes("UTF-8")));
+            hash = new BigInteger(1, MessageDigest.getInstance("SHA-1").digest(digestible.getBytes("UTF-8")));
         } catch (Exception x) {
             throw new AssertionError(x);
         }
-        return String.format("%040X%s", hash, m.matches() ? "-" + m.group(1) : "");
+        return String.format("%040X%s%s", hash, m.matches() ? "-" + m.group(1) : "", credentials == null ? "" : "-" + credentials.getUsername().replace("@", "-at-"));
     }
 
 }
