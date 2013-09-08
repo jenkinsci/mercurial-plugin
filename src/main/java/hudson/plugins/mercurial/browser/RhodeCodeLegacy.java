@@ -1,8 +1,7 @@
 package hudson.plugins.mercurial.browser;
 
 import hudson.Extension;
-import hudson.model.Descriptor;
-import hudson.scm.RepositoryBrowser;
+import hudson.util.FormValidation;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -10,6 +9,7 @@ import java.net.URL;
 import net.sf.json.JSONObject;
 
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
 /**
@@ -46,7 +46,7 @@ public class RhodeCodeLegacy extends RhodeCode {
     }
 
     @Extension
-    public static class DescriptorImpl extends Descriptor<RepositoryBrowser<?>> {
+    public static class DescriptorImpl extends HgBrowserDescriptor {
         public String getDisplayName() {
             return "rhodecode (pre-1.2.0)";
         }
@@ -57,6 +57,11 @@ public class RhodeCodeLegacy extends RhodeCode {
             return req.bindParameters(RhodeCodeLegacy.class,
                     "rhodecode-legacy.");
         }
+
+        @Override public FormValidation doCheckUrl(@QueryParameter String url) {
+            return _doCheckUrl(url);
+        }
+
     }
 
     private static final long serialVersionUID = 1L;

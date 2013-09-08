@@ -1,9 +1,8 @@
 package hudson.plugins.mercurial.browser;
 
 import hudson.Extension;
-import hudson.model.Descriptor;
 import hudson.plugins.mercurial.MercurialChangeSet;
-import hudson.scm.RepositoryBrowser;
+import hudson.util.FormValidation;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -12,6 +11,7 @@ import java.net.URL;
 import net.sf.json.JSONObject;
 
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
 /**
@@ -63,7 +63,7 @@ public class KilnHG extends HgBrowser {
     }
 
     @Extension
-    public static class DescriptorImpl extends Descriptor<RepositoryBrowser<?>> {
+    public static class DescriptorImpl extends HgBrowserDescriptor {
         public String getDisplayName() {
             return "kilnhg";
         }
@@ -71,6 +71,11 @@ public class KilnHG extends HgBrowser {
         public @Override KilnHG newInstance(StaplerRequest req, JSONObject json) throws FormException {
             return req.bindParameters(KilnHG.class,"kilnhg.");
         }
+
+        @Override public FormValidation doCheckUrl(@QueryParameter String url) {
+            return _doCheckUrl(url);
+        }
+
     }
 
     private static final long serialVersionUID = 1L;

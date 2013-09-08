@@ -1,9 +1,7 @@
 package hudson.plugins.mercurial.browser;
 
 import hudson.Extension;
-import hudson.model.Descriptor;
 import hudson.plugins.mercurial.MercurialChangeSet;
-import hudson.scm.RepositoryBrowser;
 import hudson.util.FormValidation;
 
 import java.io.IOException;
@@ -63,7 +61,7 @@ public class BitBucket extends HgBrowser {
     }
     
     @Extension
-    public static class DescriptorImpl extends Descriptor<RepositoryBrowser<?>> {
+    public static class DescriptorImpl extends HgBrowserDescriptor {
         public String getDisplayName() {
             return "bitbucket";
         }
@@ -72,10 +70,12 @@ public class BitBucket extends HgBrowser {
             return req.bindParameters(BitBucket.class,"bitbucket.");
         }
 
-        public FormValidation doCheckUrl(@QueryParameter String url) {
-            if (url.length() == 0) {
-                return FormValidation.error("Must enter URL");
-            } else if (url.matches("https?://bitbucket[.]org/[^/]+/[^/]+/")) {
+        @Override public FormValidation doCheckUrl(@QueryParameter String url) {
+            return _doCheckUrl(url);
+        }
+
+        @Override protected FormValidation check(URL url) {
+            if (url.toString().matches("https?://bitbucket[.]org/[^/]+/[^/]+/")) {
                 return FormValidation.ok();
             } else {
                 return FormValidation.warning("Possibly incorrect root URL; expected http://bitbucket.org/USERNAME/REPOS/");
