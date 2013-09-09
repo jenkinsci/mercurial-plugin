@@ -61,16 +61,18 @@ public class MercurialInstallation extends ToolInstallation implements
     private boolean debug;
     private boolean useCaches;
     private boolean useSharing;
+    private boolean pullWholeRepo;
 
     @DataBoundConstructor
     public MercurialInstallation(String name, String home, String executable,
             boolean debug, boolean useCaches,
-            boolean useSharing, List<? extends ToolProperty<?>> properties) {
+            boolean useSharing, boolean pullWholeRepo, List<? extends ToolProperty<?>> properties) {
         super(name, home, properties);
         this.executable = Util.fixEmpty(executable);
         this.debug = debug;
         this.useCaches = useCaches || useSharing;
         this.useSharing = useSharing;
+        this.pullWholeRepo = pullWholeRepo;
     }
 
     public String getExecutable() {
@@ -93,6 +95,10 @@ public class MercurialInstallation extends ToolInstallation implements
         return useSharing;
     }
 
+    public boolean isPullWholeRepo() {
+        return pullWholeRepo;
+    }
+
     public static MercurialInstallation[] allInstallations() {
         return Hudson.getInstance().getDescriptorByType(DescriptorImpl.class)
                 .getInstallations();
@@ -101,14 +107,14 @@ public class MercurialInstallation extends ToolInstallation implements
     public MercurialInstallation forNode(Node node, TaskListener log)
             throws IOException, InterruptedException {
         return new MercurialInstallation(getName(), translateFor(node, log),
-                executable, debug, useCaches, useSharing,
+                executable, debug, useCaches, useSharing, pullWholeRepo,
                 getProperties().toList());
     }
 
     public MercurialInstallation forEnvironment(EnvVars environment) {
         return new MercurialInstallation(getName(),
                 environment.expand(getHome()), executable,
-                debug, useCaches, useSharing, getProperties().toList());
+                debug, useCaches, useSharing, pullWholeRepo, getProperties().toList());
     }
 
     @Extension
