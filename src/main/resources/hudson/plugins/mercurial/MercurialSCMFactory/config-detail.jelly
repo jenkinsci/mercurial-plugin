@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+    <f:entry title="${%Project Repository}" field="source">
+        <f:textbox/>
+    </f:entry>
+    <f:entry title="${%Credentials}" field="credentialsId">
+        <f:select/>
+    </f:entry>
+    <f:advanced>
+        <f:entry title="${%Branch inclusion pattern}" field="branchPattern">
+            <f:textbox/>
+        </f:entry>
+    </f:advanced>
+</j:jelly>
