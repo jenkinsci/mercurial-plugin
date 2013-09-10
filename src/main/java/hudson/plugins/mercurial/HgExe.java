@@ -35,6 +35,7 @@ import hudson.model.AbstractBuild;
 import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.util.ArgumentListBuilder;
+import jenkins.model.Jenkins;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -77,14 +78,31 @@ public class HgExe {
     }
 
     public HgExe(MercurialSCM scm, Launcher launcher, Node node, TaskListener listener, EnvVars env) throws IOException, InterruptedException {
-        base = scm.findHgExe(node, listener, true);
+        this(MercurialSCM.findInstallation(scm.getInstallation()), launcher, node, listener, env);
+    }
+
+    HgExe(@CheckForNull MercurialInstallation inst, Launcher launcher, Node node, TaskListener listener, EnvVars env) throws IOException, InterruptedException {
+        base = findHgExe(inst, node, listener, true);
         // TODO might be more efficient to have a single call returning ArgumentListBuilder[2]?
-        baseNoDebug = scm.findHgExe(node, listener, false);
+        baseNoDebug = findHgExe(inst, node, listener, false);
         this.node = node;
         this.env = env;
         this.launcher = launcher;
         this.listener = listener;
         this.capability = Capability.get(this);
+    }
+
+    static ArgumentListBuilder findHgExe(@CheckForNull MercurialInstallation inst, Node node, TaskListener listener, boolean allowDebug) throws IOException, InterruptedException {
+        if (inst == null) {
+            return new ArgumentListBuilder(Jenkins.getInstance().getDescriptorByType(MercurialSCM.DescriptorImpl.class).getHgExe());
+        }
+        // TODO what about forEnvironment?
+        ArgumentListBuilder b = new ArgumentListBuilder(inst.executableWithSubstitution(
+                inst.forNode(node, listener).getHome()));
+        if (allowDebug && inst.getDebug()) {
+            b.add("--debug");
+        }
+        return b;
     }
 
     /**
@@ -235,12 +253,12 @@ public class HgExe {
             throws IOException, InterruptedException {
         args = seed(false).add(args.toCommandArray());
 
-        ByteArrayOutputStream rev = new ByteArrayOutputStream();
-        if (MercurialSCM.joinWithPossibleTimeout(launch(args).pwd(repository).stdout(rev), useTimeout, listener) == 0) {
-            return rev.toString();
+        ByteArrayOutputStream data = new ByteArrayOutputStream();
+        if (MercurialSCM.joinWithPossibleTimeout(launch(args).pwd(repository).stdout(data), useTimeout, listener) == 0) {
+            return data.toString();
         } else {
             listener.error("Failed to run " + args.toStringWithQuote());
-            listener.getLogger().write(rev.toByteArray());
+            listener.getLogger().write(data.toByteArray());
             throw new AbortException();
         }
     }
