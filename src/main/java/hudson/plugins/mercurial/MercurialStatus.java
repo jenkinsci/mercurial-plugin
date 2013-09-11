@@ -6,6 +6,7 @@ import hudson.Extension;
 import hudson.model.AbstractModelObject;
 import hudson.model.AbstractProject;
 import hudson.model.Hudson;
+import hudson.model.Item;
 import hudson.model.UnprotectedRootAction;
 import hudson.scm.SCM;
 import hudson.security.ACL;
@@ -27,6 +28,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static javax.servlet.http.HttpServletResponse.*;
+import jenkins.scm.api.SCMSource;
+import jenkins.scm.api.SCMSourceOwner;
+import jenkins.scm.api.SCMSourceOwners;
 import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
 /**
@@ -103,9 +107,8 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
     }
     
     private HttpResponse handleNotifyCommit(URI url) throws ServletException, IOException {
-        final List<AbstractProject<?,?>> projects = Lists.newArrayList();
+        final List<Item> projects = Lists.newArrayList();
         boolean scmFound = false,
-                triggerFound = false,
                 urlFound = false;
         for (AbstractProject<?,?> project : Hudson.getInstance().getAllItems(AbstractProject.class)) {
             SCM scm = project.getScm();
@@ -117,23 +120,46 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
             MercurialSCM hg = (MercurialSCM) scm;
             String repository = hg.getSource();
             if (repository == null) {
-                LOGGER.log(Level.FINE, "project {0} is using source control but does not identify a repository", project.getDisplayName());
+                LOGGER.log(Level.WARNING, "project {0} is using source control but does not identify a repository", project.getFullName());
                 continue;
             }
-            LOGGER.log(Level.INFO, "url == {0} repository == {1}", new Object[] {url, repository});
+            LOGGER.log(Level.INFO, "for {0}: {1} vs. {2}", new Object[] {project.getFullName(), url, repository});
             if (!looselyMatches(url, repository)) {
                 continue;
             }
             urlFound = true;
             SCMTrigger trigger = project.getTrigger(SCMTrigger.class);
             if (trigger == null || trigger.isIgnorePostCommitHooks()) {
+                // Do not send message to HTTP response because this is the normal case for a multibranch component project.
+                LOGGER.log(Level.INFO, "No SCMTrigger on {0}", project.getFullName());
                 continue;
             }
-            triggerFound = true;
 
-            LOGGER.log(Level.INFO, "Triggering the polling of {0}", project.getFullDisplayName());
+            LOGGER.log(Level.INFO, "Triggering polling of {0}", project.getFullName());
             trigger.run();
             projects.add(project);
+        }
+        for (SCMSourceOwner project : SCMSourceOwners.all()) {
+            for (SCMSource source : project.getSCMSources()) {
+                if (!(source instanceof MercurialSCMSource)) {
+                    continue;
+                }
+                scmFound = true;
+                MercurialSCMSource hgSource = (MercurialSCMSource) source;
+                String repository = hgSource.getSource();
+                if (repository == null) {
+                    LOGGER.log(Level.WARNING, "project {0} is using source control but does not identify a repository", project.getFullName());
+                    continue;
+                }
+                LOGGER.log(Level.INFO, "for {0}: {1} vs. {2}", new Object[] {project.getFullName(), url, repository});
+                if (!looselyMatches(url, repository)) {
+                    continue;
+                }
+                urlFound = true;
+                LOGGER.log(Level.INFO, "Scheduling {0} for refresh", project.getFullName());
+                project.onSCMSourceUpdated(source);
+                projects.add(project);
+            }
         }
 
         final String msg;
@@ -141,22 +167,21 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
             msg = "No Mercurial jobs found";
         } else if (!urlFound) {
             msg = "No Mercurial jobs found using repository: " + url;
-        } else if (!triggerFound) {
-            msg = "Jobs found but they are not configured for polling or are ignoring post-commit hooks";
         } else {
             msg = null;
         }
 
         return new HttpResponse() {
+            @SuppressWarnings("deprecation")
             public void generateResponse(StaplerRequest req, StaplerResponse rsp, Object node) throws IOException, ServletException {
                 rsp.setStatus(SC_OK);
                 rsp.setContentType("text/plain");
-                for (AbstractProject<?, ?> p : projects) {
+                for (Item p : projects) {
                     rsp.addHeader("Triggered", p.getAbsoluteUrl());
                 }
                 PrintWriter w = rsp.getWriter();
-                for (AbstractProject<?, ?> p : projects) {
-                    w.println("Scheduled polling of "+p.getFullDisplayName());
+                for (Item p : projects) {
+                    w.println("Scheduled polling of " + p.getFullName());
                 }
                 if (msg!=null)
                     w.println(msg);
