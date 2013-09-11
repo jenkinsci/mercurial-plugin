@@ -83,5 +83,10 @@
             <artifactId>credentials</artifactId>
             <version>1.7.6</version>
         </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>scm-api</artifactId>
+            <version>0.1-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 </project>  
