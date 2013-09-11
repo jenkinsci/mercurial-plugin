@@ -9,6 +9,7 @@ import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.Util;
 import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.scm.SCM;
@@ -37,6 +38,7 @@ public final class MercurialSCMSource extends SCMSource {
     private final String source;
     private final String credentialsId;
     private final String branchPattern;
+    // TODO consider adding modules, subdir, browser, clean
 
     @DataBoundConstructor
     public MercurialSCMSource(String id, String installation, String source, String credentialsId, String branchPattern) {
@@ -82,10 +84,17 @@ public final class MercurialSCMSource extends SCMSource {
             return;
         }
         String heads = new HgExe(inst, launcher, node, listener, new EnvVars()).popen(cache, listener, true, new ArgumentListBuilder("heads", "--template", "{node} {branch}\\n"));
+        Pattern p = Pattern.compile(Util.fixNull(branchPattern).length() == 0 ? ".+" : branchPattern);
         for (String line : heads.split("\r?\n")) {
             String[] nodeBranch = line.split(" ", 2);
-            SCMHead branch = new SCMHead(nodeBranch[1]);
-            observer.observe(branch, new MercurialRevision(branch, nodeBranch[0]));
+            String name = nodeBranch[1];
+            if (p.matcher(name).matches()) {
+                listener.getLogger().println("Found branch " + name);
+                SCMHead branch = new SCMHead(name);
+                observer.observe(branch, new MercurialRevision(branch, nodeBranch[0]));
+            } else {
+                listener.getLogger().println("Ignoring branch " + name);
+            }
         }
     }
 
@@ -93,8 +102,6 @@ public final class MercurialSCMSource extends SCMSource {
         String rev = revision == null ? head.getName() : ((MercurialRevision) revision).hash;
         return new MercurialSCM(installation, source, rev, null, null, null, true, credentialsId);
     }
-
-    // TODO call getOwner().onSCMSourceUpdated(this) in response to MercurialStatus.handleNotifyCommit
 
     private @CheckForNull StandardUsernameCredentials getCredentials() {
         if (credentialsId != null) {
