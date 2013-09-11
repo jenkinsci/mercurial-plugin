@@ -31,7 +31,7 @@ import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 
-public final class MercurialSCMFactory extends SCMSource {
+public final class MercurialSCMSource extends SCMSource {
 
     private final String installation;
     private final String source;
@@ -39,7 +39,7 @@ public final class MercurialSCMFactory extends SCMSource {
     private final String branchPattern;
 
     @DataBoundConstructor
-    public MercurialSCMFactory(String id, String installation, String source, String credentialsId, String branchPattern) {
+    public MercurialSCMSource(String id, String installation, String source, String credentialsId, String branchPattern) {
         super(id);
         this.installation = installation;
         this.source = source;
@@ -63,31 +63,30 @@ public final class MercurialSCMFactory extends SCMSource {
         return branchPattern;
     }
 
-    @Override public <O extends SCMHeadObserver> O fetch(O observer, TaskListener listener) throws IOException, InterruptedException {
-        listener = defaultListener(listener);
+    @Override
+    protected void retrieve(SCMHeadObserver observer, TaskListener listener) throws IOException, InterruptedException {
         MercurialInstallation inst = MercurialSCM.findInstallation(installation);
         if (inst == null) {
             listener.error("No configured Mercurial installation");
-            return observer;
+            return;
         }
         if (!inst.isUseCaches()) {
             listener.error("Mercurial installation " + installation + " does not support caches");
-            return observer;
+            return;
         }
         Node node = Jenkins.getInstance();
         Launcher launcher = node.createLauncher(listener);
         FilePath cache = Cache.fromURL(source, getCredentials()).repositoryCache(inst, node, launcher, listener, true);
         if (cache == null) {
             listener.error("Could not use caches, not fetching branch heads");
-            return observer;
+            return;
         }
         String heads = new HgExe(inst, launcher, node, listener, new EnvVars()).popen(cache, listener, true, new ArgumentListBuilder("heads", "--template", "{node} {branch}\\n"));
         for (String line : heads.split("\r?\n")) {
             String[] nodeBranch = line.split(" ", 2);
             SCMHead branch = new SCMHead(nodeBranch[1]);
-            observer.consume(branch, new MercurialRevision(branch, nodeBranch[0]));
+            observer.observe(branch, new MercurialRevision(branch, nodeBranch[0]));
         }
-        return observer;
     }
 
     @Override public SCM build(SCMHead head, SCMRevision revision) {
