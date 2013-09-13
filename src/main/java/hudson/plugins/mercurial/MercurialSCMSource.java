@@ -78,12 +78,13 @@ public final class MercurialSCMSource extends SCMSource {
         }
         Node node = Jenkins.getInstance();
         Launcher launcher = node.createLauncher(listener);
-        FilePath cache = Cache.fromURL(source, getCredentials()).repositoryCache(inst, node, launcher, listener, true);
+        StandardUsernameCredentials credentials = getCredentials();
+        FilePath cache = Cache.fromURL(source, credentials).repositoryCache(inst, node, launcher, listener, true);
         if (cache == null) {
             listener.error("Could not use caches, not fetching branch heads");
             return;
         }
-        String heads = new HgExe(inst, launcher, node, listener, new EnvVars()).popen(cache, listener, true, new ArgumentListBuilder("heads", "--template", "{node} {branch}\\n"));
+        String heads = new HgExe(inst, credentials, launcher, node, listener, new EnvVars()).popen(cache, listener, true, new ArgumentListBuilder("heads", "--template", "{node} {branch}\\n"));
         Pattern p = Pattern.compile(Util.fixNull(branchPattern).length() == 0 ? ".+" : branchPattern);
         for (String line : heads.split("\r?\n")) {
             String[] nodeBranch = line.split(" ", 2);
