@@ -100,14 +100,15 @@ public class HgExe {
     }
 
     private static ArgumentListBuilder findHgExe(@CheckForNull MercurialInstallation inst, @CheckForNull StandardUsernameCredentials credentials, Node node, TaskListener listener, boolean allowDebug) throws IOException, InterruptedException {
+        ArgumentListBuilder b = new ArgumentListBuilder();
         if (inst == null) {
-            return new ArgumentListBuilder(Jenkins.getInstance().getDescriptorByType(MercurialSCM.DescriptorImpl.class).getHgExe());
-        }
-        // TODO what about forEnvironment?
-        ArgumentListBuilder b = new ArgumentListBuilder(inst.executableWithSubstitution(
-                inst.forNode(node, listener).getHome()));
-        if (allowDebug && inst.getDebug()) {
-            b.add("--debug");
+            b.add(Jenkins.getInstance().getDescriptorByType(MercurialSCM.DescriptorImpl.class).getHgExe());
+        } else {
+            // TODO what about forEnvironment?
+            b.add(inst.executableWithSubstitution(inst.forNode(node, listener).getHome()));
+            if (allowDebug && inst.getDebug()) {
+                b.add("--debug");
+            }
         }
         if (credentials instanceof UsernamePasswordCredentials) {
             UsernamePasswordCredentials upc = (UsernamePasswordCredentials) credentials;
