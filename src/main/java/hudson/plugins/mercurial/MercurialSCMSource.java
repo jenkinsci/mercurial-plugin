@@ -10,13 +10,18 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
+import hudson.model.Descriptor;
 import hudson.model.Node;
 import hudson.model.TaskListener;
+import hudson.plugins.mercurial.browser.HgBrowser;
+import hudson.scm.RepositoryBrowser;
+import hudson.scm.RepositoryBrowsers;
 import hudson.scm.SCM;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -38,15 +43,22 @@ public final class MercurialSCMSource extends SCMSource {
     private final String source;
     private final String credentialsId;
     private final String branchPattern;
-    // TODO consider adding modules, subdir, browser, clean
+    private final String modules;
+    private final String subdir;
+    private final HgBrowser browser;
+    private final boolean clean;
 
     @DataBoundConstructor
-    public MercurialSCMSource(String id, String installation, String source, String credentialsId, String branchPattern) {
+    public MercurialSCMSource(String id, String installation, String source, String credentialsId, String branchPattern, String modules, String subdir, HgBrowser browser, boolean clean) {
         super(id);
         this.installation = installation;
         this.source = source;
         this.credentialsId = credentialsId;
         this.branchPattern = branchPattern;
+        this.modules = modules;
+        this.subdir = subdir;
+        this.browser = browser;
+        this.clean = clean;
     }
     
     public String getInstallation() {
@@ -63,6 +75,23 @@ public final class MercurialSCMSource extends SCMSource {
 
     public String getBranchPattern() {
         return branchPattern;
+    }
+
+    public String getModules() {
+        return modules;
+    }
+
+    public String getSubdir() {
+        return subdir;
+    }
+
+    public HgBrowser getBrowser() {
+        // Could default to HgWeb the way MercurialSCM does, but probably unnecessary.
+        return browser;
+    }
+
+    public boolean isClean() {
+        return clean;
     }
 
     @Override
@@ -101,7 +130,7 @@ public final class MercurialSCMSource extends SCMSource {
 
     @Override public SCM build(SCMHead head, SCMRevision revision) {
         String rev = revision == null ? head.getName() : ((MercurialRevision) revision).hash;
-        return new MercurialSCM(installation, source, rev, null, null, null, true, credentialsId);
+        return new MercurialSCM(installation, source, rev, modules, subdir, browser, clean, credentialsId);
     }
 
     private @CheckForNull StandardUsernameCredentials getCredentials() {
@@ -138,6 +167,10 @@ public final class MercurialSCMSource extends SCMSource {
             } catch (PatternSyntaxException x) {
                 return FormValidation.error(x.getDescription());
             }
+        }
+
+        public List<Descriptor<RepositoryBrowser<?>>> getBrowserDescriptors() {
+            return RepositoryBrowsers.filter(HgBrowser.class);
         }
 
     }
