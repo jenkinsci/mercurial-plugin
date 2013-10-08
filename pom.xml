@@ -6,7 +6,7 @@
         <version>1.509.3</version>
     </parent>
     <artifactId>mercurial</artifactId>
-    <version>1.48-SNAPSHOT</version>
+    <version>1.48</version>
     <packaging>hpi</packaging>
     <name>Jenkins Mercurial plugin</name>
     <description>Allows Jenkins to check out projects from the Mercurial SCM.</description>
