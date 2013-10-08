@@ -3,17 +3,14 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>1.509.2</version>
+        <version>1.509.3</version>
     </parent>
     <artifactId>mercurial</artifactId>
-    <version>1.48-beta-2-SNAPSHOT</version>
+    <version>1.48-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <name>Jenkins Mercurial plugin</name>
     <description>Allows Jenkins to check out projects from the Mercurial SCM.</description>
     <url>http://wiki.jenkins-ci.org/display/JENKINS/Mercurial+Plugin</url>
-    <properties>
-        <maven-hpi-plugin.version>1.96</maven-hpi-plugin.version> <!-- TODO can remove when based on 1.509.3 -->
-    </properties>
     <developers>
         <developer>
             <id>jglick</id>
