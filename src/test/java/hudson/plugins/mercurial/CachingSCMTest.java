@@ -15,7 +15,7 @@ public class CachingSCMTest extends SCMTestBase {
                 .getDescriptorByType(MercurialInstallation.DescriptorImpl.class)
                 .setInstallations(
                         new MercurialInstallation(CACHING_INSTALLATION, "",
-                                "hg", false, true, false, Collections
+                                "hg", false, true, false, false, Collections
                                         .<ToolProperty<?>> emptyList()));
         MercurialSCM.CACHE_LOCAL_REPOS = true;
     }
