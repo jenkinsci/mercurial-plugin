@@ -318,7 +318,9 @@ public class MercurialSCM extends SCM implements Serializable {
         HgExe hg = new HgExe(findInstallation(getInstallation()), credentials, launcher, node, listener, /* TODO */new EnvVars());
         ArgumentListBuilder cmd = hg.seed(true);
         cmd.add("pull");
-        cmd.add("--rev", branch);
+        if(!findInstallation(installation).isPullWholeRepo()){
+            cmd.add("--rev", branch);
+        }
         CachedRepo cachedSource = cachedSource(node, launcher, listener, true, credentials);
         if (cachedSource != null) {
             cmd.add(cachedSource.getRepoLocation());
@@ -587,13 +589,17 @@ public class MercurialSCM extends SCM implements Serializable {
                 args.add(cachedSource.getRepoLocation());
             } else {
                 args.add("clone");
-                args.add("--rev", toRevision);
+                if(!findInstallation(installation).isPullWholeRepo()){
+                    args.add("--rev", toRevision);
+                }
                 args.add("--noupdate");
                 args.add(cachedSource.getRepoLocation());
             }
         } else {
             args.add("clone");
-            args.add("--rev", toRevision);
+            if(!findInstallation(installation).isPullWholeRepo()){
+                args.add("--rev", toRevision);
+            }
             args.add("--noupdate");
             args.add(source);
         }

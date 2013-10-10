@@ -15,7 +15,7 @@ public class DebugFlagTest extends SCMTestBase {
                 .getDescriptorByType(MercurialInstallation.DescriptorImpl.class)
                 .setInstallations(
                         new MercurialInstallation(DEBUG_INSTALLATION, "", "hg",
-                                true, false, false, Collections
+                                true, false, false, false, Collections
                                         .<ToolProperty<?>> emptyList()));
     }
 
