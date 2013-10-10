@@ -1,5 +1,6 @@
 package hudson.plugins.mercurial;
 
+import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.Action;
@@ -7,15 +8,13 @@ import hudson.model.FreeStyleBuild;
 import hudson.model.TaskListener;
 import hudson.model.FreeStyleProject;
 import hudson.scm.PollingResult;
+import hudson.util.ArgumentListBuilder;
 import hudson.util.StreamTaskListener;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -55,23 +54,22 @@ public final class MercurialRule extends ExternalResource {
         return j.jenkins.createLauncher(listener);
     }
 
+    private HgExe hgExe() throws Exception {
+        return new HgExe(null, null, launcher(), j.jenkins, listener, new EnvVars());
+    }
+
     public void hg(String... args) throws Exception {
-        List<String> cmds = assembleHgCommand(args);
-        assertEquals(0, MercurialSCM.launch(launcher()).cmds(cmds).stdout(listener).join());
+        HgExe hg = hgExe();
+        assertEquals(0, hg.launch(nobody(hg.seed(false)).add(args)).join());
     }
 
     public void hg(File repo, String... args) throws Exception {
-        List<String> cmds = assembleHgCommand(args);
-        assertEquals(0, MercurialSCM.launch(launcher()).cmds(cmds).pwd(repo).stdout(listener).join());
+        HgExe hg = hgExe();
+        assertEquals(0, hg.launch(nobody(hg.seed(false)).add(args)).pwd(repo).join());
     }
 
-    private List<String> assembleHgCommand(String[] args) {
-        List<String> cmds = new ArrayList<String>();
-        cmds.add("hg");
-        cmds.add("--config");
-        cmds.add("ui.username=nobody@nowhere.net");
-        cmds.addAll(Arrays.asList(args));
-        return cmds;
+    private static ArgumentListBuilder nobody(ArgumentListBuilder args) {
+        return args.add("--config").add("ui.username=nobody@nowhere.net");
     }
 
     public void touchAndCommit(File repo, String... names) throws Exception {
@@ -113,17 +111,7 @@ public final class MercurialRule extends ExternalResource {
     }
 
     public String getLastChangesetId(File repo) throws Exception {
-        List<String> cmds = new ArrayList<String>();
-        cmds.add("hg");
-        cmds.add("log");
-        cmds.add("-l1");
-        cmds.add("--template");
-        cmds.add("{node}");
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        TaskListener nodeListener = new StreamTaskListener(baos);
-        assertEquals(0, MercurialSCM.launch(launcher()).cmds(cmds).pwd(repo)
-                .stdout(nodeListener).stderr(baos).join());
-        return baos.toString();
+        return hgExe().popen(new FilePath(repo), listener, false, new ArgumentListBuilder("log", "-l1", "--template", "{node}"));
     }
 
 }

@@ -11,7 +11,6 @@ import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.Launcher.ProcStarter;
 import hudson.Util;
 import hudson.matrix.MatrixRun;
 import hudson.model.*;
@@ -34,27 +33,21 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.net.MalformedURLException;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import net.sf.json.JSONObject;
 
-import org.apache.commons.io.output.NullOutputStream;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.SuppressWarnings;
-import hudson.util.IOException2;
 import hudson.util.ListBoxModel;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.List;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.QueryParameter;
@@ -168,7 +161,7 @@ public class MercurialSCM extends SCM implements Serializable {
         return credentialsId;
     }
 
-    private @CheckForNull StandardUsernameCredentials getCredentials(AbstractProject<?,?> owner) {
+    @CheckForNull StandardUsernameCredentials getCredentials(AbstractProject<?,?> owner) {
         if (credentialsId != null) {
             for (StandardUsernameCredentials c : availableCredentials(owner, source)) {
                 if (c.getId().equals(credentialsId)) {
@@ -177,20 +170,6 @@ public class MercurialSCM extends SCM implements Serializable {
             }
         }
         return null;
-    }
-
-    /**
-     * Gets the source with HTTP BASIC authentication credentials added to the URL (which had better not be a file path).
-     * @return a decorated version of {@link #getSource}
-     * @throws IOException only as a wrapper for {@link URISyntaxException}
-     */
-    static String getSourceWithCredentials(String source, StandardUsernamePasswordCredentials credentials) throws IOException {
-        try {
-            URI orig = new URI(source);
-            return new URI(orig.getScheme(), credentials.getUsername() + ':' + credentials.getPassword(), orig.getHost(), orig.getPort(), orig.getPath(), orig.getQuery(), orig.getFragment()).toString();
-        } catch (URISyntaxException x) {
-            throw new IOException2(x);
-        }
     }
 
     /**
@@ -251,40 +230,12 @@ public class MercurialSCM extends SCM implements Serializable {
     public boolean isClean() {
         return clean;
     }
-    
-    private ArgumentListBuilder findHgExe(AbstractBuild<?,?> build, TaskListener listener, boolean allowDebug) throws IOException, InterruptedException {
-        return findHgExe(build.getBuiltOn(), listener, allowDebug);
-    }
-
-    /**
-     * @param allowDebug
-     *      If the caller intends to parse the stdout from Mercurial, pass in false to indicate
-     *      that the optional --debug option shall never be activated.
-     */
-    ArgumentListBuilder findHgExe(Node node, TaskListener listener, boolean allowDebug) throws IOException, InterruptedException {
-        for (MercurialInstallation inst : MercurialInstallation.allInstallations()) {
-            if (inst.getName().equals(installation)) {
-                // TODO what about forEnvironment?
-                ArgumentListBuilder b = new ArgumentListBuilder(inst.executableWithSubstitution(
-                        inst.forNode(node, listener).getHome()));
-                if (allowDebug && inst.getDebug()) {
-                    b.add("--debug");
-                }
-                return b;
-            }
-        }
-        return new ArgumentListBuilder(getDescriptor().getHgExe());
-    }
-
-    static ProcStarter launch(Launcher launcher) {
-        return launcher.launch().envs(Collections.singletonMap("HGPLAIN", "true"));
-    }
 
     @Override
     public SCMRevisionState calcRevisionsFromBuild(AbstractBuild<?, ?> build, Launcher launcher, TaskListener listener)
             throws IOException, InterruptedException {
         // tag action is added during checkout, so this shouldn't be called, but just in case.
-        HgExe hg = new HgExe(this, launcher, build, listener);
+        HgExe hg = new HgExe(findInstallation(getInstallation()), getCredentials(build.getProject()), launcher, build.getBuiltOn(), listener, build.getEnvironment(listener));
         String tip = hg.tip(workspace2Repo(build.getWorkspace()), null);
         String rev = hg.tipNumber(workspace2Repo(build.getWorkspace()), null);
         return tip != null && rev != null ? new MercurialTagAction(tip, rev, subdir) : null;
@@ -306,7 +257,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
         if (!requiresWorkspaceForPolling()) {
             launcher = Hudson.getInstance().createLauncher(listener);
-            PossiblyCachedRepo possiblyCachedRepo = cachedSource(Hudson.getInstance(), launcher, listener, true, credentials);
+            CachedRepo possiblyCachedRepo = cachedSource(Hudson.getInstance(), launcher, listener, true, credentials);
             if (possiblyCachedRepo == null) {
                 throw new IOException("Could not use cache to poll for changes. See error messages above for more details");
             }
@@ -320,7 +271,7 @@ public class MercurialSCM extends SCM implements Serializable {
             Node node = project.getLastBuiltOn(); // JENKINS-5984: ugly but matches what AbstractProject.poll uses; though compare JENKINS-14247
             FilePath repository = workspace2Repo(workspace);
 
-            pull(launcher, repository, listener, output, node, getBranchExpanded(project), credentials);
+            pull(launcher, repository, listener, node, getBranchExpanded(project), credentials);
 
             return compare(launcher, listener, baseline, output, node, repository, project);
         } catch(IOException e) {
@@ -335,7 +286,7 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     private PollingResult compare(Launcher launcher, TaskListener listener, MercurialTagAction baseline, PrintStream output, Node node, FilePath repository, AbstractProject<?,?> project) throws IOException, InterruptedException {
-        HgExe hg = new HgExe(this, launcher, node, listener, /*TODO*/new EnvVars());
+        HgExe hg = new HgExe(findInstallation(getInstallation()), getCredentials(project), launcher, node, listener, /*TODO*/new EnvVars());
         String _branch = getBranchExpanded(project);
         String remote = hg.tip(repository, _branch);
         String rev = hg.tipNumber(repository, _branch);
@@ -363,25 +314,20 @@ public class MercurialSCM extends SCM implements Serializable {
         return result;
     }
 
-    private void pull(Launcher launcher, FilePath repository, TaskListener listener, PrintStream output, Node node, String branch, StandardUsernameCredentials credentials) throws IOException, InterruptedException {
-        ArgumentListBuilder cmd = findHgExe(node, listener, true);
+    private void pull(Launcher launcher, FilePath repository, TaskListener listener, Node node, String branch, StandardUsernameCredentials credentials) throws IOException, InterruptedException {
+        HgExe hg = new HgExe(findInstallation(getInstallation()), credentials, launcher, node, listener, /* TODO */new EnvVars());
+        ArgumentListBuilder cmd = hg.seed(true);
         cmd.add("pull");
         if(!findInstallation(installation).isPullWholeRepo()){
             cmd.add("--rev", branch);
         }
-        PossiblyCachedRepo cachedSource = cachedSource(node, launcher, listener, true, credentials);
+        CachedRepo cachedSource = cachedSource(node, launcher, listener, true, credentials);
         if (cachedSource != null) {
             cmd.add(cachedSource.getRepoLocation());
-        } else if (credentials instanceof StandardUsernamePasswordCredentials) {
-            cmd.addMasked(getSourceWithCredentials(source, (StandardUsernamePasswordCredentials) credentials));
         }
-        joinWithPossibleTimeout(
-                launch(launcher).cmds(cmd).stdout(output).pwd(repository),
+        HgExe.joinWithPossibleTimeout(
+                hg.launch(cmd).pwd(repository),
                 true, listener);
-    }
-
-    static int joinWithPossibleTimeout(ProcStarter proc, boolean useTimeout, final TaskListener listener) throws IOException, InterruptedException {
-        return useTimeout ? proc.start().joinWithTimeout(/* #4528: not in JDK 5: 1, TimeUnit.HOURS*/60 * 60, TimeUnit.SECONDS, listener) : proc.join();
     }
 
     private Change computeDegreeOfChanges(Set<String> changedFileNames, PrintStream output) {
@@ -429,7 +375,7 @@ public class MercurialSCM extends SCM implements Serializable {
         return affecting;
     }
 
-    public static MercurialInstallation findInstallation(String name) {
+    public static @CheckForNull MercurialInstallation findInstallation(String name) {
         for (MercurialInstallation inst : MercurialInstallation.allInstallations()) {
             if (inst.getName().equals(name)) {
                 return inst;
@@ -490,7 +436,7 @@ public class MercurialSCM extends SCM implements Serializable {
             return false;
         }
         
-        HgExe hg = new HgExe(this,launcher,build,listener);
+        HgExe hg = new HgExe(findInstallation(getInstallation()), getCredentials(build.getProject()), launcher, build.getBuiltOn(), listener, build.getEnvironment(listener));
         String upstream = hg.config(repo, "paths.default");
         if (upstream == null) {
             return false;
@@ -514,9 +460,12 @@ public class MercurialSCM extends SCM implements Serializable {
             return;
         }
         EnvVars env = build.getEnvironment(listener);
+        MercurialInstallation inst = findInstallation(getInstallation());
+        StandardUsernameCredentials credentials = getCredentials(build.getProject());
+        HgExe hg = new HgExe(inst, credentials, launcher, build.getBuiltOn(), listener, env);
 
-        ArgumentListBuilder logCommand = findHgExe(build, listener, true).add("log", "--rev", prevTag.getId());
-        int exitCode = launch(launcher).cmds(logCommand).envs(env).pwd(repository).join();
+        ArgumentListBuilder logCommand = hg.seed(true).add("log", "--rev", prevTag.getId());
+        int exitCode = hg.launch(logCommand).pwd(repository).join();
         if(exitCode != 0) {
             listener.error("Previously built revision " + prevTag.getId() + " is not known in this clone; unable to determine change log");
             createEmptyChangeLog(changelogFile, listener, "changelog");
@@ -529,7 +478,7 @@ public class MercurialSCM extends SCM implements Serializable {
             os.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n".getBytes("UTF-8"));
             try {
                 os.write("<changesets>\n".getBytes("UTF-8"));
-                ArgumentListBuilder args = findHgExe(build, listener, false);
+                ArgumentListBuilder args = hg.seed(false);
                 args.add("log");
                 args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
                 args.add("--rev", revToBuild + ":0");
@@ -540,7 +489,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
                 ByteArrayOutputStream errorLog = new ByteArrayOutputStream();
 
-                int r = launch(launcher).cmds(args).envs(env).stdout(new ForkOutputStream(os, errorLog)).pwd(repository).join();
+                int r = hg.launch(args).stdout(new ForkOutputStream(os, errorLog)).pwd(repository).join();
                 if(r!=0) {
                     Util.copyStream(new ByteArrayInputStream(errorLog.toByteArray()), listener.getLogger());
                     throw new IOException("Failure detected while running hg log to determine change log");
@@ -555,10 +504,10 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private void update(AbstractBuild<?, ?> build, Launcher launcher, FilePath repository, BuildListener listener, String toRevision, StandardUsernameCredentials credentials)
             throws IOException, InterruptedException {
-        HgExe hg = new HgExe(this, launcher, build, listener);
+        HgExe hg = new HgExe(findInstallation(getInstallation()), credentials, launcher, build.getBuiltOn(), listener, build.getEnvironment(listener));
         Node node = Computer.currentComputer().getNode(); // TODO why not build.getBuiltOn()?
         try {
-            pull(launcher, repository, listener, new PrintStream(new NullOutputStream()), node, toRevision, credentials);
+            pull(launcher, repository, listener, node, toRevision, credentials);
         } catch (IOException e) {
             if (causedByMissingHg(e)) {
                 listener.error("Failed to pull because hg could not be found;" +
@@ -582,7 +531,7 @@ public class MercurialSCM extends SCM implements Serializable {
             throw new AbortException("Failed to update");
         }
         if (build.getNumber() % 100 == 0) {
-            PossiblyCachedRepo cachedSource = cachedSource(node, launcher, listener, true, credentials);
+            CachedRepo cachedSource = cachedSource(node, launcher, listener, true, credentials);
             if (cachedSource != null && !cachedSource.isUseSharing()) {
                 // Periodically recreate hardlinks to the cache to save disk space.
                 hg.run("--config", "extensions.relink=", "relink", cachedSource.getRepoLocation()).pwd(repository).join(); // ignore failures
@@ -628,10 +577,10 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         EnvVars env = build.getEnvironment(listener);
-        HgExe hg = new HgExe(this,launcher,build.getBuiltOn(),listener,env);
+        HgExe hg = new HgExe(findInstallation(getInstallation()), credentials, launcher,build.getBuiltOn(),listener,env);
 
         ArgumentListBuilder args = hg.seed(true);
-        PossiblyCachedRepo cachedSource = cachedSource(build.getBuiltOn(), launcher, listener, false, credentials);
+        CachedRepo cachedSource = cachedSource(build.getBuiltOn(), launcher, listener, false, credentials);
         if (cachedSource != null) {
             if (cachedSource.isUseSharing()) {
                 args.add("--config", "extensions.share=");
@@ -652,11 +601,7 @@ public class MercurialSCM extends SCM implements Serializable {
                 args.add("--rev", toRevision);
             }
             args.add("--noupdate");
-            if (credentials instanceof StandardUsernamePasswordCredentials) {
-                args.addMasked(getSourceWithCredentials(source, (StandardUsernamePasswordCredentials) credentials));
-            } else {
-                args.add(source);
-            }
+            args.add(source);
         }
         args.add(repository.getRemote());
         int cloneExitCode;
@@ -676,7 +621,7 @@ public class MercurialSCM extends SCM implements Serializable {
             throw new AbortException(Messages.MercurialSCM_failed_to_clone(source));
         }
 
-        if (cachedSource != null && cachedSource.isUseCaches() && !cachedSource.isUseSharing()) {
+        if (cachedSource != null && !cachedSource.isUseSharing()) {
             FilePath hgrc = repository.child(".hg/hgrc");
             if (hgrc.exists()) {
                 String hgrcText = hgrc.readToString();
@@ -689,12 +634,6 @@ public class MercurialSCM extends SCM implements Serializable {
             // Passing --rev disables hardlinks, so we need to recreate them:
             hg.run("--config", "extensions.relink=", "relink", cachedSource.getRepoLocation())
                     .pwd(repository).join(); // ignore failures
-        } else if (credentials instanceof StandardUsernamePasswordCredentials) {
-            FilePath hgrc = repository.child(".hg/hgrc");
-            if (hgrc.exists()) {
-                String hgrcText = hgrc.readToString();
-                hgrc.write(hgrcText.replaceFirst("(?m)(?<=^default = https://)[^@]+@", ""), null);
-            }
         }
 
         ArgumentListBuilder upArgs = hg.seed(true);
@@ -762,26 +701,18 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     static boolean CACHE_LOCAL_REPOS = false;
-    private @CheckForNull PossiblyCachedRepo cachedSource(Node node, Launcher launcher, TaskListener listener, boolean fromPolling, StandardUsernameCredentials credentials) {
+    private @CheckForNull CachedRepo cachedSource(Node node, Launcher launcher, TaskListener listener, boolean useTimeout, StandardUsernameCredentials credentials) {
         if (!CACHE_LOCAL_REPOS && source.matches("(file:|[/\\\\]).+")) {
             return null;
         }
-        boolean useCaches = false;
-        MercurialInstallation _installation = null;
-        for (MercurialInstallation inst : MercurialInstallation.allInstallations()) {
-            if (inst.getName().equals(installation)) {
-                useCaches = inst.isUseCaches();
-                _installation = inst;
-                break;
-            }
-        }
-        if (!useCaches) {
+        MercurialInstallation inst = findInstallation(installation);
+        if (inst == null || !inst.isUseCaches()) {
             return null;
         }
         try {
-            FilePath cache = Cache.fromURL(source, credentials).repositoryCache(this, node, launcher, listener, fromPolling);
+            FilePath cache = Cache.fromURL(source, credentials).repositoryCache(inst, node, launcher, listener, useTimeout);
             if (cache != null) {
-                return new PossiblyCachedRepo(cache.getRemote(), _installation.isUseCaches(), _installation.isUseSharing());
+                return new CachedRepo(cache.getRemote(), inst.isUseSharing());
             } else {
                 listener.error("Failed to use repository cache for " + source);
                 return null;
@@ -792,14 +723,12 @@ public class MercurialSCM extends SCM implements Serializable {
         }
     }
 
-    private static class PossiblyCachedRepo {
+    private static class CachedRepo {
         private final String repoLocation;
-        private final boolean useCaches;
         private final boolean useSharing;
 
-        private PossiblyCachedRepo(String repoLocation, boolean useCaches, boolean useSharing) {
+        private CachedRepo(String repoLocation, boolean useSharing) {
             this.repoLocation = repoLocation;
-            this.useCaches = useCaches;
             this.useSharing = useSharing;
         }
 
@@ -811,9 +740,6 @@ public class MercurialSCM extends SCM implements Serializable {
             return useSharing;
         }
 
-        public boolean isUseCaches() {
-            return useCaches;
-        }
     }
 
     private static List<? extends StandardUsernameCredentials> availableCredentials(AbstractProject<?,?> owner, String source) {

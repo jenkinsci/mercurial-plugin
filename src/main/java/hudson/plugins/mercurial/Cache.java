@@ -1,8 +1,6 @@
 package hudson.plugins.mercurial;
 
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
-import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
-import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.EnvVars;
@@ -94,7 +92,7 @@ class Cache {
      * @return
      *      The file path on the {@code node} to the local repository cache, cloned off from the master cache.
      */
-    @CheckForNull FilePath repositoryCache(MercurialSCM config, Node node, Launcher launcher, TaskListener listener, boolean fromPolling)
+    @CheckForNull FilePath repositoryCache(MercurialInstallation inst, Node node, Launcher launcher, TaskListener listener, boolean useTimeout)
             throws IOException, InterruptedException {
         boolean masterWasLocked = masterLock.isLocked();
         if (masterWasLocked) {
@@ -109,7 +107,7 @@ class Cache {
 
             // hg invocation on master
             // do we need to pass in EnvVars from a build too?
-            HgExe masterHg = new HgExe(config,masterLauncher,master,listener,new EnvVars());
+            HgExe masterHg = new HgExe(inst, credentials, masterLauncher, master, listener, new EnvVars());
 
         // Lock the block used to verify we end up having a cloned repo in the master,
         // whether if it was previously cloned in a different build or if it's 
@@ -120,22 +118,14 @@ class Cache {
             // TODO use getCredentials()
             if (masterCache.isDirectory()) {
                 ArgumentListBuilder args = masterHg.seed(true).add("pull");
-                if (credentials instanceof UsernamePasswordCredentials) {
-                    args.addMasked(MercurialSCM.getSourceWithCredentials(remote, (StandardUsernamePasswordCredentials) credentials));
-                }
-                if (MercurialSCM.joinWithPossibleTimeout(masterHg.launch(args).pwd(masterCache), true, listener) != 0) {
+                if (HgExe.joinWithPossibleTimeout(masterHg.launch(args).pwd(masterCache), true, listener) != 0) {
                     listener.error("Failed to update " + masterCache);
                     return null;
                 }
             } else {
                 masterCaches.mkdirs();
-                ArgumentListBuilder args = masterHg.seed(true).add("clone").add("--noupdate");
-                if (credentials instanceof UsernamePasswordCredentials) {
-                    args.addMasked(MercurialSCM.getSourceWithCredentials(remote, (StandardUsernamePasswordCredentials) credentials));
-                } else {
-                    args.add(remote);
-                }
-                if (MercurialSCM.joinWithPossibleTimeout(masterHg.launch(args.add(masterCache.getRemote())), fromPolling, listener) != 0) {
+                ArgumentListBuilder args = masterHg.seed(true).add("clone").add("--noupdate").add(remote);
+                if (HgExe.joinWithPossibleTimeout(masterHg.launch(args.add(masterCache.getRemote())), useTimeout, listener) != 0) {
                     listener.error("Failed to clone " + remote);
                     return null;
                 }
@@ -175,12 +165,12 @@ class Cache {
             FilePath localTransfer = localCache.child("xfer.hg");
             try {
                 // hg invocation on the slave
-                HgExe slaveHg = new HgExe(config,launcher,node,listener,new EnvVars());
+                HgExe slaveHg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars());
 
                 if (localCache.isDirectory()) {
                     // Need to transfer just newly available changesets.
-                    Set<String> masterHeads = masterHg.heads(masterCache, fromPolling);
-                    Set<String> localHeads = slaveHg.heads(localCache, fromPolling);
+                    Set<String> masterHeads = masterHg.heads(masterCache, useTimeout);
+                    Set<String> localHeads = slaveHg.heads(localCache, useTimeout);
                     if (localHeads.equals(masterHeads)) {
                         listener.getLogger().println("Local cache is up to date.");
                     } else {
@@ -191,27 +181,27 @@ class Cache {
                         // to actually exclude those head sets, but not a big deal. (Hg 1.5 fixes that but leaves
                         // a major bug that if no csets are selected, the whole repo will be bundled; fortunately
                         // this case should be caught by equality check above.)
-                        if (MercurialSCM.joinWithPossibleTimeout(masterHg.bundle(localHeads,bundleFileName).
-                                pwd(masterCache), fromPolling, listener) != 0) {
+                        if (HgExe.joinWithPossibleTimeout(masterHg.bundle(localHeads,bundleFileName).
+                                pwd(masterCache), useTimeout, listener) != 0) {
                             listener.error("Failed to send outgoing changes");
                             return null;
                         }
                     }
                 } else {
                     // Need to transfer entire repo.
-                    if (MercurialSCM.joinWithPossibleTimeout(masterHg.bundleAll(bundleFileName).pwd(masterCache), fromPolling, listener) != 0) {
+                    if (HgExe.joinWithPossibleTimeout(masterHg.bundleAll(bundleFileName).pwd(masterCache), useTimeout, listener) != 0) {
                         listener.error("Failed to bundle repo");
                         return null;
                     }
                     localCaches.mkdirs();
-                    if (MercurialSCM.joinWithPossibleTimeout(slaveHg.init(localCache), fromPolling, listener) != 0) {
+                    if (HgExe.joinWithPossibleTimeout(slaveHg.init(localCache), useTimeout, listener) != 0) {
                         listener.error("Failed to create local cache");
                         return null;
                     }
                 }
                 if (masterTransfer.exists()) {
                     masterTransfer.copyTo(localTransfer);
-                    if (MercurialSCM.joinWithPossibleTimeout(slaveHg.unbundle("xfer.hg").pwd(localCache), fromPolling, listener) != 0) {
+                    if (HgExe.joinWithPossibleTimeout(slaveHg.unbundle("xfer.hg").pwd(localCache), useTimeout, listener) != 0) {
                         listener.error("Failed to unbundle " + localTransfer);
                         return null;
                     }
