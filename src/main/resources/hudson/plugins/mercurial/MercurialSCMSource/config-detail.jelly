@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form" xmlns:t="/lib/hudson">
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form" xmlns:t="/lib/hudson" xmlns:c="/lib/credentials">
     <j:invokeStatic var="installations" className="hudson.plugins.mercurial.MercurialInstallation" method="allInstallations"/>
     <f:entry title="Mercurial Version (caching required)">
         <select class="setting-input" name="installation">
@@ -15,7 +15,7 @@
         <f:textbox/>
     </f:entry>
     <f:entry title="${%Credentials}" field="credentialsId">
-        <f:select/>
+        <c:select/>
     </f:entry>
     <f:advanced>
         <f:entry title="${%Branch inclusion pattern}" field="branchPattern">
