@@ -8,11 +8,9 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-import net.sf.json.JSONObject;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
 
 /**
  * Mercurial web interface served using a <a href="http://bitbucket.org/">BitBucket</a> repository.
@@ -64,10 +62,6 @@ public class BitBucket extends HgBrowser {
     public static class DescriptorImpl extends HgBrowserDescriptor {
         public String getDisplayName() {
             return "bitbucket";
-        }
-
-        public @Override BitBucket newInstance(StaplerRequest req, JSONObject json) throws FormException {
-            return req.bindParameters(BitBucket.class,"bitbucket.");
         }
 
         @Override public FormValidation doCheckUrl(@QueryParameter String url) {

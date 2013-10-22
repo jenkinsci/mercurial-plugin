@@ -54,4 +54,12 @@ public class HgBrowserSelectionTest {
         assertTrue("Could not find BitBucket in " + browserDescriptors, browserDescriptors.contains(browser.getDescriptor()));
     }
 
+    @Bug(20186)
+    @Test public void configureBrowser() throws Exception {
+        FreeStyleProject p = j.createFreeStyleProject();
+        p.setScm(new MercurialSCM(null, "https://host/repo", null, null, null, new HgWeb("https://host/repo"), false, null));
+        j.configRoundtrip(p);
+        assertEquals("https://host/repo/", ((MercurialSCM) p.getScm()).getBrowser().getUrl().toString());
+    }
+
 }

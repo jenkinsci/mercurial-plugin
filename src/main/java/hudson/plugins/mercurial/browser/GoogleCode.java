@@ -10,11 +10,9 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 
-import net.sf.json.JSONObject;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
 
 /**
  * Mercurial web interface served using a <a href="http://code.google.com/">Google code</a> repository.
@@ -75,10 +73,6 @@ public class GoogleCode extends HgBrowser {
     public static class DescriptorImpl extends HgBrowserDescriptor {
         public String getDisplayName() {
             return "googlecode";
-        }
-
-        public @Override GoogleCode newInstance(StaplerRequest req, JSONObject json) throws FormException {
-            return req.bindParameters(GoogleCode.class,"googlecode.");
         }
 
         @Override public FormValidation doCheckUrl(@QueryParameter String url) {

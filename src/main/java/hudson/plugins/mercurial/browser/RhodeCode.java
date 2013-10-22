@@ -8,11 +8,9 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-import net.sf.json.JSONObject;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
 
 /**
  * Mercurial web interface served using a <a
@@ -73,12 +71,6 @@ public class RhodeCode extends HgBrowser {
     public static class DescriptorImpl extends HgBrowserDescriptor {
         public String getDisplayName() {
             return "rhodecode";
-        }
-
-        public @Override
-        RhodeCode newInstance(StaplerRequest req, JSONObject json)
-                throws FormException {
-            return req.bindParameters(RhodeCode.class, "rhodecode.");
         }
 
         @Override public FormValidation doCheckUrl(@QueryParameter String url) {

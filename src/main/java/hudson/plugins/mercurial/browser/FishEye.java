@@ -8,11 +8,9 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-import net.sf.json.JSONObject;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
 
 /**
  * Mercurial web interface served using FishEye.
@@ -74,10 +72,6 @@ public class FishEye extends HgBrowser {
     public static class DescriptorImpl extends HgBrowserDescriptor {
         public String getDisplayName() {
             return "fisheye";
-        }
-
-        public @Override FishEye newInstance(StaplerRequest req, JSONObject json) throws FormException {
-            return req.bindParameters(FishEye.class,"fisheye.");
         }
 
         @Override public FormValidation doCheckUrl(@QueryParameter String url) {
