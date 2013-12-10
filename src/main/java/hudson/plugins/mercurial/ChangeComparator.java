@@ -30,7 +30,7 @@ public abstract class ChangeComparator implements ExtensionPoint {
 	 * @return either PollingResult.Change or null if standard comparison is 
 	 * wanted
 	 */
-	abstract Change compare(MercurialSCM scm, Launcher launcher,
+	abstract public Change compare(MercurialSCM scm, Launcher launcher,
 			TaskListener listener, MercurialTagAction baseline,
 			PrintStream output, Node node, FilePath repository,
 			AbstractProject<?, ?> project) 
