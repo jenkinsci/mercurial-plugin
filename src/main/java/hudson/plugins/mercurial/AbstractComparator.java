@@ -19,13 +19,10 @@ public abstract class AbstractComparator implements ExtensionPoint {
         return Hudson.getInstance().getExtensionList(AbstractComparator.class);
     }
 
-	public Change compare(MercurialSCM scm, Launcher launcher,
+	abstract Change compare(MercurialSCM scm, Launcher launcher,
 			TaskListener listener, MercurialTagAction baseline,
 			PrintStream output, Node node, FilePath repository,
-			AbstractProject<?, ?> project) throws IOException,
-			InterruptedException {
-		output.println("This will get you nowhere");
-		return null;
-	}
+			AbstractProject<?, ?> project) 
+					throws IOException, InterruptedException;
 	
 }

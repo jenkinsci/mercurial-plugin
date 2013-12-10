@@ -291,23 +291,21 @@ public class MercurialSCM extends SCM implements Serializable {
         String _branch = getBranchExpanded(project);
         String remote = hg.tip(repository, _branch);
         String rev = hg.tipNumber(repository, _branch);
+
+        Change change = null;
         
-        if(!(project instanceof MatrixProject)) {
-            Change change = null;
+        for(AbstractComparator s : AbstractComparator.all()) {
+            Change c = s.compare(this, launcher, listener, baseline, output, node, repository, project);
             
-            for(AbstractComparator s : AbstractComparator.all()) {
-                Change c = s.compare(this, launcher, listener, baseline, output, node, repository, project);
-                
-                if(c != null) {
-                    if(change == null || c.compareTo(change) > 0){
-                        change = c;
-                    }
+            if(c != null) {
+                if(change == null || c.compareTo(change) > 0){
+                    change = c;
                 }
             }
-            
-            if(change != null) {
-                return new PollingResult(baseline, new MercurialTagAction(remote, rev, subdir), change);
-            }
+        }
+
+        if(change != null) {
+            return new PollingResult(change);
         }
         
         if (remote == null) {
