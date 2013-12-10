@@ -23,7 +23,7 @@ import java.nio.charset.Charset;
 
 import org.junit.Test;
 
-public class AbstractComparatorTest extends SCMTestBase {
+public class ChangeComparatorTest extends SCMTestBase {
 
 	@Override
 	protected String hgInstallation() {
@@ -31,7 +31,7 @@ public class AbstractComparatorTest extends SCMTestBase {
 	}
 	
 	@TestExtension("testTriggersNewBuild")
-	static public class DummyComparator extends AbstractComparator {
+	static public class DummyComparator extends ChangeComparator {
 		public Change compare(MercurialSCM scm, Launcher launcher, TaskListener listener, MercurialTagAction baseline, PrintStream output, Node node, FilePath repository, AbstractProject<?,?> project)  
 				throws IOException, InterruptedException {
 			return Change.SIGNIFICANT;

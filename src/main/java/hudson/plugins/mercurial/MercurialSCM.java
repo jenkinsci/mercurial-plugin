@@ -294,7 +294,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
         Change change = null;
         
-        for(AbstractComparator s : AbstractComparator.all()) {
+        for(ChangeComparator s : ChangeComparator.all()) {
             Change c = s.compare(this, launcher, listener, baseline, output, node, repository, project);
             
             if(c != null) {
