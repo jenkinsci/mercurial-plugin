@@ -13,7 +13,6 @@ import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
 import hudson.matrix.MatrixRun;
-import hudson.matrix.MatrixProject;
 import hudson.model.*;
 import hudson.plugins.mercurial.browser.HgBrowser;
 import hudson.plugins.mercurial.browser.HgWeb;
@@ -286,28 +285,25 @@ public class MercurialSCM extends SCM implements Serializable {
         }
     }
 
-    private PollingResult compare(Launcher launcher, TaskListener listener, MercurialTagAction baseline, PrintStream output, Node node, FilePath repository, AbstractProject<?,?> project) throws IOException, InterruptedException {
+    PollingResult compare(Launcher launcher, TaskListener listener, MercurialTagAction baseline, PrintStream output, Node node, FilePath repository, AbstractProject<?,?> project) throws IOException, InterruptedException {
+        Change change = null;
+        for (ChangeComparator s : ChangeComparator.all()) {
+            Change c = s.compare(this, launcher, listener, baseline, output, node, repository, project);
+            if (c != null) {
+                if (change == null || c.compareTo(change) > 0) {
+                    change = c;
+                }
+            }
+        }
+        if (change != null) {
+            return new PollingResult(change);
+        }
+
         HgExe hg = new HgExe(findInstallation(getInstallation()), getCredentials(project), launcher, node, listener, /*TODO*/new EnvVars());
         String _branch = getBranchExpanded(project);
         String remote = hg.tip(repository, _branch);
         String rev = hg.tipNumber(repository, _branch);
 
-        Change change = null;
-        
-        for(ChangeComparator s : ChangeComparator.all()) {
-            Change c = s.compare(this, launcher, listener, baseline, output, node, repository, project);
-            
-            if(c != null) {
-                if(change == null || c.compareTo(change) > 0){
-                    change = c;
-                }
-            }
-        }
-
-        if(change != null) {
-            return new PollingResult(change);
-        }
-        
         if (remote == null) {
             throw new IOException("failed to find ID of branch head");
         }
