@@ -640,6 +640,25 @@ public abstract class SCMTestBase {
         }
     }
 
+    @Bug(5396)
+    @Test public void tags() throws Exception {
+        m.hg(repo, "init");
+        m.touchAndCommit(repo, "f1");
+        m.touchAndCommit(repo, "f2");
+        m.hg(repo, "tag", "release");
+        m.touchAndCommit(repo, "f3");
+        FreeStyleProject p = j.createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), MercurialSCM.RevisionType.TAG, "release", null, null, null, false, null));
+        FreeStyleBuild b = j.assertBuildStatusSuccess(p.scheduleBuild2(0));
+        FilePath ws = b.getWorkspace();
+        assertTrue(ws.child("f1").exists());
+        assertTrue(ws.child("f2").exists());
+        assertFalse(ws.child("f3").exists());
+        m.hg(repo, "tag", "--force", "release");
+        b = j.assertBuildStatusSuccess(p.scheduleBuild2(0));
+        assertTrue(JenkinsRule.getLog(b), ws.child("f3").exists());
+    }
+
     private PretendSlave createNoopPretendSlave() throws Exception {
         return j.createPretendSlave(new NoopFakeLauncher());
     }

@@ -5,7 +5,9 @@ import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
-import static java.util.logging.Level.FINE;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.SuppressWarnings;
 import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -19,12 +21,12 @@ import hudson.plugins.mercurial.browser.HgWeb;
 import hudson.scm.ChangeLogParser;
 import hudson.scm.PollingResult;
 import hudson.scm.PollingResult.Change;
+import hudson.scm.SCM;
 import hudson.scm.SCMDescriptor;
 import hudson.scm.SCMRevisionState;
-import hudson.scm.SCM;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.ForkOutputStream;
-
+import hudson.util.ListBoxModel;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -34,23 +36,18 @@ import java.io.PrintStream;
 import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import static java.util.logging.Level.FINE;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
 import net.sf.json.JSONObject;
-
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.StaplerRequest;
-
-import edu.umd.cs.findbugs.annotations.CheckForNull;
-import edu.umd.cs.findbugs.annotations.SuppressWarnings;
-import hudson.util.ListBoxModel;
-import java.util.List;
 import org.kohsuke.stapler.AncestorInPath;
+import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.StaplerRequest;
 
 /**
  * Mercurial SCM.
@@ -81,10 +78,29 @@ public class MercurialSCM extends SCM implements Serializable {
     // Same thing, but not parsed for jelly.
     private final String modules;
 
+    public enum RevisionType {
+        BRANCH() {
+            @Override public String getDisplayName() {
+                return "Branch";
+            }
+        },
+        TAG() {
+            @Override public String getDisplayName() {
+                return "Tag";
+            }
+        };
+        public abstract String getDisplayName();
+    }
+
+    private RevisionType revisionType;
+
     /**
-     * In-repository branch to follow. Null indicates "default".
+     * Revision to follow.
      */
-    private final String branch;
+    private String revision;
+    
+    @Deprecated
+    private String branch;
 
     /** Slash-separated subdirectory of the workspace in which the repository will be kept; null for top level. */
     private final String subdir;
@@ -100,19 +116,20 @@ public class MercurialSCM extends SCM implements Serializable {
         this(installation, source, branch, modules, subdir, browser, clean, null);
     }
 
-    @DataBoundConstructor
+    @Deprecated
     public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean, String credentialsId) {
+        this(installation, source, RevisionType.BRANCH, branch, modules, subdir, browser, clean, credentialsId);
+    }
+
+    @DataBoundConstructor public MercurialSCM(String installation, String source, @NonNull RevisionType revisionType, @NonNull String revision, String modules, String subdir, HgBrowser browser, boolean clean, String credentialsId) {
         this.installation = installation;
         this.source = Util.fixEmptyAndTrim(source);
         this.modules = Util.fixNull(modules);
         this.subdir = Util.fixEmptyAndTrim(subdir);
         this.clean = clean;
         parseModules();
-        branch = Util.fixEmpty(branch);
-        if (branch != null && branch.equals("default")) {
-            branch = null;
-        }
-        this.branch = branch;
+        this.revisionType = revisionType;
+        this.revision = Util.fixEmpty(revision) == null ? (revisionType == RevisionType.BRANCH ? "default" : "???") : revision;
         this.browser = browser;
         this.credentialsId = credentialsId;
     }
@@ -141,6 +158,12 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     private Object readResolve() {
+        if (revisionType == null) {
+            revisionType = RevisionType.BRANCH;
+            assert revision == null;
+            revision = branch == null ? "default" : branch;
+            branch = null;
+        }
         parseModules();
         return this;
     }
@@ -172,17 +195,26 @@ public class MercurialSCM extends SCM implements Serializable {
         return null;
     }
 
-    /**
-     * In-repository branch to follow. Never null.
-     */
+    public @NonNull RevisionType getRevisionType() {
+        return revisionType;
+    }
+
+    public @NonNull String getRevision() {
+        return revision;
+    }
+
+    @Deprecated
     public String getBranch() {
-        return branch == null ? "default" : branch;
+        if (revisionType != RevisionType.BRANCH) {
+            throw new IllegalStateException();
+        }
+        return revision;
     }
 
     /**
-     * Same as {@link #getBranch()} but with <em>default</em> values of parameters expanded.
+     * Same as {@link #getRevision()} but with <em>default</em> values of parameters expanded.
      */
-    private String getBranchExpanded(AbstractProject<?,?> project) {
+    private String getRevisionExpanded(AbstractProject<?,?> project) {
         EnvVars env = new EnvVars();
         ParametersDefinitionProperty params = project.getProperty(ParametersDefinitionProperty.class);
         if (params != null) {
@@ -195,11 +227,11 @@ public class MercurialSCM extends SCM implements Serializable {
                 }
             }
         }
-        return getBranch(env);
+        return getRevision(env);
     }
 
-    private String getBranch(EnvVars env) {
-        return branch == null ? "default" : env.expand(branch);
+    private String getRevision(EnvVars env) {
+        return env.expand(revision);
     }
 
     public String getSubdir() {
@@ -271,7 +303,7 @@ public class MercurialSCM extends SCM implements Serializable {
             Node node = project.getLastBuiltOn(); // JENKINS-5984: ugly but matches what AbstractProject.poll uses; though compare JENKINS-14247
             FilePath repository = workspace2Repo(workspace);
 
-            pull(launcher, repository, listener, node, getBranchExpanded(project), credentials);
+            pull(launcher, repository, listener, node, getRevisionExpanded(project), credentials);
 
             return compare(launcher, listener, baseline, output, node, repository, project);
         } catch(IOException e) {
@@ -300,9 +332,9 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         HgExe hg = new HgExe(findInstallation(getInstallation()), getCredentials(project), launcher, node, listener, /*TODO*/new EnvVars());
-        String _branch = getBranchExpanded(project);
-        String remote = hg.tip(repository, _branch);
-        String rev = hg.tipNumber(repository, _branch);
+        String _revision = getRevisionExpanded(project);
+        String remote = hg.tip(repository, _revision);
+        String rev = hg.tipNumber(repository, _revision);
 
         if (remote == null) {
             throw new IOException("failed to find ID of branch head");
@@ -328,11 +360,13 @@ public class MercurialSCM extends SCM implements Serializable {
         return result;
     }
 
-    private void pull(Launcher launcher, FilePath repository, TaskListener listener, Node node, String branch, StandardUsernameCredentials credentials) throws IOException, InterruptedException {
+    private void pull(Launcher launcher, FilePath repository, TaskListener listener, Node node, String revision, StandardUsernameCredentials credentials) throws IOException, InterruptedException {
         HgExe hg = new HgExe(findInstallation(getInstallation()), credentials, launcher, node, listener, /* TODO */new EnvVars());
         ArgumentListBuilder cmd = hg.seed(true);
         cmd.add("pull");
-        cmd.add("--rev", branch);
+        if (revisionType == RevisionType.BRANCH) {
+            cmd.add("--rev", revision);
+        }
         CachedRepo cachedSource = cachedSource(node, launcher, listener, true, credentials);
         if (cachedSource != null) {
             cmd.add(cachedSource.getRepoLocation());
@@ -565,7 +599,7 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     private String getRevToBuild(AbstractBuild<?, ?> build, EnvVars env) {
-        String revToBuild = getBranch(env);
+        String revToBuild = getRevision(env);
         if (build instanceof MatrixRun) {
             MatrixRun matrixRun = (MatrixRun) build;
             MercurialTagAction parentRevision = matrixRun.getParentBuild().getAction(MercurialTagAction.class);
@@ -601,13 +635,14 @@ public class MercurialSCM extends SCM implements Serializable {
                 args.add(cachedSource.getRepoLocation());
             } else {
                 args.add("clone");
-                args.add("--rev", toRevision);
                 args.add("--noupdate");
                 args.add(cachedSource.getRepoLocation());
             }
         } else {
             args.add("clone");
-            args.add("--rev", toRevision);
+            if (revisionType == RevisionType.BRANCH) {
+                args.add("--rev", toRevision);
+            }
             args.add("--noupdate");
             args.add(source);
         }

@@ -18,7 +18,10 @@
   <f:entry field="credentialsId" title="${%Credentials}">
     <c:select/>
   </f:entry>
-  <f:entry field="branch" title="${%Branch}">
+  <f:entry field="revisionType" title="${%Revision Type}">
+      <f:enum>${it.displayName}</f:enum>
+  </f:entry>
+  <f:entry field="revision" title="${%Revision}">
     <f:textbox/>
   </f:entry>
   <f:advanced>
