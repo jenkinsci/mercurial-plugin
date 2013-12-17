@@ -23,6 +23,9 @@
  */
 package hudson.plugins.mercurial;
 
+import com.cloudbees.plugins.credentials.CredentialsNameProvider;
+import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
+import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -35,6 +38,7 @@ import hudson.model.AbstractBuild;
 import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.util.ArgumentListBuilder;
+import jenkins.model.Jenkins;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -48,6 +52,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 /**
@@ -72,36 +77,93 @@ public class HgExe {
     public final TaskListener listener;
     private final Capability capability;
 
+    @Deprecated
     public HgExe(MercurialSCM scm, Launcher launcher, AbstractBuild build, TaskListener listener) throws IOException, InterruptedException {
-        this(scm,launcher,build.getBuiltOn(),listener,build.getEnvironment(listener));
+        this(MercurialSCM.findInstallation(scm.getInstallation()), scm.getCredentials(build.getProject()), launcher, build.getBuiltOn(), listener, build.getEnvironment(listener));
     }
 
+    @Deprecated
     public HgExe(MercurialSCM scm, Launcher launcher, Node node, TaskListener listener, EnvVars env) throws IOException, InterruptedException {
-        base = scm.findHgExe(node, listener, true);
-        // XXX might be more efficient to have a single call returning ArgumentListBuilder[2]?
-        baseNoDebug = scm.findHgExe(node, listener, false);
+        this(MercurialSCM.findInstallation(scm.getInstallation()), null, launcher, node, listener, env);
+    }
+
+    public HgExe(@CheckForNull MercurialInstallation inst, @CheckForNull StandardUsernameCredentials credentials, Launcher launcher, Node node, TaskListener listener, EnvVars env) throws IOException, InterruptedException {
+        base = findHgExe(inst, credentials, node, listener, true);
+        // TODO might be more efficient to have a single call returning ArgumentListBuilder[2]?
+        baseNoDebug = findHgExe(inst, credentials, node, listener, false);
         this.node = node;
         this.env = env;
+        env.put("HGPLAIN", "true");
         this.launcher = launcher;
         this.listener = listener;
         this.capability = Capability.get(this);
     }
 
-    private ProcStarter l(ArgumentListBuilder args) {
-        // set the default stdout
-        return MercurialSCM.launch(launcher).cmds(args).stdout(listener).envs(env);
+    private static ArgumentListBuilder findHgExe(@CheckForNull MercurialInstallation inst, @CheckForNull StandardUsernameCredentials credentials, Node node, TaskListener listener, boolean allowDebug) throws IOException, InterruptedException {
+        ArgumentListBuilder b = new ArgumentListBuilder();
+        if (inst == null) {
+            b.add(Jenkins.getInstance().getDescriptorByType(MercurialSCM.DescriptorImpl.class).getHgExe());
+        } else {
+            // TODO what about forEnvironment?
+            b.add(inst.executableWithSubstitution(inst.forNode(node, listener).getHome()));
+            if (allowDebug && inst.getDebug()) {
+                b.add("--debug");
+            }
+        }
+        if (credentials instanceof UsernamePasswordCredentials) {
+            UsernamePasswordCredentials upc = (UsernamePasswordCredentials) credentials;
+            b.add("--config", "auth.jenkins.prefix=*", "--config");
+            b.addMasked("auth.jenkins.username=" + upc.getUsername());
+            b.add("--config");
+            b.addMasked("auth.jenkins.password=" + upc.getPassword().getPlainText());
+            b.add("--config", "auth.jenkins.schemes=http https");
+        } else if (credentials != null) {
+            throw new IOException("Support for credentials currently limited to username/password: " + CredentialsNameProvider.name(credentials));
+        }
+        return b;
     }
 
-    private ArgumentListBuilder seed(boolean allowDebug) {
+    /**
+     * Prepares to start the Mercurial command.
+     * @param args some arguments as created by {@link #seed} and then appended to
+     * @return a process starter with the correct launcher, arguments, listener, and environment variables configured
+     */
+    public ProcStarter launch(ArgumentListBuilder args) {
+        // set the default stdout
+        return launcher.launch().cmds(args).stdout(listener).envs(env);
+    }
+
+    /**
+     * For use with {@link #launch} (or similar) when running commands not inside a build and which therefore might not be easily killed.
+     */
+    public static int joinWithPossibleTimeout(ProcStarter proc, boolean useTimeout, final TaskListener listener) throws IOException, InterruptedException {
+        return useTimeout ? proc.start().joinWithTimeout(60 * 60, TimeUnit.SECONDS, listener) : proc.join();
+    }
+    
+    /**
+     * Starts creating an argument list.
+     * Initially adds only the Mercurial executable itself, possibly with a debug flag.
+     * @param allowDebug whether to add a debug flag if the configured installation requested it
+     * @return a builder
+     */
+    public ArgumentListBuilder seed(boolean allowDebug) {
         return (allowDebug ? base : baseNoDebug).clone();
     }
 
+    @Deprecated
+    /**
+     * @deprecated Unused, since we need more control over the argument list in order to support credentials.
+     */
     public ProcStarter pull() {
         return run("pull");
     }
 
+    @Deprecated
+    /**
+     * @deprecated Unused, since we need more control over the argument list in order to support credentials.
+     */
     public ProcStarter clone(String... args) {
-        return l(seed(true).add("clone").add(args));
+        return launch(seed(true).add("clone").add(args));
     }
 
     public ProcStarter bundleAll(String file) {
@@ -114,7 +176,7 @@ public class HgExe {
             args.add("--base", head);
         }
         args.add(file);
-        return l(args);
+        return launch(args);
     }
 
     public ProcStarter init(FilePath path) {
@@ -133,11 +195,15 @@ public class HgExe {
      * Runs arbitrary command.
      */
     public ProcStarter run(String... args) {
-        return l(seed(true).add(args));
+        return launch(seed(true).add(args));
     }
 
+    /**
+     * @deprecated Use {@link #seed} and {@link #launch} instead.
+     */
+    @Deprecated
     public ProcStarter run(ArgumentListBuilder args) {
-        return l(seed(true).add(args.toCommandArray()));
+        return launch(seed(true).add(args.toCommandArray()));
     }
 
     /**
@@ -212,12 +278,12 @@ public class HgExe {
             throws IOException, InterruptedException {
         args = seed(false).add(args.toCommandArray());
 
-        ByteArrayOutputStream rev = new ByteArrayOutputStream();
-        if (MercurialSCM.joinWithPossibleTimeout(l(args).pwd(repository).stdout(rev), useTimeout, listener) == 0) {
-            return rev.toString();
+        ByteArrayOutputStream data = new ByteArrayOutputStream();
+        if (joinWithPossibleTimeout(launch(args).pwd(repository).stdout(data), useTimeout, listener) == 0) {
+            return data.toString();
         } else {
             listener.error("Failed to run " + args.toStringWithQuote());
-            listener.getLogger().write(rev.toByteArray());
+            listener.getLogger().write(data.toByteArray());
             throw new AbortException();
         }
     }
@@ -271,6 +337,9 @@ public class HgExe {
             return true;
         }
         if (pathURL.startsWith("file:/") && URI.create(pathURL).equals(new File(pathAsInConfig).toURI())) {
+            return true;
+        }
+        if (pathAsInConfig.startsWith("file:/") && URI.create(pathAsInConfig).equals(new File(pathURL).toURI())) {
             return true;
         }
         return false;

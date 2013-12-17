@@ -1,4 +1,4 @@
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
 
   <j:invokeStatic var="installations" className="hudson.plugins.mercurial.MercurialInstallation" method="allInstallations"/>
   <j:if test="${!empty(installations)}">
@@ -15,7 +15,13 @@
   <f:entry field="source" title="${%Repository URL}">
     <f:textbox/>
   </f:entry>
-  <f:entry field="branch" title="${%Branch}">
+  <f:entry field="credentialsId" title="${%Credentials}">
+    <c:select/>
+  </f:entry>
+  <f:entry field="revisionType" title="${%Revision Type}">
+      <f:enum>${it.displayName}</f:enum>
+  </f:entry>
+  <f:entry field="revision" title="${%Revision}">
     <f:textbox/>
   </f:entry>
   <f:advanced>

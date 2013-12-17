@@ -1,20 +1,16 @@
 package hudson.plugins.mercurial.browser;
 
 import hudson.Extension;
-import hudson.model.Descriptor;
 import hudson.plugins.mercurial.MercurialChangeSet;
-import hudson.scm.RepositoryBrowser;
 import hudson.util.FormValidation;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-import net.sf.json.JSONObject;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
 
 /**
  * Mercurial web interface served using a <a href="http://bitbucket.org/">BitBucket</a> repository.
@@ -63,19 +59,17 @@ public class BitBucket extends HgBrowser {
     }
     
     @Extension
-    public static class DescriptorImpl extends Descriptor<RepositoryBrowser<?>> {
+    public static class DescriptorImpl extends HgBrowserDescriptor {
         public String getDisplayName() {
             return "bitbucket";
         }
 
-        public @Override BitBucket newInstance(StaplerRequest req, JSONObject json) throws FormException {
-            return req.bindParameters(BitBucket.class,"bitbucket.");
+        @Override public FormValidation doCheckUrl(@QueryParameter String url) {
+            return _doCheckUrl(url);
         }
 
-        public FormValidation doCheckUrl(@QueryParameter String url) {
-            if (url.length() == 0) {
-                return FormValidation.error("Must enter URL");
-            } else if (url.matches("https?://bitbucket[.]org/[^/]+/[^/]+/")) {
+        @Override protected FormValidation check(URL url) {
+            if (url.toString().matches("https?://bitbucket[.]org/[^/]+/[^/]+/")) {
                 return FormValidation.ok();
             } else {
                 return FormValidation.warning("Possibly incorrect root URL; expected http://bitbucket.org/USERNAME/REPOS/");

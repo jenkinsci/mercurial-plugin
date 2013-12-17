@@ -1,18 +1,16 @@
 package hudson.plugins.mercurial.browser;
 
 import hudson.Extension;
-import hudson.model.Descriptor;
 import hudson.plugins.mercurial.MercurialChangeSet;
-import hudson.scm.RepositoryBrowser;
+import hudson.util.FormValidation;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-import net.sf.json.JSONObject;
 
 import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.QueryParameter;
 
 /**
  * Mercurial web interface served using the standalone server
@@ -63,14 +61,15 @@ public class HgWeb extends HgBrowser {
     }
 
     @Extension
-    public static class DescriptorImpl extends Descriptor<RepositoryBrowser<?>> {
+    public static class DescriptorImpl extends HgBrowserDescriptor {
         public String getDisplayName() {
             return "hgweb";
         }
 
-        public @Override HgWeb newInstance(StaplerRequest req, JSONObject json) throws FormException {
-            return req.bindParameters(HgWeb.class,"hgweb.");
+        @Override public FormValidation doCheckUrl(@QueryParameter String url) {
+            return _doCheckUrl(url);
         }
+
     }
 
     private static final long serialVersionUID = 1L;

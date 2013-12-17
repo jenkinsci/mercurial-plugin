@@ -1,5 +1,6 @@
 package hudson.plugins.mercurial;
 
+import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.EnvVars;
@@ -8,6 +9,7 @@ import hudson.Launcher;
 import hudson.model.Hudson;
 import hudson.model.Node;
 import hudson.model.TaskListener;
+import hudson.util.ArgumentListBuilder;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -35,6 +37,8 @@ class Cache {
      */
     private final String remote;
 
+    private final StandardUsernameCredentials credentials;
+
     /**
      * Hashed value of {@link #remote} that only contains characters that are safe as a directory name.
      */
@@ -46,18 +50,19 @@ class Cache {
     private final ReentrantLock masterLock = new ReentrantLock(true);
     private final Map<String, ReentrantLock> slaveNodesLocksMap = new HashMap<String, ReentrantLock>();
 
-    private Cache(String remote, String hash) {
+    private Cache(String remote, String hash, StandardUsernameCredentials credentials) {
         this.remote = remote;
         this.hash = hash;
+        this.credentials = credentials;
     }
 
     private static final Map<String, Cache> CACHES = new HashMap<String, Cache>();
 
-    public synchronized static @NonNull Cache fromURL(String remote) {
-        String h = hashSource(remote);
+    public synchronized static @NonNull Cache fromURL(String remote, StandardUsernameCredentials credentials) {
+        String h = hashSource(remote, credentials);
         Cache cache = CACHES.get(h);
         if (cache == null) {
-            CACHES.put(h, cache = new Cache(remote, h));
+            CACHES.put(h, cache = new Cache(remote, h, credentials));
         }
         return cache;
     }
@@ -87,7 +92,7 @@ class Cache {
      * @return
      *      The file path on the {@code node} to the local repository cache, cloned off from the master cache.
      */
-    @CheckForNull FilePath repositoryCache(MercurialSCM config, Node node, Launcher launcher, TaskListener listener, boolean fromPolling)
+    @CheckForNull FilePath repositoryCache(MercurialInstallation inst, Node node, Launcher launcher, TaskListener listener, boolean useTimeout)
             throws IOException, InterruptedException {
         boolean masterWasLocked = masterLock.isLocked();
         if (masterWasLocked) {
@@ -102,7 +107,7 @@ class Cache {
 
             // hg invocation on master
             // do we need to pass in EnvVars from a build too?
-            HgExe masterHg = new HgExe(config,masterLauncher,master,listener,new EnvVars());
+            HgExe masterHg = new HgExe(inst, credentials, masterLauncher, master, listener, new EnvVars());
 
         // Lock the block used to verify we end up having a cloned repo in the master,
         // whether if it was previously cloned in a different build or if it's 
@@ -110,14 +115,17 @@ class Cache {
         masterLock.lockInterruptibly();
         try {
             listener.getLogger().println("Acquired master cache lock.");
+            // TODO use getCredentials()
             if (masterCache.isDirectory()) {
-                if (MercurialSCM.joinWithPossibleTimeout(masterHg.pull().pwd(masterCache), true, listener) != 0) {
+                ArgumentListBuilder args = masterHg.seed(true).add("pull");
+                if (HgExe.joinWithPossibleTimeout(masterHg.launch(args).pwd(masterCache), true, listener) != 0) {
                     listener.error("Failed to update " + masterCache);
                     return null;
                 }
             } else {
                 masterCaches.mkdirs();
-                if (MercurialSCM.joinWithPossibleTimeout(masterHg.clone("--noupdate", remote, masterCache.getRemote()), fromPolling, listener) != 0) {
+                ArgumentListBuilder args = masterHg.seed(true).add("clone").add("--noupdate").add(remote);
+                if (HgExe.joinWithPossibleTimeout(masterHg.launch(args.add(masterCache.getRemote())), useTimeout, listener) != 0) {
                     listener.error("Failed to clone " + remote);
                     return null;
                 }
@@ -157,12 +165,12 @@ class Cache {
             FilePath localTransfer = localCache.child("xfer.hg");
             try {
                 // hg invocation on the slave
-                HgExe slaveHg = new HgExe(config,launcher,node,listener,new EnvVars());
+                HgExe slaveHg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars());
 
                 if (localCache.isDirectory()) {
                     // Need to transfer just newly available changesets.
-                    Set<String> masterHeads = masterHg.heads(masterCache, fromPolling);
-                    Set<String> localHeads = slaveHg.heads(localCache, fromPolling);
+                    Set<String> masterHeads = masterHg.heads(masterCache, useTimeout);
+                    Set<String> localHeads = slaveHg.heads(localCache, useTimeout);
                     if (localHeads.equals(masterHeads)) {
                         listener.getLogger().println("Local cache is up to date.");
                     } else {
@@ -173,27 +181,27 @@ class Cache {
                         // to actually exclude those head sets, but not a big deal. (Hg 1.5 fixes that but leaves
                         // a major bug that if no csets are selected, the whole repo will be bundled; fortunately
                         // this case should be caught by equality check above.)
-                        if (MercurialSCM.joinWithPossibleTimeout(masterHg.bundle(localHeads,bundleFileName).
-                                pwd(masterCache), fromPolling, listener) != 0) {
+                        if (HgExe.joinWithPossibleTimeout(masterHg.bundle(localHeads,bundleFileName).
+                                pwd(masterCache), useTimeout, listener) != 0) {
                             listener.error("Failed to send outgoing changes");
                             return null;
                         }
                     }
                 } else {
                     // Need to transfer entire repo.
-                    if (MercurialSCM.joinWithPossibleTimeout(masterHg.bundleAll(bundleFileName).pwd(masterCache), fromPolling, listener) != 0) {
+                    if (HgExe.joinWithPossibleTimeout(masterHg.bundleAll(bundleFileName).pwd(masterCache), useTimeout, listener) != 0) {
                         listener.error("Failed to bundle repo");
                         return null;
                     }
                     localCaches.mkdirs();
-                    if (MercurialSCM.joinWithPossibleTimeout(slaveHg.init(localCache), fromPolling, listener) != 0) {
+                    if (HgExe.joinWithPossibleTimeout(slaveHg.init(localCache), useTimeout, listener) != 0) {
                         listener.error("Failed to create local cache");
                         return null;
                     }
                 }
                 if (masterTransfer.exists()) {
                     masterTransfer.copyTo(localTransfer);
-                    if (MercurialSCM.joinWithPossibleTimeout(slaveHg.unbundle("xfer.hg").pwd(localCache), fromPolling, listener) != 0) {
+                    if (HgExe.joinWithPossibleTimeout(slaveHg.unbundle("xfer.hg").pwd(localCache), useTimeout, listener) != 0) {
                         listener.error("Failed to unbundle " + localTransfer);
                         return null;
                     }
@@ -213,18 +221,19 @@ class Cache {
     /**
      * Hash a URL into a string that only contains characters that are safe as directory names.
      */
-    static String hashSource(String source) {
+    static String hashSource(String source, StandardUsernameCredentials credentials) {
         if (!source.endsWith("/")) {
             source += "/";
         }
         Matcher m = Pattern.compile(".+[/]([^/:]+)(:\\d+)?[/]?").matcher(source);
+        String digestible = credentials == null ? source : source + '#' + credentials.getId();
         BigInteger hash;
         try {
-            hash = new BigInteger(1, MessageDigest.getInstance("SHA-1").digest(source.getBytes("UTF-8")));
+            hash = new BigInteger(1, MessageDigest.getInstance("SHA-1").digest(digestible.getBytes("UTF-8")));
         } catch (Exception x) {
             throw new AssertionError(x);
         }
-        return String.format("%040X%s", hash, m.matches() ? "-" + m.group(1) : "");
+        return String.format("%040X%s%s", hash, m.matches() ? "-" + m.group(1) : "", credentials == null ? "" : "-" + credentials.getUsername().replace("@", "-at-"));
     }
 
 }
