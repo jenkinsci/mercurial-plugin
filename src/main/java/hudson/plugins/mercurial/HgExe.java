@@ -24,11 +24,8 @@
 package hudson.plugins.mercurial;
 
 import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
-import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsNameProvider;
-import com.cloudbees.plugins.credentials.common.CertificateCredentials;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
-import com.cloudbees.plugins.credentials.common.UsernameCredentials;
 import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -50,7 +47,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.URI;
-import java.security.PrivateKey;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
