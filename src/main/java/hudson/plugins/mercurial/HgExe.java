@@ -23,6 +23,7 @@
  */
 package hudson.plugins.mercurial;
 
+import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsNameProvider;
 import com.cloudbees.plugins.credentials.common.CertificateCredentials;
@@ -49,6 +50,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.URI;
+import java.security.PrivateKey;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -122,15 +124,22 @@ public class HgExe {
             b.add("--config");
             b.addMasked("auth.jenkins.password=" + upc.getPassword().getPlainText());
             b.add("--config", "auth.jenkins.schemes=http https");
-        } else if (credentials instanceof BasicSSHUserPrivateKey) {
-            BasicSSHUserPrivateKey cc = (BasicSSHUserPrivateKey) credentials;
+        } else if (credentials instanceof SSHUserPrivateKey) {
+            SSHUserPrivateKey cc = (SSHUserPrivateKey) credentials;
             File temp = File.createTempFile("key", ".key");
+            temp.deleteOnExit();
             boolean res;
             String path = temp.getAbsolutePath();
-            chmod(path, 0600);
+            new FilePath(temp).chmod(0600);
             FileOutputStream fo = new FileOutputStream(path);
             try {
-                fo.write(cc.getPrivateKey().getBytes());
+                List<String> keys = cc.getPrivateKeys();
+                if (keys.size() == 0)
+                    throw new IOException("No private key available");
+                else if (keys.size() > 1)
+                    throw  new IOException("Multiple private keys found.");
+                else
+                    fo.write(keys.get(0).getBytes());
             }
             finally {
                 fo.close();
@@ -139,7 +148,7 @@ public class HgExe {
             b.addMasked(String.format("ui.ssh=%s", String.format("ssh -i %s -l %s", path, cc.getUsername())));
         }
         else if (credentials != null) {
-            throw new IOException("Support for credentials currently limited to username/password: " + CredentialsNameProvider.name(credentials));
+            throw new IOException("Support for credentials currently limited to username/password and ssh key: " + CredentialsNameProvider.name(credentials));
         }
         return b;
     }

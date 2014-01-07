@@ -2,9 +2,7 @@ package hudson.plugins.mercurial;
 
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
-import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
-import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -156,7 +154,7 @@ public final class MercurialSCMSource extends SCMSource {
         }
 
         public ListBoxModel doFillCredentialsIdItems(@AncestorInPath SCMSourceOwner owner, @QueryParameter String source) {
-            return new StandardListBoxModel()
+            return new StandardUsernameListBoxModel()
                     .withEmptySelection()
                     .withAll(availableCredentials(owner, source));
         }
