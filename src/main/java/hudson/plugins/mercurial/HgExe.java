@@ -23,8 +23,11 @@
  */
 package hudson.plugins.mercurial;
 
+import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsNameProvider;
+import com.cloudbees.plugins.credentials.common.CertificateCredentials;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
+import com.cloudbees.plugins.credentials.common.UsernameCredentials;
 import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -42,7 +45,9 @@ import jenkins.model.Jenkins;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
@@ -117,10 +122,37 @@ public class HgExe {
             b.add("--config");
             b.addMasked("auth.jenkins.password=" + upc.getPassword().getPlainText());
             b.add("--config", "auth.jenkins.schemes=http https");
-        } else if (credentials != null) {
+        } else if (credentials instanceof BasicSSHUserPrivateKey) {
+            BasicSSHUserPrivateKey cc = (BasicSSHUserPrivateKey) credentials;
+            File temp = File.createTempFile("key", ".key");
+            boolean res;
+            String path = temp.getAbsolutePath();
+            chmod(path, 0600);
+            FileOutputStream fo = new FileOutputStream(path);
+            try {
+                fo.write(cc.getPrivateKey().getBytes());
+            }
+            finally {
+                fo.close();
+            }
+            b.add("--config");
+            b.addMasked(String.format("ui.ssh=%s", String.format("ssh -i %s -l %s", path, cc.getUsername())));
+        }
+        else if (credentials != null) {
             throw new IOException("Support for credentials currently limited to username/password: " + CredentialsNameProvider.name(credentials));
         }
         return b;
+    }
+
+    private static int chmod(String filename, int mode) {
+        try {
+            Class<?> fspClass = Class.forName("java.util.prefs.FileSystemPreferences");
+            Method chmodMethod = fspClass.getDeclaredMethod("chmod", String.class, Integer.TYPE);
+            chmodMethod.setAccessible(true);
+            return (Integer)chmodMethod.invoke(null, filename, mode);
+        } catch (Throwable ex) {
+            return -1;
+        }
     }
 
     /**

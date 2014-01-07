@@ -2,6 +2,7 @@ package hudson.plugins.mercurial;
 
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
+import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
@@ -144,8 +145,8 @@ public final class MercurialSCMSource extends SCMSource {
         return null;
     }
 
-    private static List<StandardUsernamePasswordCredentials> availableCredentials(@CheckForNull SCMSourceOwner owner, @CheckForNull String source) {
-        return CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, owner, null, URIRequirementBuilder.fromUri(source).build());
+    private static List<StandardUsernameCredentials> availableCredentials(@CheckForNull SCMSourceOwner owner, @CheckForNull String source) {
+        return CredentialsProvider.lookupCredentials(StandardUsernameCredentials.class, owner, null, URIRequirementBuilder.fromUri(source).build());
     }
 
     @Extension public static final class DescriptorImpl extends SCMSourceDescriptor {
@@ -155,7 +156,7 @@ public final class MercurialSCMSource extends SCMSource {
         }
 
         public ListBoxModel doFillCredentialsIdItems(@AncestorInPath SCMSourceOwner owner, @QueryParameter String source) {
-            return new StandardUsernameListBoxModel()
+            return new StandardListBoxModel()
                     .withEmptySelection()
                     .withAll(availableCredentials(owner, source));
         }
