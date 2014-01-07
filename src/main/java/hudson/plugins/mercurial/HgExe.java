@@ -38,6 +38,7 @@ import hudson.Launcher.ProcStarter;
 import hudson.model.AbstractBuild;
 import hudson.model.Node;
 import hudson.model.TaskListener;
+import hudson.remoting.Callable;
 import hudson.util.ArgumentListBuilder;
 import jenkins.model.Jenkins;
 
@@ -121,27 +122,42 @@ public class HgExe {
             b.addMasked("auth.jenkins.password=" + upc.getPassword().getPlainText());
             b.add("--config", "auth.jenkins.schemes=http https");
         } else if (credentials instanceof SSHUserPrivateKey) {
-            SSHUserPrivateKey cc = (SSHUserPrivateKey) credentials;
-            File temp = File.createTempFile("key", ".key");
-            temp.deleteOnExit();
-            boolean res;
-            String path = temp.getAbsolutePath();
-            new FilePath(temp).chmod(0600);
-            FileOutputStream fo = new FileOutputStream(path);
-            try {
-                List<String> keys = cc.getPrivateKeys();
-                if (keys.size() == 0)
-                    throw new IOException("No private key available");
-                else if (keys.size() > 1)
-                    throw  new IOException("Multiple private keys found.");
-                else
-                    fo.write(keys.get(0).getBytes());
-            }
-            finally {
-                fo.close();
-            }
+            final SSHUserPrivateKey cc = (SSHUserPrivateKey) credentials;
+            List<String> keys = cc.getPrivateKeys();
+            final String key;
+            if (keys.size() == 0)
+                throw new IOException("No private key available");
+            else if (keys.size() > 1)
+                throw  new IOException("Multiple private keys found.");
+            else
+                key = keys.get(0);
+
+            Callable<String, IOException> task = new Callable<String, IOException>() {
+                public String call() throws IOException {
+                    File temp = File.createTempFile("key", ".key");
+                    temp.deleteOnExit();
+                    String path = temp.getAbsolutePath();
+                    try {
+                        new FilePath(temp).chmod(0600);
+                    }
+                    catch (InterruptedException e) {
+                        throw new IOException(e);
+                    }
+                    FileOutputStream fo = new FileOutputStream(path);
+                    try {
+                        fo.write(key.getBytes());
+                    }
+                    finally {
+                        fo.close();
+                    }
+                    return path;
+                }
+            };
+            Launcher launcher = node.createLauncher(listener);
+            // Get a "channel" to the build machine and run the task there
+            String fileName = launcher.getChannel().call(task);
             b.add("--config");
-            b.addMasked(String.format("ui.ssh=\"%s\"", String.format("ssh -i %s -l %s", path, cc.getUsername())));
+            b.addMasked(String.format("ui.ssh=%s", String.format("ssh -i %s -l %s", fileName, cc.getUsername())));
         }
         else if (credentials != null) {
             throw new IOException("Support for credentials currently limited to username/password and ssh key: " + CredentialsNameProvider.name(credentials));
