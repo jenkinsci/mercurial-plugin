@@ -153,9 +153,8 @@ public class HgExe {
                     return path;
                 }
             };
-            Launcher launcher = node.createLauncher(listener);
             // Get a "channel" to the build machine and run the task there
-            String fileName = launcher.getChannel().call(task);
+            String fileName = node.getChannel().call(task);
             b.add("--config");
             b.addMasked(String.format("ui.ssh=%s", String.format("ssh -i %s -l %s", fileName, cc.getUsername())));
         }
