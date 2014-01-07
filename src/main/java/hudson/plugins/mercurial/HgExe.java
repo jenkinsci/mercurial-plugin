@@ -141,7 +141,7 @@ public class HgExe {
                 fo.close();
             }
             b.add("--config");
-            b.addMasked(String.format("ui.ssh=%s", String.format("ssh -i %s -l %s", path, cc.getUsername())));
+            b.addMasked(String.format("ui.ssh=\"%s\"", String.format("ssh -i %s -l %s", path, cc.getUsername())));
         }
         else if (credentials != null) {
             throw new IOException("Support for credentials currently limited to username/password and ssh key: " + CredentialsNameProvider.name(credentials));
