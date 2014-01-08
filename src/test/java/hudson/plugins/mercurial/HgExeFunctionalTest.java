@@ -88,6 +88,7 @@ public class HgExeFunctionalTest {
                 "hg", "--config", "auth.jenkins.prefix=*", "--config", "******",
                 "--config", "******", "--config", "auth.jenkins.schemes=http https").toString(),
                 b.toString());
+        hgexe.close();
     }
 
     @Test public void credentialsSSHKeyTest() throws Exception {
@@ -108,6 +109,7 @@ public class HgExeFunctionalTest {
         assertEquals(new ArgumentListBuilder(
                 "hg", "--config", "******").toString(),
                 b.toString());
+        hgexe.close();
     }
 
 }

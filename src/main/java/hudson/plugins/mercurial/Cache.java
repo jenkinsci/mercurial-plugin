@@ -108,6 +108,7 @@ class Cache {
             // hg invocation on master
             // do we need to pass in EnvVars from a build too?
             HgExe masterHg = new HgExe(inst, credentials, masterLauncher, master, listener, new EnvVars());
+            try {
 
         // Lock the block used to verify we end up having a cloned repo in the master,
         // whether if it was previously cloned in a different build or if it's 
@@ -166,6 +167,7 @@ class Cache {
             try {
                 // hg invocation on the slave
                 HgExe slaveHg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars());
+                try {
 
                 if (localCache.isDirectory()) {
                     // Need to transfer just newly available changesets.
@@ -206,6 +208,9 @@ class Cache {
                         return null;
                     }
                 }
+                } finally {
+                    slaveHg.close();
+                }
             } finally {
                 masterTransfer.delete();
                 localTransfer.delete();
@@ -214,6 +219,9 @@ class Cache {
         } finally {
             slaveNodeLock.unlock();
             listener.getLogger().println("Slave node cache lock released for node " + node.getNodeName() + ".");
+        }
+            } finally {
+            masterHg.close();
         }
     }
 

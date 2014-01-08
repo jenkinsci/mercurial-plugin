@@ -267,9 +267,13 @@ public class MercurialSCM extends SCM implements Serializable {
             throws IOException, InterruptedException {
         // tag action is added during checkout, so this shouldn't be called, but just in case.
         HgExe hg = new HgExe(findInstallation(getInstallation()), getCredentials(build.getProject()), launcher, build.getBuiltOn(), listener, build.getEnvironment(listener));
+        try {
         String tip = hg.tip(workspace2Repo(build.getWorkspace()), null);
         String rev = hg.tipNumber(workspace2Repo(build.getWorkspace()), null);
         return tip != null && rev != null ? new MercurialTagAction(tip, rev, subdir) : null;
+        } finally {
+            hg.close();
+        }
     }
 
     @Override
@@ -331,6 +335,7 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         HgExe hg = new HgExe(findInstallation(getInstallation()), getCredentials(project), launcher, node, listener, /*TODO*/new EnvVars());
+        try {
         String _revision = getRevisionExpanded(project);
         String remote = hg.tip(repository, _revision);
         String rev = hg.tipNumber(repository, _revision);
@@ -348,6 +353,9 @@ public class MercurialSCM extends SCM implements Serializable {
 
         MercurialTagAction cur = new MercurialTagAction(remote, rev, subdir);
         return new PollingResult(baseline,cur,computeDegreeOfChanges(changedFileNames,output));
+        } finally {
+            hg.close();
+        }
     }
 
     static Set<String> parseStatus(String status) {
@@ -361,6 +369,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private void pull(Launcher launcher, FilePath repository, TaskListener listener, Node node, String revision, StandardUsernameCredentials credentials) throws IOException, InterruptedException {
         HgExe hg = new HgExe(findInstallation(getInstallation()), credentials, launcher, node, listener, /* TODO */new EnvVars());
+        try {
         ArgumentListBuilder cmd = hg.seed(true);
         cmd.add("pull");
         if (revisionType == RevisionType.BRANCH) {
@@ -373,6 +382,9 @@ public class MercurialSCM extends SCM implements Serializable {
         HgExe.joinWithPossibleTimeout(
                 hg.launch(cmd).pwd(repository),
                 true, listener);
+        } finally {
+            hg.close();
+        }
     }
 
     private Change computeDegreeOfChanges(Set<String> changedFileNames, PrintStream output) {
@@ -482,6 +494,7 @@ public class MercurialSCM extends SCM implements Serializable {
         }
         
         HgExe hg = new HgExe(findInstallation(getInstallation()), getCredentials(build.getProject()), launcher, build.getBuiltOn(), listener, build.getEnvironment(listener));
+        try {
         String upstream = hg.config(repo, "paths.default");
         if (upstream == null) {
             return false;
@@ -494,6 +507,9 @@ public class MercurialSCM extends SCM implements Serializable {
                 "\nwhich looks different than " + source +
                 "\nso falling back to fresh clone rather than incremental update");
         return false;
+        } finally {
+            hg.close();
+        }
     }
 
     private void determineChanges(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, File changelogFile, FilePath repository, String revToBuild) throws IOException, InterruptedException {
@@ -508,6 +524,7 @@ public class MercurialSCM extends SCM implements Serializable {
         MercurialInstallation inst = findInstallation(getInstallation());
         StandardUsernameCredentials credentials = getCredentials(build.getProject());
         HgExe hg = new HgExe(inst, credentials, launcher, build.getBuiltOn(), listener, env);
+        try {
 
         ArgumentListBuilder logCommand = hg.seed(true).add("log", "--rev", prevTag.getId());
         int exitCode = hg.launch(logCommand).pwd(repository).join();
@@ -545,11 +562,15 @@ public class MercurialSCM extends SCM implements Serializable {
         } finally {
             os.close();
         }
+        } finally {
+            hg.close();
+        }
     }
 
     private void update(AbstractBuild<?, ?> build, Launcher launcher, FilePath repository, BuildListener listener, String toRevision, StandardUsernameCredentials credentials)
             throws IOException, InterruptedException {
         HgExe hg = new HgExe(findInstallation(getInstallation()), credentials, launcher, build.getBuiltOn(), listener, build.getEnvironment(listener));
+        try {
         Node node = Computer.currentComputer().getNode(); // TODO why not build.getBuiltOn()?
         try {
             pull(launcher, repository, listener, node, toRevision, credentials);
@@ -595,6 +616,9 @@ public class MercurialSCM extends SCM implements Serializable {
         if (tip != null && rev != null) {
             build.addAction(new MercurialTagAction(tip, rev, subdir));
         }
+        } finally {
+            hg.close();
+        }
     }
 
     private String getRevToBuild(AbstractBuild<?, ?> build, EnvVars env) {
@@ -623,6 +647,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
         EnvVars env = build.getEnvironment(listener);
         HgExe hg = new HgExe(findInstallation(getInstallation()), credentials, launcher,build.getBuiltOn(),listener,env);
+        try {
 
         ArgumentListBuilder args = hg.seed(true);
         CachedRepo cachedSource = cachedSource(build.getBuiltOn(), launcher, listener, false, credentials);
@@ -689,6 +714,9 @@ public class MercurialSCM extends SCM implements Serializable {
         String rev = hg.tipNumber(repository, null);
         if (tip != null && rev != null) {
             build.addAction(new MercurialTagAction(tip, rev, subdir));
+        }
+        } finally {
+            hg.close();
         }
     }
 

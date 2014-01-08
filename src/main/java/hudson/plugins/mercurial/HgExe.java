@@ -41,14 +41,12 @@ import hudson.Launcher.ProcStarter;
 import hudson.model.AbstractBuild;
 import hudson.model.Node;
 import hudson.model.TaskListener;
-import hudson.remoting.Callable;
 import hudson.remoting.VirtualChannel;
 import hudson.util.ArgumentListBuilder;
 import jenkins.model.Jenkins;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
@@ -64,14 +62,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 /**
- * Encapsulates the invocation of "hg".
- *
- * <p>
- * This reduces the amount of code in the main logic.
- *
- * TODO: perhaps a subtype 'Repository' with a repository location field would be good.
- *
- * @author Kohsuke Kawaguchi
+ * Encapsulates the invocation of the Mercurial command.
  */
 public class HgExe {
     private final ArgumentListBuilder base;
@@ -84,6 +75,7 @@ public class HgExe {
     public final Node node;
     public final TaskListener listener;
     private final Capability capability;
+    private final FilePath sshPrivateKey;
 
     @Deprecated
     public HgExe(MercurialSCM scm, Launcher launcher, AbstractBuild build, TaskListener listener) throws IOException, InterruptedException {
@@ -95,37 +87,23 @@ public class HgExe {
         this(MercurialSCM.findInstallation(scm.getInstallation()), null, launcher, node, listener, env);
     }
 
+    /**
+     * Creates a new launcher.
+     * You <strong>must</strong> call {@link #close} in a {@code finally} block.
+     * @param inst a particular Mercurial installation to use (optional)
+     * @param credentials username/password or SSH private key credentials (optional)
+     * @param launcher a way to run commands
+     * @param node the machine to run commands on
+     * @param listener a place to print errors
+     * @param env environment variables to pass to the command
+     * @throws IOException for various reasons
+     * @throws InterruptedException for various reasons
+     */
     public HgExe(@CheckForNull MercurialInstallation inst, @CheckForNull StandardUsernameCredentials credentials, Launcher launcher, Node node, TaskListener listener, EnvVars env) throws IOException, InterruptedException {
         base = findHgExe(inst, credentials, node, listener, true);
         // TODO might be more efficient to have a single call returning ArgumentListBuilder[2]?
         baseNoDebug = findHgExe(inst, credentials, node, listener, false);
-        this.node = node;
-        this.env = env;
-        env.put("HGPLAIN", "true");
-        this.launcher = launcher;
-        this.listener = listener;
-        this.capability = Capability.get(this);
-    }
-
-    private static ArgumentListBuilder findHgExe(@CheckForNull MercurialInstallation inst, @CheckForNull StandardUsernameCredentials credentials, Node node, TaskListener listener, boolean allowDebug) throws IOException, InterruptedException {
-        ArgumentListBuilder b = new ArgumentListBuilder();
-        if (inst == null) {
-            b.add(Jenkins.getInstance().getDescriptorByType(MercurialSCM.DescriptorImpl.class).getHgExe());
-        } else {
-            // TODO what about forEnvironment?
-            b.add(inst.executableWithSubstitution(inst.forNode(node, listener).getHome()));
-            if (allowDebug && inst.getDebug()) {
-                b.add("--debug");
-            }
-        }
-        if (credentials instanceof UsernamePasswordCredentials) {
-            UsernamePasswordCredentials upc = (UsernamePasswordCredentials) credentials;
-            b.add("--config", "auth.jenkins.prefix=*", "--config");
-            b.addMasked("auth.jenkins.username=" + upc.getUsername());
-            b.add("--config");
-            b.addMasked("auth.jenkins.password=" + upc.getPassword().getPlainText());
-            b.add("--config", "auth.jenkins.schemes=http https");
-        } else if (credentials instanceof SSHUserPrivateKey) {
+        if (credentials instanceof SSHUserPrivateKey) {
             final SSHUserPrivateKey cc = (SSHUserPrivateKey) credentials;
             List<String> keys = cc.getPrivateKeys();
             byte[] keyData;
@@ -149,43 +127,71 @@ public class HgExe {
                     throw (IOException) new IOException("Did not manage to decrypt SSH private key: " + x).initCause(x);
                 }
             }
-            VirtualChannel channel = node.getChannel();
-            if (channel == null) {
+            FilePath slaveRoot = node.getRootPath();
+            if (slaveRoot == null) {
                 throw new IOException(node.getDisplayName() + " is offline");
             }
-            String fileName = channel.call(new StorePrivateKey(keyData));
+            sshPrivateKey = slaveRoot.createTempFile("jenkins-mercurial", ".sshkey");
+            sshPrivateKey.chmod(0600);
+            // just in case slave goes offline during command; createTempFile fails to do it:
+            sshPrivateKey.act(new DeleteOnExit());
+            OutputStream os = sshPrivateKey.write();
+            try {
+                os.write(keyData);
+            } finally {
+                os.close();
+            }
+            for (ArgumentListBuilder b : new ArgumentListBuilder[] {base, baseNoDebug}) {
+                b.add("--config");
+                // TODO do we really want to pass -l username? Usually the username is ‘hg’ and encoded in the URL. But seems harmless at least on bitbucket.
+                b.addMasked(String.format("ui.ssh=ssh -i %s -l %s", sshPrivateKey.getRemote(), cc.getUsername()));
+            }
+        } else {
+            sshPrivateKey = null;
+        }
+        this.node = node;
+        this.env = env;
+        env.put("HGPLAIN", "true");
+        this.launcher = launcher;
+        this.listener = listener;
+        this.capability = Capability.get(this);
+    }
+    private static final class DeleteOnExit implements FilePath.FileCallable<Void> {
+        private static final long serialVersionUID = 1;
+        @Override public Void invoke(File f, VirtualChannel channel) throws IOException, InterruptedException {
+            f.deleteOnExit();
+            return null;
+        }
+    }
+
+    public void close() throws IOException, InterruptedException { // TODO implement AutoCloseable in Java 7+
+        if (sshPrivateKey != null) {
+            sshPrivateKey.delete();
+        }
+    }
+
+    private static ArgumentListBuilder findHgExe(@CheckForNull MercurialInstallation inst, @CheckForNull StandardUsernameCredentials credentials, Node node, TaskListener listener, boolean allowDebug) throws IOException, InterruptedException {
+        ArgumentListBuilder b = new ArgumentListBuilder();
+        if (inst == null) {
+            b.add(Jenkins.getInstance().getDescriptorByType(MercurialSCM.DescriptorImpl.class).getHgExe());
+        } else {
+            // TODO what about forEnvironment?
+            b.add(inst.executableWithSubstitution(inst.forNode(node, listener).getHome()));
+            if (allowDebug && inst.getDebug()) {
+                b.add("--debug");
+            }
+        }
+        if (credentials instanceof UsernamePasswordCredentials) {
+            UsernamePasswordCredentials upc = (UsernamePasswordCredentials) credentials;
+            b.add("--config", "auth.jenkins.prefix=*", "--config");
+            b.addMasked("auth.jenkins.username=" + upc.getUsername());
             b.add("--config");
-            // TODO do we really want to pass -l username? Usually the username is ‘hg’ and encoded in the URL. But seems harmless at least on bitbucket.
-            b.addMasked(String.format("ui.ssh=ssh -i %s -l %s", fileName, cc.getUsername()));
-        } else if (credentials != null) {
-            throw new IOException("Support for credentials currently limited to username/password and ssh key: " + CredentialsNameProvider.name(credentials));
+            b.addMasked("auth.jenkins.password=" + upc.getPassword().getPlainText());
+            b.add("--config", "auth.jenkins.schemes=http https");
+        } else if (credentials != null && !(credentials instanceof SSHUserPrivateKey)) {
+            throw new IOException("Support for credentials currently limited to username/password and SSH private key: " + CredentialsNameProvider.name(credentials));
         }
         return b;
-    }
-    private static class StorePrivateKey implements Callable<String,IOException> {
-        private static final long serialVersionUID = 1;
-        private final byte[] keyData;
-        StorePrivateKey(byte[] keyData) {
-            this.keyData = keyData;
-        }
-        @Override public String call() throws IOException {
-            File temp = File.createTempFile("jenkins-mercurial", ".sshkey");
-            // TODO try to delete this deterministically upon completion of command
-            temp.deleteOnExit();
-            String path = temp.getAbsolutePath();
-            try {
-                new FilePath(temp).chmod(0600);
-            } catch (InterruptedException e) {
-                throw new IOException(e);
-            }
-            OutputStream fo = new FileOutputStream(path);
-            try {
-                fo.write(keyData);
-            } finally {
-                fo.close();
-            }
-            return path;
-        }
     }
 
     /**
