@@ -3,7 +3,6 @@ package hudson.plugins.mercurial;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
-import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
@@ -787,7 +786,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private static List<? extends StandardUsernameCredentials> availableCredentials(AbstractProject<?,?> owner, String source) {
         // TODO implement support for SSHUserPrivateKey
-        return CredentialsProvider.lookupCredentials(StandardUsernamePasswordCredentials.class, owner, null, URIRequirementBuilder.fromUri(source).build());
+        return CredentialsProvider.lookupCredentials(StandardUsernameCredentials.class, owner, null, URIRequirementBuilder.fromUri(source).build());
     }
 
     @Extension

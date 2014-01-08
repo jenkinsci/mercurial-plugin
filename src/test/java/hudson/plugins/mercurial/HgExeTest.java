@@ -24,10 +24,14 @@
 
 package hudson.plugins.mercurial;
 
-import static org.junit.Assert.*;
 import org.junit.Test;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+
 public class HgExeTest {
+
     @Test public void pathEquals() {
         assertTrue(HgExe.pathEquals("http://nowhere.net/hg/", "http://nowhere.net/hg/"));
         assertTrue(HgExe.pathEquals("http://nowhere.net/hg", "http://nowhere.net/hg/"));
