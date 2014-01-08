@@ -27,6 +27,9 @@ import com.cloudbees.jenkins.plugins.sshcredentials.SSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsNameProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.KeyPair;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
@@ -125,7 +128,7 @@ public class HgExe {
         } else if (credentials instanceof SSHUserPrivateKey) {
             final SSHUserPrivateKey cc = (SSHUserPrivateKey) credentials;
             List<String> keys = cc.getPrivateKeys();
-            final byte[] keyData;
+            byte[] keyData;
             if (keys.isEmpty()) {
                 throw new IOException("No private key available");
             } else if (keys.size() > 1) {
@@ -133,12 +136,26 @@ public class HgExe {
             } else {
                 keyData = keys.get(0).getBytes("US-ASCII");
             }
+            if (cc.getPassphrase() != null && /* TODO JENKINS-21283 */ cc.getPassphrase().getPlainText().length() > 0) {
+                try {
+                    KeyPair kp = KeyPair.load(new JSch(), keyData, null);
+                    if (!kp.decrypt(cc.getPassphrase().getPlainText())) {
+                        throw new IOException("Passphrase did not decrypt SSH private key");
+                    }
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    kp.writePrivateKey(baos);
+                    keyData = baos.toByteArray();
+                } catch (JSchException x) {
+                    throw (IOException) new IOException("Did not manage to decrypt SSH private key: " + x).initCause(x);
+                }
+            }
             VirtualChannel channel = node.getChannel();
             if (channel == null) {
                 throw new IOException(node.getDisplayName() + " is offline");
             }
             String fileName = channel.call(new StorePrivateKey(keyData));
             b.add("--config");
+            // TODO do we really want to pass -l username? Usually the username is ‘hg’ and encoded in the URL. But seems harmless at least on bitbucket.
             b.addMasked(String.format("ui.ssh=ssh -i %s -l %s", fileName, cc.getUsername()));
         } else if (credentials != null) {
             throw new IOException("Support for credentials currently limited to username/password and ssh key: " + CredentialsNameProvider.name(credentials));
