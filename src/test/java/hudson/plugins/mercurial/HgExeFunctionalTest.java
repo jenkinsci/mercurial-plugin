@@ -29,7 +29,6 @@ import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
 import hudson.EnvVars;
 import hudson.Launcher;
-import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.tools.ToolProperty;
 import hudson.util.ArgumentListBuilder;
@@ -57,7 +56,6 @@ public class HgExeFunctionalTest {
     private static final String INSTALLATION = "test";
     private MercurialInstallation mercurialInstallation;
     private TaskListener listener;
-    private Node node;
     private Launcher launcher;
     private EnvVars vars;
 

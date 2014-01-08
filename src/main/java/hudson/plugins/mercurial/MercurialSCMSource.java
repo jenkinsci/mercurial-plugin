@@ -143,7 +143,7 @@ public final class MercurialSCMSource extends SCMSource {
         return null;
     }
 
-    private static List<StandardUsernameCredentials> availableCredentials(@CheckForNull SCMSourceOwner owner, @CheckForNull String source) {
+    private static List<? extends StandardUsernameCredentials> availableCredentials(@CheckForNull SCMSourceOwner owner, @CheckForNull String source) {
         return CredentialsProvider.lookupCredentials(StandardUsernameCredentials.class, owner, null, URIRequirementBuilder.fromUri(source).build());
     }
 

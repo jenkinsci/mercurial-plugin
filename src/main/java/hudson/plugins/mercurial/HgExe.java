@@ -39,6 +39,7 @@ import hudson.model.AbstractBuild;
 import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.remoting.Callable;
+import hudson.remoting.VirtualChannel;
 import hudson.util.ArgumentListBuilder;
 import jenkins.model.Jenkins;
 
@@ -46,7 +47,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Method;
+import java.io.OutputStream;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
@@ -124,54 +125,49 @@ public class HgExe {
         } else if (credentials instanceof SSHUserPrivateKey) {
             final SSHUserPrivateKey cc = (SSHUserPrivateKey) credentials;
             List<String> keys = cc.getPrivateKeys();
-            final String key;
-            if (keys.size() == 0)
+            final byte[] keyData;
+            if (keys.isEmpty()) {
                 throw new IOException("No private key available");
-            else if (keys.size() > 1)
-                throw  new IOException("Multiple private keys found.");
-            else
-                key = keys.get(0);
-
-            Callable<String, IOException> task = new Callable<String, IOException>() {
-                public String call() throws IOException {
-                    File temp = File.createTempFile("key", ".key");
-                    temp.deleteOnExit();
-                    String path = temp.getAbsolutePath();
-                    try {
-                        new FilePath(temp).chmod(0600);
-                    }
-                    catch (InterruptedException e) {
-                        throw new IOException(e);
-                    }
-                    FileOutputStream fo = new FileOutputStream(path);
-                    try {
-                        fo.write(key.getBytes());
-                    }
-                    finally {
-                        fo.close();
-                    }
-                    return path;
-                }
-            };
-            // Get a "channel" to the build machine and run the task there
-            String fileName = node.getChannel().call(task);
+            } else if (keys.size() > 1) {
+                throw new IOException("Multiple private keys found.");
+            } else {
+                keyData = keys.get(0).getBytes("US-ASCII");
+            }
+            VirtualChannel channel = node.getChannel();
+            if (channel == null) {
+                throw new IOException(node.getDisplayName() + " is offline");
+            }
+            String fileName = channel.call(new StorePrivateKey(keyData));
             b.add("--config");
-            b.addMasked(String.format("ui.ssh=%s", String.format("ssh -i %s -l %s", fileName, cc.getUsername())));
-        }
-        else if (credentials != null) {
+            b.addMasked(String.format("ui.ssh=ssh -i %s -l %s", fileName, cc.getUsername()));
+        } else if (credentials != null) {
             throw new IOException("Support for credentials currently limited to username/password and ssh key: " + CredentialsNameProvider.name(credentials));
         }
         return b;
     }
-
-    private static int chmod(String filename, int mode) {
-        try {
-            Class<?> fspClass = Class.forName("java.util.prefs.FileSystemPreferences");
-            Method chmodMethod = fspClass.getDeclaredMethod("chmod", String.class, Integer.TYPE);
-            chmodMethod.setAccessible(true);
-            return (Integer)chmodMethod.invoke(null, filename, mode);
-        } catch (Throwable ex) {
-            return -1;
+    private static class StorePrivateKey implements Callable<String,IOException> {
+        private static final long serialVersionUID = 1;
+        private final byte[] keyData;
+        StorePrivateKey(byte[] keyData) {
+            this.keyData = keyData;
+        }
+        @Override public String call() throws IOException {
+            File temp = File.createTempFile("jenkins-mercurial", ".sshkey");
+            // TODO try to delete this deterministically upon completion of command
+            temp.deleteOnExit();
+            String path = temp.getAbsolutePath();
+            try {
+                new FilePath(temp).chmod(0600);
+            } catch (InterruptedException e) {
+                throw new IOException(e);
+            }
+            OutputStream fo = new FileOutputStream(path);
+            try {
+                fo.write(keyData);
+            } finally {
+                fo.close();
+            }
+            return path;
         }
     }
 
