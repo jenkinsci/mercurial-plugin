@@ -1,0 +1,4 @@
+<j:jelly xmlns:j="jelly:core">
+  <j:set var="revision" value="${it.getMercurialRevision(job)}"/>
+  <td data="${revision}">${revision}</td>
+</j:jelly>
