@@ -1,15 +1,13 @@
 package hudson.plugins.mercurial;
 
 import hudson.Extension;
+import hudson.model.Item;
 import hudson.model.AbstractProject;
 import hudson.model.Descriptor;
-import hudson.model.Job;
 import hudson.scm.SCM;
 import hudson.views.ListViewColumn;
 
 import org.kohsuke.stapler.DataBoundConstructor;
-
-import com.google.common.base.Optional;
 
 /**
  * Allows adding a column in the overview that displays the revision that is
@@ -34,22 +32,16 @@ public class MercurialRevisionColumn extends ListViewColumn {
 	return super.getDescriptor();
     }
 
-    public String getMercurialRevision(final Job job) {
-	final Optional<MercurialSCM> hgScm = tryGetMercurialSCM(job);
-
-	return hgScm.isPresent() ? hgScm.get().getRevision() : "";
-    }
-
-    private Optional<MercurialSCM> tryGetMercurialSCM(final Job job) {
-	if (!AbstractProject.class.isAssignableFrom(job.getClass())) {
-	    return Optional.absent();
+    public String getMercurialRevision(final Item item) {
+	if (!AbstractProject.class.isAssignableFrom(item.getClass())) {
+	    return "";
 	}
-	final SCM scm = ((AbstractProject) job).getScm();
+	final SCM scm = ((AbstractProject) item).getScm();
 	if (scm == null || !MercurialSCM.class.isAssignableFrom(scm.getClass())) {
-	    return Optional.absent();
+	    return "";
 	}
 
-	return Optional.of((MercurialSCM) scm);
+	return ((MercurialSCM) scm).getRevision();
     }
 
     private static class DescriptorImpl extends Descriptor<ListViewColumn> {
