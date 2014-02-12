@@ -1,12 +1,11 @@
 package hudson.plugins.mercurial;
 
 import hudson.Extension;
-import hudson.model.Item;
 import hudson.model.AbstractProject;
-import hudson.model.Descriptor;
+import hudson.model.Item;
 import hudson.scm.SCM;
 import hudson.views.ListViewColumn;
-
+import hudson.views.ListViewColumnDescriptor;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -18,18 +17,8 @@ import org.kohsuke.stapler.DataBoundConstructor;
  */
 public class MercurialRevisionColumn extends ListViewColumn {
 
-    @Extension
-    public static final Descriptor<ListViewColumn> DESCRIPTOR = new DescriptorImpl();
-
     @DataBoundConstructor
     public MercurialRevisionColumn() {
-	super();
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public Descriptor<ListViewColumn> getDescriptor() {
-	return super.getDescriptor();
     }
 
     public String getMercurialRevision(final Item item) {
@@ -44,12 +33,16 @@ public class MercurialRevisionColumn extends ListViewColumn {
 	return ((MercurialSCM) scm).getRevision();
     }
 
-    private static class DescriptorImpl extends Descriptor<ListViewColumn> {
+    @Extension public static class DescriptorImpl extends ListViewColumnDescriptor {
 
 	@Override
 	public String getDisplayName() {
 	    return Messages.MercurialRevisionColumn_DisplayName();
 	}
+
+        @Override public boolean shownByDefault() {
+            return false;
+        }
 
     }
 }
