@@ -151,7 +151,9 @@ public class HgExe {
         }
         this.node = node;
         this.env = env;
-        env.put("HGPLAIN", "true");
+        if (inst == null || !inst.isUseHgrc()) {
+          env.put("HGPLAIN", "true");
+        }
         this.launcher = launcher;
         this.listener = listener;
         this.capability = Capability.get(this);

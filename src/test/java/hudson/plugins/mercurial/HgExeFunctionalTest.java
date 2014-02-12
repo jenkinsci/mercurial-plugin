@@ -45,7 +45,7 @@ import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 
 public class HgExeFunctionalTest {
@@ -63,7 +63,7 @@ public class HgExeFunctionalTest {
     public void setUp() throws Exception {
         this.mercurialInstallation = new MercurialInstallation(
                 INSTALLATION, "",
-                "hg", false, true, false, Collections
+                "hg", false, true, false, false, Collections
                 .<ToolProperty<?>> emptyList());
         this.listener = new StreamTaskListener(System.out, Charset.defaultCharset());
         this.launcher = j.jenkins.createLauncher(listener);
@@ -110,6 +110,27 @@ public class HgExeFunctionalTest {
                 "hg", "--config", "******").toString(),
                 b.toString());
         hgexe.close();
+    }
+
+    @Test public void withoutUseHgrc() throws Exception {
+        HgExe hgexe = new HgExe(
+                this.mercurialInstallation, null,
+                this.launcher, j.jenkins,
+                this.listener, this.vars);
+        assertTrue(this.vars.containsKey("HGPLAIN"));
+    }
+
+    @Test public void withUseHgrc() throws Exception {
+        MercurialInstallation inst = new MercurialInstallation(
+                INSTALLATION, "",
+                "hg", false, false, false, true, Collections
+                .<ToolProperty<?>> emptyList());
+
+        HgExe hgexe = new HgExe(
+                inst, null,
+                this.launcher, j.jenkins,
+                this.listener, this.vars);
+        assertFalse(this.vars.containsKey("HGPLAIN"));
     }
 
 }
