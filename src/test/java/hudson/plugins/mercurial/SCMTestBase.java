@@ -10,13 +10,13 @@ import hudson.model.FreeStyleProject;
 import hudson.model.ParametersAction;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Result;
+import hudson.model.Slave;
 import hudson.model.StringParameterDefinition;
 import hudson.model.StringParameterValue;
 import hudson.scm.ChangeLogSet;
 import hudson.scm.ChangeLogSet.Entry;
 import hudson.scm.PollingResult;
 import hudson.scm.SCM;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,11 +34,9 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-
 import org.jvnet.hudson.test.Bug;
 import org.jvnet.hudson.test.FakeLauncher;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.jvnet.hudson.test.PretendSlave;
 
 public abstract class SCMTestBase {
 
@@ -520,8 +518,8 @@ public abstract class SCMTestBase {
     @Test public void changelogFromPreviousBuild() throws Exception {
         AbstractBuild<?, ?> b;
         FreeStyleProject p = j.createFreeStyleProject();
-        PretendSlave s1 = createNoopPretendSlave();
-        PretendSlave s2 = createNoopPretendSlave();
+        Slave s1 = j.createOnlineSlave();
+        Slave s2 = j.createOnlineSlave();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, null,
                 null, null, false));
         p.setAssignedNode(s1);
@@ -657,10 +655,6 @@ public abstract class SCMTestBase {
         m.hg(repo, "tag", "--force", "release");
         b = j.assertBuildStatusSuccess(p.scheduleBuild2(0));
         assertTrue(JenkinsRule.getLog(b), ws.child("f3").exists());
-    }
-
-    private PretendSlave createNoopPretendSlave() throws Exception {
-        return j.createPretendSlave(new NoopFakeLauncher());
     }
 
     private void assertChangeSetPaths(List<? extends Set<String>> expectedChangeSetPaths,
