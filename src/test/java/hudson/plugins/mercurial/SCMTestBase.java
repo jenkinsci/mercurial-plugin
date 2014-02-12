@@ -51,6 +51,15 @@ public abstract class SCMTestBase {
 
     protected abstract String hgInstallation();
 
+    protected void assertClone(String log, boolean cloneExpected) {
+        if (cloneExpected) {
+            assertTrue(log, log.contains(" clone --"));
+        } else {
+            assertTrue(log, log.contains(" update --"));
+            assertFalse(log, log.contains(" clone --"));
+        }
+    }
+
     @Bug(13329)
     @Test public void basicOps() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
@@ -60,11 +69,25 @@ public abstract class SCMTestBase {
         m.hg(repo, "init");
         m.touchAndCommit(repo, "a");
         String log = m.buildAndCheck(p, "a");
-        assertTrue(log, log.contains(" clone --"));
+        assertClone(log, true);
         m.touchAndCommit(repo, "b");
         log = m.buildAndCheck(p, "b");
-        assertTrue(log, log.contains(" update --"));
-        assertFalse(log, log.contains(" clone --"));
+        assertClone(log, false);
+    }
+
+    @Bug(15829)
+    @Test public void basicOpsSlave() throws Exception {
+        FreeStyleProject p = j.createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, null,
+                null, null, false));
+        p.setAssignedNode(j.createOnlineSlave());
+        m.hg(repo, "init");
+        m.touchAndCommit(repo, "a");
+        String log = m.buildAndCheck(p, "a");
+        assertClone(log, true);
+        m.touchAndCommit(repo, "b");
+        log = m.buildAndCheck(p, "b");
+        assertClone(log, false);
     }
 
     @Bug(4281)
