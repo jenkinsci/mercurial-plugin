@@ -30,13 +30,13 @@ public class SwitchingSCMTest {
                 .getDescriptorByType(MercurialInstallation.DescriptorImpl.class)
                 .setInstallations(
                         new MercurialInstallation(cachingInstallation, "",
-                                "hg", false, true, false, Collections
+                                "hg", false, true, false, false, Collections
                                         .<ToolProperty<?>> emptyList()));
         Hudson.getInstance()
                 .getDescriptorByType(MercurialInstallation.DescriptorImpl.class)
                 .setInstallations(
                         new MercurialInstallation(sharingInstallation, "",
-                                "hg", false, true, true, Collections
+                                "hg", false, true, true, false, Collections
                                         .<ToolProperty<?>> emptyList()));
 
         MercurialSCM.CACHE_LOCAL_REPOS = true;
