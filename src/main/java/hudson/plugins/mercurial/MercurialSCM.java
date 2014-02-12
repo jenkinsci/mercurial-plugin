@@ -484,15 +484,18 @@ public class MercurialSCM extends SCM implements Serializable {
             boolean jobShouldUseSharing, AbstractBuild<?,?> build,
             Launcher launcher, BuildListener listener)
                 throws IOException, InterruptedException {
-        if (!new FilePath(repo, ".hg/hgrc").exists()) {
-            return false;
-        }
 
         boolean jobUsesSharing = new FilePath(repo, ".hg/sharedpath").exists();
         if (jobShouldUseSharing != jobUsesSharing) {
             return false;
+        } else if(jobUsesSharing) {
+            return true;
         }
         
+        if (!new FilePath(repo, ".hg/hgrc").exists()) {
+            return false;
+        }
+
         HgExe hg = new HgExe(findInstallation(getInstallation()), getCredentials(build.getProject()), launcher, build.getBuiltOn(), listener, build.getEnvironment(listener));
         try {
         String upstream = hg.config(repo, "paths.default");
