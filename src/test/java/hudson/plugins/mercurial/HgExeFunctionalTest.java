@@ -63,7 +63,7 @@ public class HgExeFunctionalTest {
     public void setUp() throws Exception {
         this.mercurialInstallation = new MercurialInstallation(
                 INSTALLATION, "",
-                "hg", false, true, false, Collections
+                "hg", false, true, false, false, Collections
                 .<ToolProperty<?>> emptyList());
         this.listener = new StreamTaskListener(System.out, Charset.defaultCharset());
         this.launcher = j.jenkins.createLauncher(listener);

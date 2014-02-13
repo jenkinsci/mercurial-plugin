@@ -516,6 +516,12 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     private void determineChanges(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, File changelogFile, FilePath repository, String revToBuild) throws IOException, InterruptedException {
+        MercurialInstallation inst = findInstallation(getInstallation());
+        if (inst != null && inst.isDisableChangeLog()) {
+            createEmptyChangeLog(changelogFile, listener, "changelog");
+            return;
+        }
+
         AbstractBuild<?, ?> previousBuild = build.getPreviousBuild();
         MercurialTagAction prevTag = previousBuild != null ? findTag(previousBuild) : null;
         if (prevTag == null) {
@@ -524,7 +530,6 @@ public class MercurialSCM extends SCM implements Serializable {
             return;
         }
         EnvVars env = build.getEnvironment(listener);
-        MercurialInstallation inst = findInstallation(getInstallation());
         StandardUsernameCredentials credentials = getCredentials(build.getProject());
         HgExe hg = new HgExe(inst, credentials, launcher, build.getBuiltOn(), listener, env);
         try {
