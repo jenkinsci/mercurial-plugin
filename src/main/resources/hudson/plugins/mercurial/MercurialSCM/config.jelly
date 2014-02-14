@@ -34,6 +34,9 @@
     <f:entry field="subdir" title="${%Subdirectory}">
       <f:textbox/>
     </f:entry>
+    <f:entry field="fullClone" title="${%Full Clone}">
+      <f:checkbox/>
+    </f:entry>
     <f:entry field="disableChangeLog" title="${%Disable Changelog}">
       <f:checkbox/>
     </f:entry>

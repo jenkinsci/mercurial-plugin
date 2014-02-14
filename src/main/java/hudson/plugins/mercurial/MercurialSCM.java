@@ -110,6 +110,8 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private final String credentialsId;
 
+    private final boolean fullClone;
+
     private final boolean disableChangeLog;
 
     @Deprecated
@@ -124,10 +126,10 @@ public class MercurialSCM extends SCM implements Serializable {
 
     @Deprecated
     public MercurialSCM(String installation, String source, @NonNull RevisionType revisionType, @NonNull String revision, String modules, String subdir, HgBrowser browser, boolean clean, String credentialsId) {
-      this(installation, source, revisionType, revision, modules, subdir, browser, clean, credentialsId, false);
+      this(installation, source, revisionType, revision, modules, subdir, browser, clean, credentialsId, false, false);
     }
 
-    @DataBoundConstructor public MercurialSCM(String installation, String source, @NonNull RevisionType revisionType, @NonNull String revision, String modules, String subdir, HgBrowser browser, boolean clean, String credentialsId, boolean disableChangeLog) {
+    @DataBoundConstructor public MercurialSCM(String installation, String source, @NonNull RevisionType revisionType, @NonNull String revision, String modules, String subdir, HgBrowser browser, boolean clean, String credentialsId, boolean fullClone, boolean disableChangeLog) {
         this.installation = installation;
         this.source = Util.fixEmptyAndTrim(source);
         this.modules = Util.fixNull(modules);
@@ -138,6 +140,7 @@ public class MercurialSCM extends SCM implements Serializable {
         this.revision = Util.fixEmpty(revision) == null ? (revisionType == RevisionType.BRANCH ? "default" : "???") : revision;
         this.browser = browser;
         this.credentialsId = credentialsId;
+        this.fullClone = fullClone;
         this.disableChangeLog = disableChangeLog;
     }
 
@@ -189,6 +192,10 @@ public class MercurialSCM extends SCM implements Serializable {
 
     public String getCredentialsId() {
         return credentialsId;
+    }
+
+    public boolean isFullClone() {
+        return fullClone;
     }
 
     public boolean isDisableChangeLog() {
@@ -684,7 +691,7 @@ public class MercurialSCM extends SCM implements Serializable {
             }
         } else {
             args.add("clone");
-            if (revisionType == RevisionType.BRANCH) {
+            if (!isFullClone() && revisionType == RevisionType.BRANCH) {
                 args.add("--rev", toRevision);
             }
             args.add("--noupdate");
