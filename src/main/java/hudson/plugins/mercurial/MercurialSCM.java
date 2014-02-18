@@ -43,6 +43,7 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.sf.json.JSONObject;
+import org.jenkinsci.plugins.multiplescms.MultiSCMRevisionState;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -645,7 +646,19 @@ public class MercurialSCM extends SCM implements Serializable {
         String revToBuild = getRevision(env);
         if (build instanceof MatrixRun) {
             MatrixRun matrixRun = (MatrixRun) build;
-            MercurialTagAction parentRevision = matrixRun.getParentBuild().getAction(MercurialTagAction.class);
+            MercurialTagAction parentRevision;
+
+            if (Hudson.getInstance().getPlugin("multiple-scms") != null) {
+                MultiSCMRevisionState parentRevisions = matrixRun.getParentBuild().getAction(MultiSCMRevisionState.class);
+                if (parentRevisions != null) {
+                    parentRevision = (MercurialTagAction) parentRevisions.get(this, build.getWorkspace(), build);
+                } else {
+                    parentRevision = matrixRun.getParentBuild().getAction(MercurialTagAction.class);
+                }
+            } else {
+                parentRevision = matrixRun.getParentBuild().getAction(MercurialTagAction.class);
+            }
+
             if (parentRevision != null && parentRevision.getId() != null) {
                 revToBuild = parentRevision.getId();
             }
