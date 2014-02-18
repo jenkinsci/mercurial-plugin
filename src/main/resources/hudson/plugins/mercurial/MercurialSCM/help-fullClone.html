@@ -1,0 +1,13 @@
+<div>
+  Clone the entire repository.
+  <p>
+  Without this option, Hudson clones repositories using the <code>--rev</code> option.  The
+  clone will contain only the specified changesets and their ancestors.  On very large
+  repositories, ancestor calculation can increase clone time and load on the Mercurial
+  server.
+  </p>
+  <p>
+  With this option, Hudson will do a full clone.  On very large repositories this
+  can decrease clone times at the expense of larger clones.
+  </p>
+</div>
