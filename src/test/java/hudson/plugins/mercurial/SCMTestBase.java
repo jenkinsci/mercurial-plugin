@@ -29,6 +29,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import org.jenkinsci.plugins.multiplescms.MultiSCM;
 import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Rule;
