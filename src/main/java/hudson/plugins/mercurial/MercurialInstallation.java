@@ -24,25 +24,28 @@
 
 package hudson.plugins.mercurial;
 
+import edu.umd.cs.findbugs.annotations.SuppressWarnings;
 import hudson.CopyOnWrite;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.Util;
 import hudson.model.EnvironmentSpecific;
-import hudson.model.TaskListener;
 import hudson.model.Hudson;
 import hudson.model.Node;
+import hudson.model.TaskListener;
 import hudson.slaves.NodeSpecific;
 import hudson.tools.ToolDescriptor;
-import hudson.tools.ToolProperty;
 import hudson.tools.ToolInstallation;
-
+import hudson.tools.ToolProperty;
+import hudson.util.FormValidation;
 import java.io.IOException;
+import java.io.StringReader;
 import java.util.List;
-
+import javax.annotation.CheckForNull;
+import org.ini4j.Ini;
+import org.ini4j.InvalidFileFormatException;
 import org.kohsuke.stapler.DataBoundConstructor;
-
-import edu.umd.cs.findbugs.annotations.SuppressWarnings;
+import org.kohsuke.stapler.QueryParameter;
 
 /**
  * Installation of Mercurial.
@@ -61,15 +64,21 @@ public class MercurialInstallation extends ToolInstallation implements
     private boolean debug;
     private boolean useCaches;
     private boolean useSharing;
+    private final String config;
 
-    @DataBoundConstructor
+    @Deprecated
     public MercurialInstallation(String name, String home, String executable,
             boolean debug, boolean useCaches,
             boolean useSharing, List<? extends ToolProperty<?>> properties) {
+        this(name, home, executable, debug, useCaches, useSharing, null, properties);
+    }
+
+    @DataBoundConstructor public MercurialInstallation(String name, String home, String executable, boolean debug, boolean useCaches, boolean useSharing, String config, List<? extends ToolProperty<?>> properties) {
         super(name, home, properties);
         this.executable = Util.fixEmpty(executable);
         this.debug = debug;
         this.useCaches = useCaches || useSharing;
+        this.config = Util.fixEmptyAndTrim(config);
         this.useSharing = useSharing;
     }
 
@@ -91,6 +100,10 @@ public class MercurialInstallation extends ToolInstallation implements
 
     public boolean isUseSharing() {
         return useSharing;
+    }
+
+    public @CheckForNull String getConfig() {
+        return config;
     }
 
     public static MercurialInstallation[] allInstallations() {
@@ -137,6 +150,21 @@ public class MercurialInstallation extends ToolInstallation implements
         public void setInstallations(MercurialInstallation... installations) {
             this.installations = installations;
             save();
+        }
+
+        @java.lang.SuppressWarnings("ResultOfObjectAllocationIgnored")
+        public FormValidation doCheckConfig(@QueryParameter String value) {
+            if (value == null) {
+                return FormValidation.ok();
+            }
+            try {
+                new Ini(new StringReader(value));
+                return FormValidation.ok();
+            } catch (InvalidFileFormatException x) {
+                return FormValidation.error(x.getMessage());
+            } catch (IOException x) {
+                return FormValidation.error(x, "should not happen");
+            }
         }
 
     }

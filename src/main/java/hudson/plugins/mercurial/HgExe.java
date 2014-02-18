@@ -43,12 +43,11 @@ import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 import hudson.util.ArgumentListBuilder;
-import jenkins.model.Jenkins;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.StringReader;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
@@ -60,6 +59,8 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import jenkins.model.Jenkins;
+import org.ini4j.Ini;
 
 /**
  * Encapsulates the invocation of the Mercurial command.
@@ -179,6 +180,15 @@ public class HgExe {
             b.add(inst.executableWithSubstitution(inst.forNode(node, listener).getHome()));
             if (allowDebug && inst.getDebug()) {
                 b.add("--debug");
+            }
+            String config = inst.getConfig();
+            if (config != null) {
+                for (Map.Entry<String,? extends Map<String,String>> entry : new Ini(new StringReader(config)).entrySet()) {
+                    String sectionName = entry.getKey();
+                    for (Map.Entry<String,String> entry2 : entry.getValue().entrySet()) {
+                        b.add("--config", sectionName + '.' + entry2.getKey() + '=' + entry2.getValue());
+                    }
+                }
             }
         }
         if (credentials instanceof UsernamePasswordCredentials) {

@@ -17,4 +17,7 @@
   <f:entry field="debug" title="${%Debug Flag}">
     <f:checkbox/>
   </f:entry>
+  <f:entry field="config" title="${%Custom Configuration}">
+    <f:textarea/>
+  </f:entry>
 </j:jelly>
