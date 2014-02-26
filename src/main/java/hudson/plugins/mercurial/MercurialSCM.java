@@ -380,7 +380,7 @@ public class MercurialSCM extends SCM implements Serializable {
         return result;
     }
 
-    private void pull(Launcher launcher, FilePath repository, TaskListener listener, Node node, String revision, StandardUsernameCredentials credentials) throws IOException, InterruptedException {
+    private int pull(Launcher launcher, FilePath repository, TaskListener listener, Node node, String revision, StandardUsernameCredentials credentials) throws IOException, InterruptedException {
         HgExe hg = new HgExe(findInstallation(getInstallation()), credentials, launcher, node, listener, /* TODO */new EnvVars());
         try {
         ArgumentListBuilder cmd = hg.seed(true);
@@ -392,7 +392,7 @@ public class MercurialSCM extends SCM implements Serializable {
         if (cachedSource != null) {
             cmd.add(cachedSource.getRepoLocation());
         }
-        HgExe.joinWithPossibleTimeout(
+        return HgExe.joinWithPossibleTimeout(
                 hg.launch(cmd).pwd(repository),
                 true, listener);
         } finally {
@@ -593,8 +593,9 @@ public class MercurialSCM extends SCM implements Serializable {
         HgExe hg = new HgExe(findInstallation(getInstallation()), credentials, launcher, build.getBuiltOn(), listener, build.getEnvironment(listener));
         try {
         Node node = Computer.currentComputer().getNode(); // TODO why not build.getBuiltOn()?
+        int pullExitCode;
         try {
-            pull(launcher, repository, listener, node, toRevision, credentials);
+            pullExitCode = pull(launcher, repository, listener, node, toRevision, credentials);
         } catch (IOException e) {
             if (causedByMissingHg(e)) {
                 listener.error("Failed to pull because hg could not be found;" +
@@ -602,6 +603,10 @@ public class MercurialSCM extends SCM implements Serializable {
             } else {
                 e.printStackTrace(listener.error("Failed to pull"));
             }
+            throw new AbortException("Failed to pull");
+        }
+        if (pullExitCode != 0) {
+            listener.error("Failed to pull");
             throw new AbortException("Failed to pull");
         }
 

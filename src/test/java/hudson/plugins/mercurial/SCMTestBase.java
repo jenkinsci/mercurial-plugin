@@ -718,6 +718,34 @@ public abstract class SCMTestBase {
         }
     }
 
+    @Bug(15806)
+    @Test public void testPullReturnCode() throws Exception {
+        File repoOnline = tmp.newFolder();
+        File repoOffline = new File(repoOnline.getPath() + "-offline");
+
+        m.hg(repoOnline, "init");
+        m.touchAndCommit(repoOnline, "init");
+        m.hg(repoOnline, "tag", "init");
+
+        FreeStyleProject p = j.createFreeStyleProject();
+        MercurialSCM a = new MercurialSCM(hgInstallation(), repoOnline.getPath(), null, null, null, null, false);
+        p.setScm(a);
+
+        // First build to get a local checkout (no update on this one)
+        AbstractBuild<?, ?> b = p.scheduleBuild2(0).get();
+        assertEquals(Result.SUCCESS, b.getResult());
+
+        // Second build fails due to offline repo
+        repoOnline.renameTo(repoOffline);
+        b = p.scheduleBuild2(0).get();
+        assertNotEquals(Result.SUCCESS, b.getResult());
+
+        // Third build succeeds after repo returns
+        repoOffline.renameTo(repoOnline);
+        b = p.scheduleBuild2(0).get();
+        assertEquals(Result.SUCCESS, b.getResult());
+    }
+
     /* TODO the following will pass, but canUpdate is not going to work without further changes:
     public void testParameterizedBuildsSource() throws Exception {
         p = createFreeStyleProject();
