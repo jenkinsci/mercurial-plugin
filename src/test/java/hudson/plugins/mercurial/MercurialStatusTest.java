@@ -52,18 +52,26 @@ public class MercurialStatusTest {
       assertTrue( MercurialStatus.looselyMatches(new URI("ssh://somehost/path"), "ssh://user:password@somehost:22/path"));
 
       assertFalse( MercurialStatus.looselyMatches(new URI("ssh://somehost/path"), "invalid/url") );
-      assertFalse( MercurialStatus.looselyMatches(new URI("ssh://somehost/path"), "http://somehost/path") );
       assertFalse( MercurialStatus.looselyMatches(new URI("ssh://somehost/path"), "ssh://somehost/other/path") );
       assertFalse( MercurialStatus.looselyMatches(new URI("ssh://somehost/path"), "ssh://somehost/other/path") );
       assertFalse( MercurialStatus.looselyMatches(new URI("http://somehost/path"), "http://somehost/") );
       assertFalse( MercurialStatus.looselyMatches(new URI("http://somehost/path"), "http://somehost/path?query=test") );
-      assertFalse( MercurialStatus.looselyMatches(new URI("http://somehost/path"), "http://somehost:81/path") );
       assertTrue( MercurialStatus.looselyMatches(new URI("/var/hg/stuff"), "/var/hg/stuff") );
       assertTrue( MercurialStatus.looselyMatches(new URI("file:///var/hg/stuff"), "/var/hg/stuff") );
       assertTrue( MercurialStatus.looselyMatches(new URI("file:/var/hg/stuff"), "/var/hg/stuff") );
       assertTrue( MercurialStatus.looselyMatches(new URI("/var/hg/stuff"), "file:/var/hg/stuff") );
       assertTrue( MercurialStatus.looselyMatches(new URI("/var/hg/stuff"), "file:///var/hg/stuff") );
       assertTrue( MercurialStatus.looselyMatches(new URI("file:///var/hg/stuff"), "file:///var/hg/stuff") );
+
+      assertTrue( MercurialStatus.looselyMatches(new URI("http://somehost/"), "ssh://somehost/") );
+      assertTrue( MercurialStatus.looselyMatches(new URI("https://somehost/"), "http://somehost/") );
+      assertTrue( MercurialStatus.looselyMatches(new URI("ssh://somehost/"), "https://somehost/") );
+      assertTrue( MercurialStatus.looselyMatches(new URI("http://somehost:80/"), "ssh://somehost:22/") );
+      assertTrue( MercurialStatus.looselyMatches(new URI("https://somehost:443/"), "http://somehost:80/") );
+      assertTrue( MercurialStatus.looselyMatches(new URI("ssh://somehost:22/"), "https://somehost:443/") );
+      assertTrue( MercurialStatus.looselyMatches(new URI("http://somehost/path"), "ssh://somehost/path") );
+      assertTrue( MercurialStatus.looselyMatches(new URI("https://somehost/path"), "http://somehost/path") );
+      assertTrue( MercurialStatus.looselyMatches(new URI("ssh://somehost/path"), "https://somehost/path") );
   }
   
 }

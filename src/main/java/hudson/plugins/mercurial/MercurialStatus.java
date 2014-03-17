@@ -53,38 +53,12 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
     public String getUrlName() {
         return "mercurial";
     }
-    
-    private static int getPort(URI uri) {
-        int port = uri.getPort();
-        if ( port < 0 ){
-            String scheme = uri.getScheme();
-            if ("http".equals(scheme)){
-                port = 80;
-            } else if ("https".equals(scheme)) {
-                port = 443;
-            } else if ("ssh".equals(scheme)) {
-                port = 22;
-            }
-        }
-        return port;
-    }
 
-	@Nonnull
-	private static String getScheme(URI uri) {
-		String scheme = uri.getScheme();
-		if (scheme == null) {
-			return "file";
-		}
-		return scheme;
-	}
-    
     static boolean looselyMatches(URI notifyUri, String repository) {
         boolean result = false;
         try {
             URI repositoryUri = new URI(repository);
-            result = getScheme(notifyUri).equals(getScheme(repositoryUri))
-                && Objects.equal(notifyUri.getHost(), repositoryUri.getHost()) 
-                && getPort(notifyUri) == getPort(repositoryUri)
+            result = Objects.equal(notifyUri.getHost(), repositoryUri.getHost())
                 && Objects.equal(notifyUri.getPath(), repositoryUri.getPath())
                 && Objects.equal(notifyUri.getQuery(), repositoryUri.getQuery());
         } catch ( URISyntaxException ex ) {
