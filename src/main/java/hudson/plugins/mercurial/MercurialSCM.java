@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import static java.util.logging.Level.FINE;
+
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -319,7 +320,7 @@ public class MercurialSCM extends SCM implements Serializable {
             Node node = project.getLastBuiltOn(); // JENKINS-5984: ugly but matches what AbstractProject.poll uses; though compare JENKINS-14247
             FilePath repository = workspace2Repo(workspace);
 
-            pull(launcher, repository, listener, node, getRevisionExpanded(project), credentials);
+            pull(launcher, repository, listener, node, getRevisionExpanded(project), credentials, null);
 
             return compare(launcher, listener, baseline, output, node, repository, project);
         } catch(IOException e) {
@@ -380,13 +381,17 @@ public class MercurialSCM extends SCM implements Serializable {
         return result;
     }
 
-    private int pull(Launcher launcher, FilePath repository, TaskListener listener, Node node, String revision, StandardUsernameCredentials credentials) throws IOException, InterruptedException {
-        HgExe hg = new HgExe(findInstallation(getInstallation()), credentials, launcher, node, listener, /* TODO */new EnvVars());
-        try {
+    private int pull(Launcher launcher, FilePath repository, TaskListener listener, Node node, String revision, StandardUsernameCredentials credentials, AbstractBuild<?, ?> build) throws IOException, InterruptedException {
+
+    	EnvVars envVars = ( build == null) ? new EnvVars() : new EnvVars( build.getBuildVariables());
+    	HgExe hg = new HgExe(findInstallation(getInstallation()), credentials, launcher, node, listener, envVars);
+
+    	try {
         ArgumentListBuilder cmd = hg.seed(true);
         cmd.add("pull");
         if (revisionType == RevisionType.BRANCH) {
-            cmd.add("--rev", revision);
+        	
+			cmd.add( "--rev", revision);
         }
         CachedRepo cachedSource = cachedSource(node, launcher, listener, true, credentials);
         if (cachedSource != null) {
@@ -595,7 +600,7 @@ public class MercurialSCM extends SCM implements Serializable {
         Node node = Computer.currentComputer().getNode(); // TODO why not build.getBuiltOn()?
         int pullExitCode;
         try {
-            pullExitCode = pull(launcher, repository, listener, node, toRevision, credentials);
+            pullExitCode = pull(launcher, repository, listener, node, toRevision, credentials, build);
         } catch (IOException e) {
             if (causedByMissingHg(e)) {
                 listener.error("Failed to pull because hg could not be found;" +
