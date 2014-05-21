@@ -144,7 +144,7 @@ public class HgExe {
             }
             for (ArgumentListBuilder b : new ArgumentListBuilder[] {base, baseNoDebug}) {
                 b.add("--config");
-                // TODO do we really want to pass -l username? Usually the username is â€˜hgâ€™ and encoded in the URL. But seems harmless at least on bitbucket.
+                // TODO do we really want to pass -l username? Usually the username is ‘hg’ and encoded in the URL. But seems harmless at least on bitbucket.
                 b.addMasked(String.format("ui.ssh=ssh -i %s -l %s", sshPrivateKey.getRemote(), cc.getUsername()));
             }
         } else {
@@ -159,7 +159,7 @@ public class HgExe {
     }
     private static final class DeleteOnExit implements FilePath.FileCallable<Void> {
         private static final long serialVersionUID = 1;
-        public Void invoke(File f, VirtualChannel channel) throws IOException, InterruptedException {
+        @Override public Void invoke(File f, VirtualChannel channel) throws IOException, InterruptedException {
             f.deleteOnExit();
             return null;
         }
