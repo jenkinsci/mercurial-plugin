@@ -4,6 +4,7 @@ import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
+import edu.umd.cs.findbugs.annotations.SuppressWarnings;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
@@ -20,7 +21,6 @@ import hudson.util.ArgumentListBuilder;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -132,9 +132,10 @@ public final class MercurialSCMSource extends SCMSource {
         }
     }
 
+    @SuppressWarnings("DB_DUPLICATE_BRANCHES")
     @Override public SCM build(SCMHead head, SCMRevision revision) {
         String rev = revision == null ? head.getName() : ((MercurialRevision) revision).hash;
-        return new MercurialSCM(installation, source, rev, modules, subdir, browser, clean, credentialsId);
+        return new MercurialSCM(installation, source, revision == null ? MercurialSCM.RevisionType.BRANCH : /* TODO use CHANGESET, when defined */MercurialSCM.RevisionType.BRANCH, rev, modules, subdir, browser, clean, credentialsId, false);
     }
 
     private @CheckForNull StandardUsernameCredentials getCredentials() {
