@@ -56,7 +56,7 @@ public class MercurialChangeLogParserTest {
             pw.close();
         }
         ChangeLogParser clp = new MercurialChangeLogParser(null);
-        ChangeLogSet<? extends ChangeLogSet.Entry> cls = clp.parse(null, changelogXml);
+        ChangeLogSet<? extends ChangeLogSet.Entry> cls = clp.parse(null, null, changelogXml);
         Iterator<? extends ChangeLogSet.Entry> it = cls.iterator();
         assertTrue(it.hasNext());
         ChangeLogSet.Entry entry = it.next();

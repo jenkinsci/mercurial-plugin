@@ -1,8 +1,9 @@
 package hudson.plugins.mercurial;
 
 import hudson.Util;
-import hudson.model.AbstractBuild;
+import hudson.model.Run;
 import hudson.scm.ChangeLogParser;
+import hudson.scm.RepositoryBrowser;
 import hudson.util.Digester2;
 import hudson.util.IOException2;
 
@@ -30,7 +31,7 @@ public class MercurialChangeLogParser extends ChangeLogParser {
         this.modules = modules;
     }
 
-    public MercurialChangeSetList parse(AbstractBuild build, File changelogFile)
+    @Override public MercurialChangeSetList parse(Run build, RepositoryBrowser<?> browser, File changelogFile)
             throws IOException, SAXException {
         Digester digester = new Digester2();
         ArrayList<MercurialChangeSet> r = new ArrayList<MercurialChangeSet>();
@@ -91,7 +92,7 @@ public class MercurialChangeLogParser extends ChangeLogParser {
             }
         });
 
-        return new MercurialChangeSetList(build, r);
+        return new MercurialChangeSetList(build, browser, r);
     }
 
 }

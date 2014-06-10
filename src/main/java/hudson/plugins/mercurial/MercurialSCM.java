@@ -14,7 +14,18 @@ import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
 import hudson.matrix.MatrixRun;
-import hudson.model.*;
+import hudson.model.AbstractBuild;
+import hudson.model.Action;
+import hudson.model.Actionable;
+import hudson.model.Computer;
+import hudson.model.Hudson;
+import hudson.model.Job;
+import hudson.model.Node;
+import hudson.model.ParameterDefinition;
+import hudson.model.ParametersDefinitionProperty;
+import hudson.model.Run;
+import hudson.model.StringParameterDefinition;
+import hudson.model.TaskListener;
 import hudson.plugins.mercurial.browser.HgBrowser;
 import hudson.plugins.mercurial.browser.HgWeb;
 import hudson.scm.ChangeLogParser;
@@ -42,6 +53,8 @@ import static java.util.logging.Level.FINE;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.annotation.Nonnull;
+import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.jenkinsci.plugins.multiplescms.MultiSCMRevisionState;
 import org.kohsuke.stapler.AncestorInPath;
@@ -196,7 +209,7 @@ public class MercurialSCM extends SCM implements Serializable {
         return disableChangeLog;
     }
 
-    @CheckForNull StandardUsernameCredentials getCredentials(AbstractProject<?,?> owner) {
+    @CheckForNull StandardUsernameCredentials getCredentials(Job<?,?> owner) {
         if (credentialsId != null) {
             for (StandardUsernameCredentials c : availableCredentials(owner, source)) {
                 if (c.getId().equals(credentialsId)) {
@@ -226,7 +239,7 @@ public class MercurialSCM extends SCM implements Serializable {
     /**
      * Same as {@link #getRevision()} but with <em>default</em> values of parameters expanded.
      */
-    private String getRevisionExpanded(AbstractProject<?,?> project) {
+    private String getRevisionExpanded(Job<?,?> project) {
         EnvVars env = new EnvVars();
         ParametersDefinitionProperty params = project.getProperty(ParametersDefinitionProperty.class);
         if (params != null) {
@@ -276,13 +289,13 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     @Override
-    public SCMRevisionState calcRevisionsFromBuild(AbstractBuild<?, ?> build, Launcher launcher, TaskListener listener)
+    public SCMRevisionState calcRevisionsFromBuild(Run<?, ?> build, FilePath workspace, Launcher launcher, TaskListener listener)
             throws IOException, InterruptedException {
         // tag action is added during checkout, so this shouldn't be called, but just in case.
-        HgExe hg = new HgExe(findInstallation(getInstallation()), getCredentials(build.getProject()), launcher, build.getBuiltOn(), listener, build.getEnvironment(listener));
+        HgExe hg = new HgExe(findInstallation(getInstallation()), getCredentials(build.getParent()), launcher, workspaceToNode(workspace), listener, build.getEnvironment(listener));
         try {
-        String tip = hg.tip(workspace2Repo(build.getWorkspace()), null);
-        String rev = hg.tipNumber(workspace2Repo(build.getWorkspace()), null);
+        String tip = hg.tip(workspace2Repo(workspace), null);
+        String rev = hg.tipNumber(workspace2Repo(workspace), null);
         return tip != null && rev != null ? new MercurialTagAction(tip, rev, subdir) : null;
         } finally {
             hg.close();
@@ -296,7 +309,7 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     @Override
-    protected PollingResult compareRemoteRevisionWith(AbstractProject<?, ?> project, Launcher launcher, FilePath workspace,
+    public PollingResult compareRemoteRevisionWith(Job<?, ?> project, Launcher launcher, FilePath workspace,
             TaskListener listener, SCMRevisionState _baseline) throws IOException, InterruptedException {
         MercurialTagAction baseline = (MercurialTagAction)_baseline;
 
@@ -316,7 +329,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
         try {
             // Get the list of changed files.
-            Node node = project.getLastBuiltOn(); // JENKINS-5984: ugly but matches what AbstractProject.poll uses; though compare JENKINS-14247
+            Node node = workspaceToNode(workspace);
             FilePath repository = workspace2Repo(workspace);
 
             pull(launcher, repository, listener, node, getRevisionExpanded(project), credentials);
@@ -333,7 +346,7 @@ public class MercurialSCM extends SCM implements Serializable {
         }
     }
 
-    PollingResult compare(Launcher launcher, TaskListener listener, MercurialTagAction baseline, PrintStream output, Node node, FilePath repository, AbstractProject<?,?> project) throws IOException, InterruptedException {
+    PollingResult compare(Launcher launcher, TaskListener listener, MercurialTagAction baseline, PrintStream output, Node node, FilePath repository, Job<?,?> project) throws IOException, InterruptedException {
         Change change = null;
         for (ChangeComparator s : ChangeComparator.all()) {
             Change c = s.compare(this, launcher, listener, baseline, output, node, repository, project);
@@ -455,16 +468,17 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     @Override
-    public boolean checkout(AbstractBuild<?,?> build, Launcher launcher, FilePath workspace, final BuildListener listener, File changelogFile)
+    public void checkout(Run<?,?> build, Launcher launcher, FilePath workspace, final TaskListener listener, File changelogFile)
             throws IOException, InterruptedException {
 
         MercurialInstallation mercurialInstallation = findInstallation(installation);
         final boolean jobShouldUseSharing = mercurialInstallation != null && mercurialInstallation.isUseSharing();
 
+        Node node = workspaceToNode(workspace);
         FilePath repository = workspace2Repo(workspace);
         boolean canReuseExistingWorkspace;
         try {
-            canReuseExistingWorkspace = canReuseWorkspace(repository, jobShouldUseSharing, build, launcher, listener);
+            canReuseExistingWorkspace = canReuseWorkspace(repository, node, jobShouldUseSharing, build, launcher, listener);
         } catch(IOException e) {
             if (causedByMissingHg(e)) {
                 listener.error("Failed to determine whether workspace can be reused because hg could not be found;" +
@@ -475,27 +489,28 @@ public class MercurialSCM extends SCM implements Serializable {
             throw new AbortException("Failed to determine whether workspace can be reused");
         }
 
-        String revToBuild = getRevToBuild(build, build.getEnvironment(listener));
-        StandardUsernameCredentials credentials = getCredentials(build.getProject());
+        String revToBuild = getRevToBuild(build, workspace, build.getEnvironment(listener));
+        StandardUsernameCredentials credentials = getCredentials(build.getParent());
         if (canReuseExistingWorkspace) {
-            update(build, launcher, repository, listener, revToBuild, credentials);
+            update(build, launcher, repository, node, listener, revToBuild, credentials);
         } else {
-            clone(build, launcher, repository, listener, revToBuild, credentials);
+            clone(build, launcher, repository, node, listener, revToBuild, credentials);
         }
 
+        if (changelogFile != null) {
         try {
-            determineChanges(build, launcher, listener, changelogFile, repository, revToBuild);
+            determineChanges(build, launcher, listener, changelogFile, repository, node, revToBuild);
         } catch (IOException e) {
             listener.error("Failed to capture change log");
             e.printStackTrace(listener.getLogger());
             throw new AbortException("Failed to capture change log");
         }
-        return true;
+        }
     }
     
-    private boolean canReuseWorkspace(FilePath repo,
-            boolean jobShouldUseSharing, AbstractBuild<?,?> build,
-            Launcher launcher, BuildListener listener)
+    private boolean canReuseWorkspace(FilePath repo, Node node,
+            boolean jobShouldUseSharing, Run<?,?> build,
+            Launcher launcher, TaskListener listener)
                 throws IOException, InterruptedException {
 
         boolean jobUsesSharing = new FilePath(repo, ".hg/sharedpath").exists();
@@ -509,7 +524,7 @@ public class MercurialSCM extends SCM implements Serializable {
             return false;
         }
 
-        HgExe hg = new HgExe(findInstallation(getInstallation()), getCredentials(build.getProject()), launcher, build.getBuiltOn(), listener, build.getEnvironment(listener));
+        HgExe hg = new HgExe(findInstallation(getInstallation()), getCredentials(build.getParent()), launcher, node, listener, build.getEnvironment(listener));
         try {
         String upstream = hg.config(repo, "paths.default");
         if (upstream == null) {
@@ -528,13 +543,13 @@ public class MercurialSCM extends SCM implements Serializable {
         }
     }
 
-    private void determineChanges(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener, File changelogFile, FilePath repository, String revToBuild) throws IOException, InterruptedException {
+    private void determineChanges(Run<?, ?> build, Launcher launcher, TaskListener listener, @Nonnull File changelogFile, FilePath repository, Node node, String revToBuild) throws IOException, InterruptedException {
         if (isDisableChangeLog()) {
             createEmptyChangeLog(changelogFile, listener, "changelog");
             return;
         }
 
-        AbstractBuild<?, ?> previousBuild = build.getPreviousBuild();
+        Run<?, ?> previousBuild = build.getPreviousBuild();
         MercurialTagAction prevTag = previousBuild != null ? findTag(previousBuild) : null;
         if (prevTag == null) {
             listener.getLogger().println("WARN: Revision data for previous build unavailable; unable to determine change log");
@@ -543,8 +558,8 @@ public class MercurialSCM extends SCM implements Serializable {
         }
         EnvVars env = build.getEnvironment(listener);
         MercurialInstallation inst = findInstallation(getInstallation());
-        StandardUsernameCredentials credentials = getCredentials(build.getProject());
-        HgExe hg = new HgExe(inst, credentials, launcher, build.getBuiltOn(), listener, env);
+        StandardUsernameCredentials credentials = getCredentials(build.getParent());
+        HgExe hg = new HgExe(inst, credentials, launcher, node, listener, env);
         try {
 
         ArgumentListBuilder logCommand = hg.seed(true).add("log", "--rev", prevTag.getId());
@@ -588,11 +603,10 @@ public class MercurialSCM extends SCM implements Serializable {
         }
     }
 
-    private void update(AbstractBuild<?, ?> build, Launcher launcher, FilePath repository, BuildListener listener, String toRevision, StandardUsernameCredentials credentials)
+    private void update(Run<?, ?> build, Launcher launcher, FilePath repository, Node node, TaskListener listener, String toRevision, StandardUsernameCredentials credentials)
             throws IOException, InterruptedException {
-        HgExe hg = new HgExe(findInstallation(getInstallation()), credentials, launcher, build.getBuiltOn(), listener, build.getEnvironment(listener));
+        HgExe hg = new HgExe(findInstallation(getInstallation()), credentials, launcher, node, listener, build.getEnvironment(listener));
         try {
-        Node node = Computer.currentComputer().getNode(); // TODO why not build.getBuiltOn()?
         int pullExitCode;
         try {
             pullExitCode = pull(launcher, repository, listener, node, toRevision, credentials);
@@ -647,7 +661,7 @@ public class MercurialSCM extends SCM implements Serializable {
         }
     }
 
-    private String getRevToBuild(AbstractBuild<?, ?> build, EnvVars env) {
+    private String getRevToBuild(Run<?, ?> build, FilePath workspace, EnvVars env) {
         String revToBuild = getRevision(env);
         if (build instanceof MatrixRun) {
             MatrixRun matrixRun = (MatrixRun) build;
@@ -656,7 +670,7 @@ public class MercurialSCM extends SCM implements Serializable {
             if (Hudson.getInstance().getPlugin("multiple-scms") != null) {
                 MultiSCMRevisionState parentRevisions = matrixRun.getParentBuild().getAction(MultiSCMRevisionState.class);
                 if (parentRevisions != null) {
-                    parentRevision = (MercurialTagAction) parentRevisions.get(this, build.getWorkspace(), build);
+                    parentRevision = (MercurialTagAction) parentRevisions.get(this, workspace, (MatrixRun) build);
                 } else {
                     parentRevision = matrixRun.getParentBuild().getAction(MercurialTagAction.class);
                 }
@@ -674,7 +688,7 @@ public class MercurialSCM extends SCM implements Serializable {
     /**
      * Start from scratch and clone the whole repository.
      */
-    private void clone(AbstractBuild<?, ?> build, Launcher launcher, FilePath repository, BuildListener listener, String toRevision, StandardUsernameCredentials credentials)
+    private void clone(Run<?, ?> build, Launcher launcher, FilePath repository, Node node, TaskListener listener, String toRevision, StandardUsernameCredentials credentials)
             throws InterruptedException, IOException {
         try {
             repository.deleteRecursive();
@@ -684,11 +698,11 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         EnvVars env = build.getEnvironment(listener);
-        HgExe hg = new HgExe(findInstallation(getInstallation()), credentials, launcher,build.getBuiltOn(),listener,env);
+        HgExe hg = new HgExe(findInstallation(getInstallation()), credentials, launcher, node, listener, env);
         try {
 
         ArgumentListBuilder args = hg.seed(true);
-        CachedRepo cachedSource = cachedSource(build.getBuiltOn(), launcher, listener, false, credentials);
+        CachedRepo cachedSource = cachedSource(node, launcher, listener, false, credentials);
         if (cachedSource != null) {
             if (cachedSource.isUseSharing()) {
                 args.add("--config", "extensions.share=");
@@ -850,7 +864,22 @@ public class MercurialSCM extends SCM implements Serializable {
 
     }
 
-    private static List<? extends StandardUsernameCredentials> availableCredentials(AbstractProject<?,?> owner, String source) {
+    private static Node workspaceToNode(FilePath workspace) { // TODO https://trello.com/c/doFFMdUm/46-filepath-getcomputer
+        Jenkins j = Jenkins.getInstance();
+        if (workspace.isRemote()) {
+            for (Computer c : j.getComputers()) {
+                if (c.getChannel() == workspace.getChannel()) {
+                    Node n = c.getNode();
+                    if (n != null) {
+                        return n;
+                    }
+                }
+            }
+        }
+        return j;
+    }
+
+    private static List<? extends StandardUsernameCredentials> availableCredentials(Job<?,?> owner, String source) {
         // TODO implement support for SSHUserPrivateKey
         return CredentialsProvider.lookupCredentials(StandardUsernameCredentials.class, owner, null, URIRequirementBuilder.fromUri(source).build());
     }
@@ -891,7 +920,7 @@ public class MercurialSCM extends SCM implements Serializable {
             return true;
         }
 
-        public ListBoxModel doFillCredentialsIdItems(@AncestorInPath AbstractProject<?,?> owner, @QueryParameter String source) {
+        public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Job<?,?> owner, @QueryParameter String source) {
             return new StandardUsernameListBoxModel()
                     .withEmptySelection()
                     .withAll(availableCredentials(owner, source));

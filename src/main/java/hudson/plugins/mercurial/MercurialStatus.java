@@ -4,8 +4,6 @@ import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 import hudson.Extension;
 import hudson.model.AbstractModelObject;
-import hudson.model.AbstractProject;
-import hudson.model.Hudson;
 import hudson.model.Item;
 import hudson.model.UnprotectedRootAction;
 import hudson.scm.SCM;
@@ -17,7 +15,6 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
-import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -28,9 +25,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static javax.servlet.http.HttpServletResponse.*;
+import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceOwner;
 import jenkins.scm.api.SCMSourceOwners;
+import jenkins.triggers.SCMTriggerItem;
 import org.acegisecurity.context.SecurityContext;
 import org.acegisecurity.context.SecurityContextHolder;
 /**
@@ -84,8 +83,12 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
         final List<Item> projects = Lists.newArrayList();
         boolean scmFound = false,
                 urlFound = false;
-        for (AbstractProject<?,?> project : Hudson.getInstance().getAllItems(AbstractProject.class)) {
-            SCM scm = project.getScm();
+        for (Item project : Jenkins.getInstance().getAllItems()) {
+            SCMTriggerItem scmTriggerItem = SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project);
+            if (scmTriggerItem == null) {
+                continue;
+            }
+            SCMS: for (SCM scm : scmTriggerItem.getSCMs()) {
             if (!(scm instanceof MercurialSCM)) {
                 continue;
             }
@@ -102,7 +105,7 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
                 continue;
             }
             urlFound = true;
-            SCMTrigger trigger = project.getTrigger(SCMTrigger.class);
+            SCMTrigger trigger = scmTriggerItem.getSCMTrigger();
             if (trigger == null || trigger.isIgnorePostCommitHooks()) {
                 // Do not send message to HTTP response because this is the normal case for a multibranch component project.
                 LOGGER.log(Level.INFO, "No SCMTrigger on {0}", project.getFullName());
@@ -112,6 +115,8 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
             LOGGER.log(Level.INFO, "Triggering polling of {0}", project.getFullName());
             trigger.run();
             projects.add(project);
+            break SCMS;
+            }
         }
         for (SCMSourceOwner project : SCMSourceOwners.all()) {
             for (SCMSource source : project.getSCMSources()) {
