@@ -202,6 +202,10 @@ public class MercurialSCM extends SCM implements Serializable {
         return source;
     }
 
+    @Override public String getKey() {
+        return "hg " + source + " " + revision;
+    }
+
     public String getCredentialsId() {
         return credentialsId;
     }
@@ -469,7 +473,7 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     @Override
-    public void checkout(Run<?,?> build, Launcher launcher, FilePath workspace, final TaskListener listener, File changelogFile)
+    public void checkout(Run<?, ?> build, Launcher launcher, FilePath workspace, final TaskListener listener, File changelogFile, SCMRevisionState baseline)
             throws IOException, InterruptedException {
 
         MercurialInstallation mercurialInstallation = findInstallation(installation);
@@ -500,7 +504,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
         if (changelogFile != null) {
         try {
-            determineChanges(build, launcher, listener, changelogFile, repository, node, revToBuild);
+            determineChanges(build, launcher, listener, changelogFile, repository, node, revToBuild, baseline);
         } catch (IOException e) {
             listener.error("Failed to capture change log");
             e.printStackTrace(listener.getLogger());
@@ -544,14 +548,13 @@ public class MercurialSCM extends SCM implements Serializable {
         }
     }
 
-    private void determineChanges(Run<?, ?> build, Launcher launcher, TaskListener listener, @Nonnull File changelogFile, FilePath repository, Node node, String revToBuild) throws IOException, InterruptedException {
+    private void determineChanges(Run<?, ?> build, Launcher launcher, TaskListener listener, @Nonnull File changelogFile, FilePath repository, Node node, String revToBuild, SCMRevisionState baseline) throws IOException, InterruptedException {
         if (isDisableChangeLog()) {
             createEmptyChangeLog(changelogFile, listener, "changelog");
             return;
         }
 
-        Run<?, ?> previousBuild = build.getPreviousBuild();
-        MercurialTagAction prevTag = previousBuild != null ? findTag(previousBuild) : null;
+        MercurialTagAction prevTag = (MercurialTagAction) baseline;
         if (prevTag == null) {
             listener.getLogger().println("WARN: Revision data for previous build unavailable; unable to determine change log");
             createEmptyChangeLog(changelogFile, listener, "changelog");
