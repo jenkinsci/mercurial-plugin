@@ -276,7 +276,7 @@ public class MercurialSCM extends SCM implements Serializable {
         try {
             return new HgWeb(source);
         } catch (MalformedURLException x) {
-            LOGGER.log(Level.WARNING, null, x);
+            LOGGER.log(Level.FINE, null, x); // OK, could just be a local directory path
             return null;
         }
     }
