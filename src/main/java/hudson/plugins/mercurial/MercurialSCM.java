@@ -6,7 +6,6 @@ import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
-import edu.umd.cs.findbugs.annotations.SuppressWarnings;
 import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -31,6 +30,7 @@ import hudson.plugins.mercurial.browser.HgWeb;
 import hudson.scm.ChangeLogParser;
 import hudson.scm.PollingResult;
 import hudson.scm.PollingResult.Change;
+import hudson.scm.RepositoryBrowser;
 import hudson.scm.SCM;
 import hudson.scm.SCMDescriptor;
 import hudson.scm.SCMRevisionState;
@@ -49,6 +49,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
 import static java.util.logging.Level.FINE;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -267,17 +268,17 @@ public class MercurialSCM extends SCM implements Serializable {
         return subdir != null ? workspace.child(subdir) : workspace;
     }
 
-    @Override
-    @SuppressWarnings("DLS_DEAD_LOCAL_STORE")
     public HgBrowser getBrowser() {
-        if (browser == null) {
-            try {
-                return new HgWeb(source); // #2406
-            } catch (MalformedURLException x) {
-                // forget it
-            }
-        }
         return browser;
+    }
+
+    @Override public RepositoryBrowser<?> guessBrowser() {
+        try {
+            return new HgWeb(source);
+        } catch (MalformedURLException x) {
+            LOGGER.log(Level.WARNING, null, x);
+            return null;
+        }
     }
 
     /**

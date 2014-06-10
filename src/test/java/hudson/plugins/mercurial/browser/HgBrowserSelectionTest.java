@@ -26,8 +26,9 @@ public class HgBrowserSelectionTest {
     @Test public void repositoryBrowserCompatibility() throws Exception {
         FreeStyleProject p = (FreeStyleProject) j.jenkins.getItem("foo");
         MercurialSCM ms = (MercurialSCM) p.getScm();
-        assertTrue(ms.getBrowser() instanceof HgWeb);
-        j.assertEqualBeans(new HgWeb("http://www.yahoo.com/"), ms.getBrowser(), "url");
+        RepositoryBrowser<?> browser = ms.getEffectiveBrowser();
+        assertTrue(String.valueOf(browser), browser instanceof HgWeb);
+        j.assertEqualBeans(new HgWeb("http://www.yahoo.com/"), browser, "url");
     }
 
     @Bug(4510)
