@@ -3,7 +3,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>1.568-SNAPSHOT</version>
+        <version>1.568</version>
     </parent>
     <artifactId>mercurial</artifactId>
     <version>1.51-SNAPSHOT</version>
@@ -103,7 +103,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>multiple-scms</artifactId>
-            <version>0.4-SNAPSHOT</version>
+            <version>0.4-beta-1</version>
             <optional>true</optional>
         </dependency>
         <dependency>
