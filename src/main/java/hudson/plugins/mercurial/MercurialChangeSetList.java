@@ -1,7 +1,8 @@
 package hudson.plugins.mercurial;
 
 import hudson.scm.ChangeLogSet;
-import hudson.model.AbstractBuild;
+import hudson.model.Run;
+import hudson.scm.RepositoryBrowser;
 
 import java.util.List;
 import java.util.Collections;
@@ -13,8 +14,8 @@ import java.util.Iterator;
 public class MercurialChangeSetList extends ChangeLogSet<MercurialChangeSet> {
     private final List<MercurialChangeSet> changeSets;
 
-    /*package*/ MercurialChangeSetList(AbstractBuild build, List<MercurialChangeSet> logs) {
-        super(build);
+    /*package*/ MercurialChangeSetList(Run<?,?> build, RepositoryBrowser<?> browser, List<MercurialChangeSet> logs) {
+        super(build, browser);
         Collections.reverse(logs);  // put new things first
         this.changeSets = Collections.unmodifiableList(logs);
         for (MercurialChangeSet log : logs)

@@ -7,9 +7,11 @@ import hudson.ExtensionList;
 import hudson.ExtensionPoint;
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.Util;
 import hudson.model.TaskListener;
 import hudson.model.AbstractProject;
 import hudson.model.Hudson;
+import hudson.model.Job;
 import hudson.model.Node;
 import hudson.scm.PollingResult;
 
@@ -29,10 +31,17 @@ public abstract class ChangeComparator implements ExtensionPoint {
 	 * Override to customize the compare functionality.
 	 * @return either a class of change, or null if the standard comparison is wanted
 	 */
-	abstract public PollingResult.Change compare(MercurialSCM scm, Launcher launcher,
-			TaskListener listener, MercurialTagAction baseline,
-			PrintStream output, Node node, FilePath repository,
-			AbstractProject<?, ?> project) 
-					throws IOException, InterruptedException;
+	public PollingResult.Change compare(MercurialSCM scm, Launcher launcher, TaskListener listener, MercurialTagAction baseline, PrintStream output, Node node, FilePath repository, Job<?, ?> project) throws IOException, InterruptedException {
+        if (Util.isOverridden(ChangeComparator.class, getClass(), "compare", MercurialSCM.class, Launcher.class, TaskListener.class, MercurialTagAction.class, PrintStream.class, Node.class, FilePath.class, AbstractProject.class) && project instanceof AbstractProject) {
+            return compare(scm, launcher, listener, baseline, output, node, repository, (AbstractProject) project);
+        } else {
+            throw new AbstractMethodError("you must override the new overload of compare");
+        }
+    }
+
+    @Deprecated
+	public PollingResult.Change compare(MercurialSCM scm, Launcher launcher, TaskListener listener, MercurialTagAction baseline, PrintStream output, Node node, FilePath repository, AbstractProject<?, ?> project) throws IOException, InterruptedException {
+        return compare(scm, launcher, listener, baseline, output, node, repository, (Job) project);
+    }
 	
 }

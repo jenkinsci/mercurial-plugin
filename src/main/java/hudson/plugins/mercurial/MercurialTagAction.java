@@ -2,13 +2,12 @@ package hudson.plugins.mercurial;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import hudson.model.AbstractBuild;
 import hudson.scm.SCMRevisionState;
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
 
 /**
- * Action contributed to {@link AbstractBuild} from Mercurial.
+ * Action contributed to a build from Mercurial.
  *
  * <p>  
  * Currently it just remembers the revision ID, but we want to extend this to cover tagging.
