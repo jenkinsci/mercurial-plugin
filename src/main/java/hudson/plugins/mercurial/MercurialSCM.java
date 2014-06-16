@@ -912,6 +912,10 @@ public class MercurialSCM extends SCM implements Serializable {
             return hgExe;
         }
 
+        @Override public boolean isApplicable(Job project) {
+            return true;
+        }
+
         @Override
         public SCM newInstance(StaplerRequest req, JSONObject formData) throws FormException {
             return super.newInstance(req, formData);
