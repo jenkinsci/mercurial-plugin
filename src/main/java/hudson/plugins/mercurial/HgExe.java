@@ -153,7 +153,7 @@ public class HgExe {
         this.node = node;
         this.env = env;
         env.put("HGPLAIN", "true");
-        this.launcher = launcher;
+        this.launcher = launcher.decorateByEnv(env);
         this.listener = listener;
         this.capability = Capability.get(this);
     }
@@ -210,6 +210,11 @@ public class HgExe {
      * @return a process starter with the correct launcher, arguments, listener, and environment variables configured
      */
     public ProcStarter launch(ArgumentListBuilder args) {
+        
+    	if(!launcher.isUnix()) {
+            args = args.toWindowsCommand();
+        }
+
         // set the default stdout
         return launcher.launch().cmds(args).stdout(listener).envs(env);
     }
