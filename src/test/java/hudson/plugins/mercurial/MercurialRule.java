@@ -58,6 +58,10 @@ public final class MercurialRule extends ExternalResource {
         return new HgExe(null, null, launcher(), j.jenkins, listener, new EnvVars());
     }
 
+    private HgExe hgExe(EnvVars env) throws Exception {
+        return new HgExe(null, null, launcher(), j.jenkins, listener, env);
+    }
+
     public void hg(String... args) throws Exception {
         HgExe hg = hgExe();
         assertEquals(0, hg.launch(nobody(hg.seed(false)).add(args)).join());
@@ -66,6 +70,11 @@ public final class MercurialRule extends ExternalResource {
     public void hg(File repo, String... args) throws Exception {
         HgExe hg = hgExe();
         assertEquals(0, hg.launch(nobody(hg.seed(false)).add(args)).pwd(repo).join());
+    }
+
+    public void hg(File repo, EnvVars env, String... args) throws Exception {
+        HgExe hg = hgExe(env);
+        assertEquals(0, hg.launch(nobody(hg.seed(false)).add(args)).envs( env ).pwd(new File(env.expand(repo.getPath()))).join());
     }
 
     private static ArgumentListBuilder nobody(ArgumentListBuilder args) {
