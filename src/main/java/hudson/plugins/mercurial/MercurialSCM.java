@@ -59,6 +59,7 @@ import net.sf.json.JSONObject;
 import org.jenkinsci.plugins.multiplescms.MultiSCMRevisionState;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
@@ -75,7 +76,7 @@ public class MercurialSCM extends SCM implements Serializable {
     /**
      * Name of selected installation, if any.
      */
-    private final String installation;
+    private String installation;
 
     /**
      * Source repository URL from which we pull.
@@ -89,7 +90,7 @@ public class MercurialSCM extends SCM implements Serializable {
      */
     private transient Set<String> _modules;
     // Same thing, but not parsed for jelly.
-    private final String modules;
+    private String modules = "";
 
     public enum RevisionType {
         BRANCH() {
@@ -105,26 +106,30 @@ public class MercurialSCM extends SCM implements Serializable {
         public abstract String getDisplayName();
     }
 
-    private RevisionType revisionType;
+    private RevisionType revisionType = RevisionType.BRANCH;
 
     /**
      * Revision to follow.
      */
-    private String revision;
+    private String revision = "default";
     
     @Deprecated
     private String branch;
 
     /** Slash-separated subdirectory of the workspace in which the repository will be kept; null for top level. */
-    private final String subdir;
+    private String subdir;
 
-    private final boolean clean;
+    private boolean clean;
 
     private HgBrowser browser;
 
-    private final String credentialsId;
+    private String credentialsId;
 
-    private final boolean disableChangeLog;
+    private boolean disableChangeLog;
+
+    @DataBoundConstructor public MercurialSCM(String source) {
+        this.source = Util.fixEmptyAndTrim(source);
+    }
 
     @Deprecated
     public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean) {
@@ -141,18 +146,18 @@ public class MercurialSCM extends SCM implements Serializable {
       this(installation, source, revisionType, revision, modules, subdir, browser, clean, credentialsId, false);
     }
 
-    @DataBoundConstructor public MercurialSCM(String installation, String source, @NonNull RevisionType revisionType, @NonNull String revision, String modules, String subdir, HgBrowser browser, boolean clean, String credentialsId, boolean disableChangeLog) {
-        this.installation = installation;
-        this.source = Util.fixEmptyAndTrim(source);
-        this.modules = Util.fixNull(modules);
-        this.subdir = Util.fixEmptyAndTrim(subdir);
-        this.clean = clean;
-        parseModules();
-        this.revisionType = revisionType;
-        this.revision = Util.fixEmpty(revision) == null ? (revisionType == RevisionType.BRANCH ? "default" : "???") : revision;
-        this.browser = browser;
-        this.credentialsId = credentialsId;
-        this.disableChangeLog = disableChangeLog;
+    @Deprecated
+    public MercurialSCM(String installation, String source, @NonNull RevisionType revisionType, @NonNull String revision, String modules, String subdir, HgBrowser browser, boolean clean, String credentialsId, boolean disableChangeLog) {
+        this(source);
+        setInstallation(installation);
+        setModules(modules);
+        setSubdir(subdir);
+        setClean(clean);
+        setRevisionType(revisionType);
+        setRevision(revision);
+        setBrowser(browser);
+        setCredentialsId(credentialsId);
+        setDisableChangeLog(disableChangeLog);
     }
 
     private void parseModules() {
@@ -193,6 +198,10 @@ public class MercurialSCM extends SCM implements Serializable {
         return installation;
     }
 
+    @DataBoundSetter public final void setInstallation(String installation) {
+        this.installation = installation;
+    }
+
     /**
      * Gets the source repository path.
      * Either URL or local file path.
@@ -212,8 +221,16 @@ public class MercurialSCM extends SCM implements Serializable {
         return credentialsId;
     }
 
+    @DataBoundSetter public final void setCredentialsId(String credentialsId) {
+        this.credentialsId = credentialsId;
+    }
+
     public boolean isDisableChangeLog() {
         return disableChangeLog;
+    }
+    
+    @DataBoundSetter public final void setDisableChangeLog(boolean disableChangeLog) {
+        this.disableChangeLog = disableChangeLog;
     }
 
     @CheckForNull StandardUsernameCredentials getCredentials(Job<?,?> owner, EnvVars env) {
@@ -231,8 +248,16 @@ public class MercurialSCM extends SCM implements Serializable {
         return revisionType;
     }
 
+    @DataBoundSetter public final void setRevisionType(@NonNull RevisionType revisionType) {
+        this.revisionType = revisionType;
+    }
+
     public @NonNull String getRevision() {
         return revision;
+    }
+
+    @DataBoundSetter public final void setRevision(@NonNull String revision) {
+        this.revision = Util.fixEmpty(revision) == null ? "default" : revision;
     }
 
     @Deprecated
@@ -268,6 +293,11 @@ public class MercurialSCM extends SCM implements Serializable {
     public String getSubdir() {
         return subdir;
     }
+
+    @DataBoundSetter public final void setSubdir(String subdir) {
+        this.subdir = Util.fixEmptyAndTrim(subdir);
+    }
+
     private String getSubdir(EnvVars env) {
         return env.expand(subdir);
     }    
@@ -278,6 +308,10 @@ public class MercurialSCM extends SCM implements Serializable {
 
     public HgBrowser getBrowser() {
         return browser;
+    }
+
+    @DataBoundSetter public final void setBrowser(HgBrowser browser) {
+        this.browser = browser;
     }
 
     @Override public RepositoryBrowser<?> guessBrowser() {
@@ -295,6 +329,10 @@ public class MercurialSCM extends SCM implements Serializable {
      */
     public boolean isClean() {
         return clean;
+    }
+
+    @DataBoundSetter public final void setClean(boolean clean) {
+        this.clean = clean;
     }
 
     @Override
@@ -842,6 +880,11 @@ public class MercurialSCM extends SCM implements Serializable {
 
     public String getModules() {
         return modules;
+    }
+
+    @DataBoundSetter public final void setModules(String modules) {
+        this.modules = Util.fixNull(modules);
+        parseModules();
     }
 
     private boolean causedByMissingHg(IOException e) {
