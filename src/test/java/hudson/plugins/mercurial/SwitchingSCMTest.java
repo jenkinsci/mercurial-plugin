@@ -1,7 +1,6 @@
 package hudson.plugins.mercurial;
 
 import hudson.model.FreeStyleProject;
-import hudson.model.Hudson;
 import hudson.tools.ToolProperty;
 
 import static org.junit.Assert.*;
@@ -13,6 +12,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 
 import java.io.File;
 import java.util.Collections;
+import jenkins.model.Jenkins;
 
 public class SwitchingSCMTest {
 
@@ -26,13 +26,13 @@ public class SwitchingSCMTest {
     @Before public void setUp() throws Exception {
         repo = tmp.getRoot();
 
-        Hudson.getInstance()
+        Jenkins.getInstance()
                 .getDescriptorByType(MercurialInstallation.DescriptorImpl.class)
                 .setInstallations(
                         new MercurialInstallation(cachingInstallation, "",
                                 "hg", false, true, false, Collections
                                         .<ToolProperty<?>> emptyList()));
-        Hudson.getInstance()
+        Jenkins.getInstance()
                 .getDescriptorByType(MercurialInstallation.DescriptorImpl.class)
                 .setInstallations(
                         new MercurialInstallation(sharingInstallation, "",

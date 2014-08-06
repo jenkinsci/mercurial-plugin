@@ -10,10 +10,10 @@ import hudson.Launcher;
 import hudson.Util;
 import hudson.model.TaskListener;
 import hudson.model.AbstractProject;
-import hudson.model.Hudson;
 import hudson.model.Job;
 import hudson.model.Node;
 import hudson.scm.PollingResult;
+import jenkins.model.Jenkins;
 
 /**
  * An extension point that allows plugins to override the built in compare 
@@ -24,7 +24,7 @@ import hudson.scm.PollingResult;
 public abstract class ChangeComparator implements ExtensionPoint {
 	
 	public static ExtensionList<ChangeComparator> all() {
-        return Hudson.getInstance().getExtensionList(ChangeComparator.class);
+        return Jenkins.getInstance().getExtensionList(ChangeComparator.class);
     }
 
 	/**

@@ -6,7 +6,6 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.model.Hudson;
 import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.util.ArgumentListBuilder;
@@ -20,6 +19,7 @@ import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import jenkins.model.Jenkins;
 
 /**
  * Mercurial repository that serves as a cache to hg operations in the Hudson cluster.
@@ -100,7 +100,7 @@ class Cache {
         }
 
             // Always update master cache first.
-            Node master = Hudson.getInstance();
+            Node master = Jenkins.getInstance();
             FilePath masterCaches = master.getRootPath().child("hgcache");
             FilePath masterCache = masterCaches.child(hash);
             Launcher masterLauncher = node == master ? launcher : master.createLauncher(listener);

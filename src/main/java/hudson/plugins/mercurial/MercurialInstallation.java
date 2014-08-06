@@ -30,7 +30,6 @@ import hudson.EnvVars;
 import hudson.Extension;
 import hudson.Util;
 import hudson.model.EnvironmentSpecific;
-import hudson.model.Hudson;
 import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.slaves.NodeSpecific;
@@ -42,6 +41,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.util.List;
 import javax.annotation.CheckForNull;
+import jenkins.model.Jenkins;
 import org.ini4j.Ini;
 import org.ini4j.InvalidFileFormatException;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -107,7 +107,7 @@ public class MercurialInstallation extends ToolInstallation implements
     }
 
     public static MercurialInstallation[] allInstallations() {
-        return Hudson.getInstance().getDescriptorByType(DescriptorImpl.class)
+        return Jenkins.getInstance().getDescriptorByType(DescriptorImpl.class)
                 .getInstallations();
     }
 

@@ -17,7 +17,6 @@ import hudson.model.AbstractBuild;
 import hudson.model.Action;
 import hudson.model.Actionable;
 import hudson.model.Computer;
-import hudson.model.Hudson;
 import hudson.model.Job;
 import hudson.model.Node;
 import hudson.model.ParameterDefinition;
@@ -325,17 +324,17 @@ public class MercurialSCM extends SCM implements Serializable {
         MercurialTagAction baseline = (MercurialTagAction)_baseline;
 
         PrintStream output = listener.getLogger();
-        EnvVars env = project.getEnvironment(Hudson.getInstance(), listener);
+        EnvVars env = project.getEnvironment(Jenkins.getInstance(), listener);
         StandardUsernameCredentials credentials = getCredentials(project, env);
 
         if (!requiresWorkspaceForPolling()) {
-            launcher = Hudson.getInstance().createLauncher(listener);
-            CachedRepo possiblyCachedRepo = cachedSource(Hudson.getInstance(), env, launcher, listener, true, credentials);
+            launcher = Jenkins.getInstance().createLauncher(listener);
+            CachedRepo possiblyCachedRepo = cachedSource(Jenkins.getInstance(), env, launcher, listener, true, credentials);
             if (possiblyCachedRepo == null) {
                 throw new IOException("Could not use cache to poll for changes. See error messages above for more details");
             }
             FilePath repositoryCache = new FilePath(new File(possiblyCachedRepo.getRepoLocation()));
-            return compare(launcher, listener, baseline, output, Hudson.getInstance(), repositoryCache, project);
+            return compare(launcher, listener, baseline, output, Jenkins.getInstance(), repositoryCache, project);
         }
         // TODO do canUpdate check similar to in checkout, and possibly return INCOMPARABLE
 
@@ -680,7 +679,7 @@ public class MercurialSCM extends SCM implements Serializable {
             MatrixRun matrixRun = (MatrixRun) build;
             MercurialTagAction parentRevision;
 
-            if (Hudson.getInstance().getPlugin("multiple-scms") != null) {
+            if (Jenkins.getInstance().getPlugin("multiple-scms") != null) {
                 MultiSCMRevisionState parentRevisions = matrixRun.getParentBuild().getAction(MultiSCMRevisionState.class);
                 if (parentRevisions != null) {
                     parentRevision = (MercurialTagAction) parentRevisions.get(this, workspace, (MatrixRun) build);
