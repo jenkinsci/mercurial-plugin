@@ -80,7 +80,7 @@ public class HgExe {
 
     @Deprecated
     public HgExe(MercurialSCM scm, Launcher launcher, AbstractBuild build, TaskListener listener) throws IOException, InterruptedException {
-        this(MercurialSCM.findInstallation(scm.getInstallation()), scm.getCredentials(build.getProject()), launcher, build.getBuiltOn(), listener, build.getEnvironment(listener));
+        this(MercurialSCM.findInstallation(scm.getInstallation()), scm.getCredentials(build.getProject(), build.getEnvironment(listener)), launcher, build.getBuiltOn(), listener, build.getEnvironment(listener));
     }
 
     @Deprecated

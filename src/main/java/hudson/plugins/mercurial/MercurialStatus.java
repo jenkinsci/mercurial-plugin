@@ -2,6 +2,7 @@ package hudson.plugins.mercurial;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
+import hudson.EnvVars;
 import hudson.Extension;
 import hudson.model.AbstractModelObject;
 import hudson.model.Item;
