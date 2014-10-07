@@ -11,6 +11,7 @@ import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
 import hudson.model.Descriptor;
+import hudson.model.Item;
 import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.plugins.mercurial.browser.HgBrowser;
@@ -160,6 +161,9 @@ public final class MercurialSCMSource extends SCMSource {
         }
 
         public ListBoxModel doFillCredentialsIdItems(@AncestorInPath SCMSourceOwner owner, @QueryParameter String source) {
+            if (owner == null || !owner.hasPermission(Item.CONFIGURE)) {
+                return new ListBoxModel();
+            }
             return new StandardUsernameListBoxModel()
                     .withEmptySelection()
                     .withAll(availableCredentials(owner, source));

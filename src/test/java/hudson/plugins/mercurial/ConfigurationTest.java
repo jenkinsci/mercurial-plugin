@@ -24,6 +24,8 @@
 
 package hudson.plugins.mercurial;
 
+import com.cloudbees.plugins.credentials.Credentials;
+import com.cloudbees.plugins.credentials.CredentialsNameProvider;
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.domains.Domain;
@@ -31,9 +33,21 @@ import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
 import hudson.EnvVars;
 import hudson.XmlFile;
 import hudson.model.FreeStyleProject;
+import hudson.model.Item;
+import hudson.model.Job;
+import hudson.model.User;
+import hudson.security.ACL;
+import hudson.security.AuthorizationMatrixProperty;
+import hudson.security.ProjectMatrixAuthorizationStrategy;
+import hudson.util.ListBoxModel;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import jenkins.model.Jenkins;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import org.junit.Rule;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
 public class ConfigurationTest {
@@ -75,6 +89,44 @@ public class ConfigurationTest {
         assertEquals("caching", scm.getInstallation());
         // Did not explicitly set this one:
         assertFalse(scm.isDisableChangeLog());
+    }
+
+    @Issue("SECURITY-158")
+    @Test public void doFillCredentialsIdItems() throws Exception {
+        r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
+        ProjectMatrixAuthorizationStrategy as = new ProjectMatrixAuthorizationStrategy();
+        as.add(Jenkins.READ, "alice");
+        as.add(Jenkins.READ, "bob");
+        r.jenkins.setAuthorizationStrategy(as);
+        FreeStyleProject p1 = r.createFreeStyleProject("p1");
+        FreeStyleProject p2 = r.createFreeStyleProject("p2");
+        p2.addProperty(new AuthorizationMatrixProperty(Collections.singletonMap(Item.CONFIGURE, Collections.singleton("bob"))));
+        UsernamePasswordCredentialsImpl c = new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL, null, "test", "bob", "s3cr3t");
+        CredentialsProvider.lookupStores(r.jenkins).iterator().next().addCredentials(Domain.global(), c);
+        assertCredentials("alice", null);
+        assertCredentials("alice", p1);
+        assertCredentials("alice", p2);
+        assertCredentials("bob", null);
+        assertCredentials("bob", p1);
+        assertCredentials("bob", p2, c);
+    }
+    private void assertCredentials(String user, final Job<?,?> owner, Credentials... expected) {
+        final List<String> expectedNames = new ArrayList<String>();
+        for (Credentials c : expected) {
+            expectedNames.add(CredentialsNameProvider.name(c));
+        }
+        ACL.impersonate(User.get(user).impersonate(), new Runnable() {
+            @Override public void run() {
+                List<String> actualNames = new ArrayList<String>();
+                for (ListBoxModel.Option o : r.jenkins.getDescriptorByType(MercurialSCM.DescriptorImpl.class).doFillCredentialsIdItems(owner, "http://nowhere.net/")) {
+                    if (o.value.isEmpty()) {
+                        continue; // AbstractIdCredentialsListBoxModel.EmptySelection
+                    }
+                    actualNames.add(o.name);
+                }
+                assertEquals(expectedNames, actualNames);
+            }
+        });
     }
 
 }

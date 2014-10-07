@@ -17,6 +17,7 @@ import hudson.model.AbstractBuild;
 import hudson.model.Action;
 import hudson.model.Actionable;
 import hudson.model.Computer;
+import hudson.model.Item;
 import hudson.model.Job;
 import hudson.model.Node;
 import hudson.model.ParameterDefinition;
@@ -995,6 +996,9 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Job<?,?> owner, @QueryParameter String source) {
+            if (owner == null || !owner.hasPermission(Item.CONFIGURE)) {
+                return new ListBoxModel();
+            }
             return new StandardUsernameListBoxModel()
                     .withEmptySelection()
                     .withAll(availableCredentials(owner, new EnvVars( ).expand( source )));
