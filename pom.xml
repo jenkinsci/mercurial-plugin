@@ -6,7 +6,7 @@
         <version>1.509.4</version>
     </parent>
     <artifactId>mercurial</artifactId>
-    <version>1.50.1-SNAPSHOT</version>
+    <version>1.50.1</version>
     <packaging>hpi</packaging>
     <name>Jenkins Mercurial plugin</name>
     <description>Allows Jenkins to check out projects from the Mercurial SCM.</description>
@@ -48,7 +48,8 @@
         <connection>scm:git:git://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
         <developerConnection>scm:git:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>
         <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
-    </scm>
+      <tag>mercurial-1.50.1</tag>
+  </scm>
     <issueManagement>
         <system>JIRA</system>
         <url>http://issues.jenkins-ci.org/secure/IssueNavigator.jspa?reset=true&amp;jqlQuery=project+%3D+Jenkins+AND+component+%3D+mercurial+AND+resolution+%3D+Unresolved</url>
