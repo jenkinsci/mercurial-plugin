@@ -390,9 +390,7 @@ public class MercurialSCM extends SCM implements Serializable {
                 listener.error(Messages.MercurialSCM_failed_to_compare_with_remote_repository());
                 throw new AbortException("Failed to compare with remote repository");
             }
-            IOException ex = new IOException("Failed to compare with remote repository");
-            ex.initCause(e);
-            throw ex;
+            throw new IOException("Failed to compare with remote repository", e);
         }
     }
 

@@ -125,7 +125,7 @@ public class HgExe {
                     kp.writePrivateKey(baos);
                     keyData = baos.toByteArray();
                 } catch (JSchException x) {
-                    throw (IOException) new IOException("Did not manage to decrypt SSH private key: " + x).initCause(x);
+                    throw new IOException("Did not manage to decrypt SSH private key: " + x, x);
                 }
             }
             FilePath slaveRoot = node.getRootPath();
