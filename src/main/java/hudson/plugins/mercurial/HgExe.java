@@ -346,6 +346,22 @@ public class HgExe {
     }
 
     /**
+     * Gets the branch name of given revision number or of the current workspace.
+     * @param rev the revision to identify; defaults to current working copy
+     */
+    public @CheckForNull String branch(FilePath repository, @Nullable String rev) throws IOException, InterruptedException {
+        ArgumentListBuilder builder = new ArgumentListBuilder("id", "--branch");
+        if (rev != null)
+            builder.add("--rev", rev);
+        String branch = popen(repository, listener, false, builder).trim();
+        if (branch.isEmpty()) {
+            listener.error(Messages.HgExe_expected_to_get_a_branch_name_but_got_nothing());
+            return null;
+        }
+        return branch;
+    }
+
+    /**
      * Gets the current value of a specified config item.
      */
     public String config(FilePath repository, String name) throws IOException, InterruptedException {
