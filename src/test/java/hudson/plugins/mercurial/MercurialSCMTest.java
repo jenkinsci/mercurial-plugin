@@ -60,4 +60,16 @@ public class MercurialSCMTest {
         assertEquals(EXPECTED_SHORT_ID, actualEnvironment.get("MERCURIAL_REVISION_SHORT"));
     }
 
+    @Test public void buildEnvVarsSetsUrl() throws IOException {
+        Map<String,String> actualEnvironment = new HashMap<String,String>();
+        final String EXPECTED_REPOSITORY_URL = "http://mercurialserver/testrepo";
+        new MercurialSCM("",EXPECTED_REPOSITORY_URL,"", "", "", null, true).buildEnvVarsFromActionable(new Actionable() {
+            @Override public List<Action> getActions() {
+                return Collections.<Action>singletonList(new MercurialTagAction("1627e63489b4096a8858e559a456", "rev", null));            }
+            @Override public String getDisplayName() {return null;}
+            @Override public String getSearchUrl() {return null;}
+        }, actualEnvironment);
+        assertEquals(EXPECTED_REPOSITORY_URL, actualEnvironment.get("MERCURIAL_REPOSITORY_URL"));
+    }
+
 }

@@ -68,6 +68,13 @@ import org.kohsuke.stapler.StaplerRequest;
  * Mercurial SCM.
  */
 public class MercurialSCM extends SCM implements Serializable {
+
+    // Environment vars names to be exposed
+    private static final String ENV_MERCURIAL_REVISION = "MERCURIAL_REVISION";
+    private static final String ENV_MERCURIAL_REVISION_SHORT = "MERCURIAL_REVISION_SHORT";
+    private static final String ENV_MERCURIAL_REVISION_NUMBER = "MERCURIAL_REVISION_NUMBER";
+    private static final String ENV_MERCURIAL_REPOSITORY_URL = "MERCURIAL_REPOSITORY_URL";
+
     // old fields are left so that old config data can be read in, but
     // they are deprecated. transient so that they won't show up in XML
     // when writing back
@@ -829,9 +836,10 @@ public class MercurialSCM extends SCM implements Serializable {
     void buildEnvVarsFromActionable(Actionable build, Map<String, String> env) {
         MercurialTagAction a = findTag(build, new EnvVars(env));
         if (a != null) {
-            env.put("MERCURIAL_REVISION", a.id);
-            env.put("MERCURIAL_REVISION_SHORT", a.getShortId());
-            env.put("MERCURIAL_REVISION_NUMBER", a.rev);
+            env.put(ENV_MERCURIAL_REVISION, a.id);
+            env.put(ENV_MERCURIAL_REVISION_SHORT, a.getShortId());
+            env.put(ENV_MERCURIAL_REVISION_NUMBER, a.rev);
+            env.put(ENV_MERCURIAL_REPOSITORY_URL, this.getSource());
         }
     }
 
