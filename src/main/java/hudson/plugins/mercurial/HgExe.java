@@ -55,6 +55,8 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
@@ -359,6 +361,24 @@ public class HgExe {
             return null;
         }
         return branch;
+    }
+
+    /**
+     * Gets the version of used Mercurial installation.
+     */
+    public @CheckForNull String version() throws IOException, InterruptedException {
+        String version = popen(null, listener, false, new ArgumentListBuilder("version"));
+        if (version.isEmpty()) {
+            listener.error(Messages.HgExe_expected_to_get_hg_version_name_but_got_nothing());
+            return null;
+        }
+        Matcher m = Pattern.compile("^Mercurial Distributed SCM \\(version ([0-9][^)]*)\\)").matcher(version);
+        if (!m.lookingAt() || m.groupCount() < 1)
+        {
+            listener.error(Messages.HgExe_cannot_extract_hg_version());
+            return null;
+        }
+        return m.group(1);
     }
 
     /**

@@ -42,6 +42,8 @@ import org.apache.commons.io.FileUtils;
 import static org.junit.Assert.assertEquals;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -120,4 +122,14 @@ public class HgExeFunctionalTest {
         assertEquals("hg --config defaults.clone=--uncompressed clone http://some.thing/", b.toString());
     }
 
+    @Test public void checkVersion() throws Exception {
+        HgExe hgexe = new HgExe(
+                this.mercurialInstallation, null,
+                this.launcher, j.jenkins,
+                this.listener, this.vars);
+        String version = hgexe.version();
+        assertNotNull(version);
+        assertTrue(version.length() >= 3); // min: X.Y
+        assertTrue(version.length() <= 8); // max: XX.YY.ZZ
+    }
 }
