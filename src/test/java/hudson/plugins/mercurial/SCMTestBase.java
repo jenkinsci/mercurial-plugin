@@ -746,6 +746,39 @@ public abstract class SCMTestBase {
         assertEquals(Result.SUCCESS, b.getResult());
     }
 
+    private void initRepoWithBookmark() throws Exception {
+        m.hg(repo, "init");
+        m.touchAndCommit(repo, "init");
+        m.hg(repo, "branch", "stable");
+        m.touchAndCommit(repo, "stable commit");
+        m.hg(repo, "update", "--clean", "default");
+        m.hg(repo, "bookmark", "--rev", "stable", "release");
+    }
+
+    @Test public void testGetBranchFromTag() throws Exception {
+        initRepoWithBookmark();
+        FreeStyleProject p = j.createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), MercurialSCM.RevisionType.TAG, "release", null, null, null, false, null));
+
+        FreeStyleBuild b = j.assertBuildStatusSuccess(p.scheduleBuild2(0).get());
+        MercurialTagAction action = b.getAction(MercurialTagAction.class);
+        assertNotNull(action);
+        assertEquals("stable", action.getBranch());
+        assertEquals("stable", b.getEnvironment().get("MERCURIAL_REVISION_BRANCH", ""));
+    }
+
+    @Test public void testGetNoBranchFromBranch() throws Exception {
+        initRepoWithBookmark();
+        FreeStyleProject p = j.createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), MercurialSCM.RevisionType.BRANCH, "default", null, null, null, false, null));
+
+        FreeStyleBuild b = j.assertBuildStatusSuccess(p.scheduleBuild2(0).get());
+        MercurialTagAction action = b.getAction(MercurialTagAction.class);
+        assertNotNull(action);
+        assertEquals(null, action.getBranch());
+        assertEquals("", b.getEnvironment().get("MERCURIAL_REVISION_BRANCH", ""));
+    }
+
     /* TODO the following will pass, but canUpdate is not going to work without further changes:
     public void testParameterizedBuildsSource() throws Exception {
         p = createFreeStyleProject();
