@@ -54,7 +54,7 @@ public class ChangeComparatorTest {
         PollingResult pr = scm.compare(
 				launcher, 
 				listener, 
-				new MercurialTagAction("tip","",null,"default"),
+				new MercurialTagAction("tip","",null,null),
 				listener.getLogger(), 
 				Computer.currentComputer().getNode(), 
 				new FilePath(tmp.getRoot()), 
