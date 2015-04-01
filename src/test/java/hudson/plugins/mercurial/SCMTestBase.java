@@ -746,17 +746,17 @@ public abstract class SCMTestBase {
         assertEquals(Result.SUCCESS, b.getResult());
     }
 
-    private void initRepoWithBookmark() throws Exception {
+    private void initRepoWithTag() throws Exception {
         m.hg(repo, "init");
         m.touchAndCommit(repo, "init");
         m.hg(repo, "branch", "stable");
         m.touchAndCommit(repo, "stable commit");
+        m.hg(repo, "tag", "release");
         m.hg(repo, "update", "--clean", "default");
-        m.hg(repo, "bookmark", "--rev", "stable", "release");
     }
 
     @Test public void testGetBranchFromTag() throws Exception {
-        initRepoWithBookmark();
+        initRepoWithTag();
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), MercurialSCM.RevisionType.TAG, "release", null, null, null, false, null));
 
@@ -768,7 +768,7 @@ public abstract class SCMTestBase {
     }
 
     @Test public void testGetNoBranchFromBranch() throws Exception {
-        initRepoWithBookmark();
+        initRepoWithTag();
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), MercurialSCM.RevisionType.BRANCH, "default", null, null, null, false, null));
 
