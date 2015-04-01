@@ -353,7 +353,7 @@ public class MercurialSCM extends SCM implements Serializable {
         try {
         String tip = hg.tip(workspace2Repo(workspace, env), null);
         String rev = hg.tipNumber(workspace2Repo(workspace, env), null);
-        String branch = revisionType == RevisionType.TAG ? hg.branch(workspace2Repo(workspace, env), null) : null;
+        String branch = revisionType != RevisionType.BRANCH ? hg.branch(workspace2Repo(workspace, env), null) : null;
         return tip != null && rev != null ? new MercurialTagAction(tip, rev, getSubdir(env), branch) : null;
         } finally {
             hg.close();
@@ -422,7 +422,7 @@ public class MercurialSCM extends SCM implements Serializable {
         String _revision = getRevisionExpanded(project, env);
         String remote = hg.tip(repository, _revision);
         String rev = hg.tipNumber(repository, _revision);
-        String branch = revisionType == RevisionType.TAG ? hg.branch(repository, _revision) : null;
+        String branch = revisionType != RevisionType.BRANCH ? hg.branch(repository, _revision) : null;
 
         if (remote == null) {
             throw new IOException("failed to find ID of branch head");
@@ -712,7 +712,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
         String tip = hg.tip(repository, null);
         String rev = hg.tipNumber(repository, null);
-        String branch = revisionType == RevisionType.TAG ? hg.branch(repository, null) : null;
+        String branch = revisionType != RevisionType.BRANCH ? hg.branch(repository, null) : null;
         if (tip != null && rev != null) {
             build.addAction(new MercurialTagAction(tip, rev, getSubdir(env), branch));
         }
@@ -824,7 +824,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
         String tip = hg.tip(repository, null);
         String rev = hg.tipNumber(repository, null);
-        String branch = revisionType == RevisionType.TAG ? hg.branch(repository, null) : null;
+        String branch = revisionType != RevisionType.BRANCH ? hg.branch(repository, null) : null;
         if (tip != null && rev != null) {
             build.addAction(new MercurialTagAction(tip, rev, getSubdir(env), branch));
         }
@@ -844,7 +844,7 @@ public class MercurialSCM extends SCM implements Serializable {
             env.put(ENV_MERCURIAL_REVISION, a.id);
             env.put(ENV_MERCURIAL_REVISION_SHORT, a.getShortId());
             env.put(ENV_MERCURIAL_REVISION_NUMBER, a.rev);
-            if (revisionType == RevisionType.TAG)
+            if (revisionType != RevisionType.BRANCH)
                 env.put(ENV_MERCURIAL_REVISION_BRANCH, a.getBranch());
             env.put(ENV_MERCURIAL_REPOSITORY_URL, this.getSource());
         }
