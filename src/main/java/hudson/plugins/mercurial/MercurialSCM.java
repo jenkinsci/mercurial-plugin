@@ -37,6 +37,7 @@ import hudson.scm.SCMRevisionState;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.ForkOutputStream;
 import hudson.util.ListBoxModel;
+import hudson.util.VersionNumber;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -769,6 +770,9 @@ public class MercurialSCM extends SCM implements Serializable {
                 args.add("share");
                 args.add("--noupdate");
                 args.add(cachedSource.getRepoLocation());
+                if (new VersionNumber(hg.version()).compareTo(new VersionNumber("3.3")) >= 0) {
+                    args.add("-B");
+                }
             } else {
                 args.add("clone");
                 args.add("--noupdate");
