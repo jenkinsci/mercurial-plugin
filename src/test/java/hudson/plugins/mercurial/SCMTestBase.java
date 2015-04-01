@@ -764,7 +764,7 @@ public abstract class SCMTestBase {
         MercurialTagAction action = b.getAction(MercurialTagAction.class);
         assertNotNull(action);
         assertEquals("stable", action.getBranch());
-        assertEquals("stable", b.getEnvironment().get("MERCURIAL_REVISION_BRANCH", ""));
+        assertEquals("stable", b.getEnvironment().get("MERCURIAL_REVISION_BRANCH"));
     }
 
     @Test public void testGetNoBranchFromBranch() throws Exception {
@@ -776,7 +776,7 @@ public abstract class SCMTestBase {
         MercurialTagAction action = b.getAction(MercurialTagAction.class);
         assertNotNull(action);
         assertEquals(null, action.getBranch());
-        assertEquals("", b.getEnvironment().get("MERCURIAL_REVISION_BRANCH", ""));
+        assertEquals(null, b.getEnvironment().get("MERCURIAL_REVISION_BRANCH"));
     }
 
     /* TODO the following will pass, but canUpdate is not going to work without further changes:
