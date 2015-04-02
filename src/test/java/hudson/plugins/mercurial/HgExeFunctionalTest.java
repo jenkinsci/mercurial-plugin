@@ -33,6 +33,7 @@ import hudson.model.TaskListener;
 import hudson.tools.ToolProperty;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.StreamTaskListener;
+import hudson.util.VersionNumber;
 import java.io.File;
 import java.nio.charset.Charset;
 import java.util.Collections;
@@ -129,7 +130,6 @@ public class HgExeFunctionalTest {
                 this.listener, this.vars);
         String version = hgexe.version();
         assertNotNull(version);
-        assertTrue(version.length() >= 3); // min: X.Y
-        assertTrue(version.length() <= 8); // max: XX.YY.ZZ
+        assertTrue(new VersionNumber(version).compareTo(new VersionNumber("1.0")) >= 0);
     }
 }

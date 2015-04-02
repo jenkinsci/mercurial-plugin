@@ -755,24 +755,26 @@ public abstract class SCMTestBase {
         m.hg(repo, "update", "--clean", "default");
     }
 
+    @Bug(10706)
     @Test public void testGetBranchFromTag() throws Exception {
         initRepoWithTag();
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), MercurialSCM.RevisionType.TAG, "release", null, null, null, false, null));
 
-        FreeStyleBuild b = j.assertBuildStatusSuccess(p.scheduleBuild2(0).get());
+        FreeStyleBuild b = j.buildAndAssertSuccess(p);
         MercurialTagAction action = b.getAction(MercurialTagAction.class);
         assertNotNull(action);
         assertEquals("stable", action.getBranch());
         assertEquals("stable", b.getEnvironment().get("MERCURIAL_REVISION_BRANCH"));
     }
 
+    @Bug(10706)
     @Test public void testGetNoBranchFromBranch() throws Exception {
         initRepoWithTag();
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), MercurialSCM.RevisionType.BRANCH, "default", null, null, null, false, null));
 
-        FreeStyleBuild b = j.assertBuildStatusSuccess(p.scheduleBuild2(0).get());
+        FreeStyleBuild b = j.buildAndAssertSuccess(p);
         MercurialTagAction action = b.getAction(MercurialTagAction.class);
         assertNotNull(action);
         assertEquals(null, action.getBranch());

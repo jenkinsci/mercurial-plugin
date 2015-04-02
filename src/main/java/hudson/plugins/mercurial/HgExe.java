@@ -351,7 +351,7 @@ public class HgExe {
      * Gets the branch name of given revision number or of the current workspace.
      * @param rev the revision to identify; defaults to current working copy
      */
-    public @CheckForNull String branch(FilePath repository, @Nullable String rev) throws IOException, InterruptedException {
+    public @CheckForNull String branch(FilePath repository, @CheckForNull String rev) throws IOException, InterruptedException {
         ArgumentListBuilder builder = new ArgumentListBuilder("id", "--branch");
         if (rev != null)
             builder.add("--rev", rev);
