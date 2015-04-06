@@ -1,11 +1,6 @@
 package hudson.plugins.mercurial;
 
-import com.cloudbees.plugins.credentials.CredentialsProvider;
-import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
-import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
-import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
-import edu.umd.cs.findbugs.annotations.CheckForNull;
-import edu.umd.cs.findbugs.annotations.NonNull;
+import static java.util.logging.Level.FINE;
 import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -13,30 +8,31 @@ import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
 import hudson.matrix.MatrixRun;
-import hudson.model.AbstractBuild;
 import hudson.model.Action;
+import hudson.model.Item;
+import hudson.model.TaskListener;
+import hudson.model.AbstractBuild;
 import hudson.model.Actionable;
 import hudson.model.Computer;
-import hudson.model.Item;
 import hudson.model.Job;
 import hudson.model.Node;
 import hudson.model.ParameterDefinition;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Run;
 import hudson.model.StringParameterDefinition;
-import hudson.model.TaskListener;
 import hudson.plugins.mercurial.browser.HgBrowser;
 import hudson.plugins.mercurial.browser.HgWeb;
 import hudson.scm.ChangeLogParser;
 import hudson.scm.PollingResult;
 import hudson.scm.PollingResult.Change;
 import hudson.scm.RepositoryBrowser;
-import hudson.scm.SCM;
 import hudson.scm.SCMDescriptor;
 import hudson.scm.SCMRevisionState;
+import hudson.scm.SCM;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.ForkOutputStream;
 import hudson.util.ListBoxModel;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -45,24 +41,36 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.net.MalformedURLException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
-import static java.util.logging.Level.FINE;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 import javax.annotation.Nonnull;
+
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
+
+import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.multiplescms.MultiSCMRevisionState;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
+
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
+import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
+import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
+
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
  * Mercurial SCM.
@@ -99,7 +107,7 @@ public class MercurialSCM extends SCM implements Serializable {
     private transient Set<String> _modules;
     // Same thing, but not parsed for jelly.
     private String modules = "";
-
+    
     public enum RevisionType {
         BRANCH() {
             @Override public String getDisplayName() {
@@ -430,7 +438,7 @@ public class MercurialSCM extends SCM implements Serializable {
         if (remote.equals(baseline.id)) { // shortcut
             return new PollingResult(baseline, new MercurialTagAction(remote, rev, getSubdir(env)), Change.NONE);
         }
-        Set<String> changedFileNames = parseStatus(hg.popen(repository, listener, false, new ArgumentListBuilder("status", "--rev", baseline.id, "--rev", remote)));
+        Set<String> changedFileNames = getChangedFileNames(listener, baseline, repository, hg, remote);
 
         MercurialTagAction cur = new MercurialTagAction(remote, rev, getSubdir(env));
         return new PollingResult(baseline,cur,computeDegreeOfChanges(changedFileNames,output));
@@ -438,6 +446,79 @@ public class MercurialSCM extends SCM implements Serializable {
             hg.close();
         }
     }
+
+	private Set<String> getChangedFileNames(TaskListener listener,
+			MercurialTagAction baseline, FilePath repository, HgExe hg,
+			String remote) throws IOException, InterruptedException {
+		PrintStream pluginLogger = listener.getLogger();
+		Set<String> changedFileNames;
+		String commitMessageInclusionRegex = getDescriptor().getCommitMessageInclusionRegex();
+		if(StringUtils.isBlank(commitMessageInclusionRegex)) {
+			changedFileNames = getChangedFileNamesStandard(listener, baseline, repository, hg,
+					remote);
+		} else {
+			changedFileNames = getChangedFileNamesFilteringByRegex(listener, baseline, repository,
+					hg, remote, pluginLogger, commitMessageInclusionRegex);
+		}
+		pluginLogger.println("changedFileNames: "+changedFileNames);
+		return changedFileNames;
+	}
+
+	Set<String> getChangedFileNamesFilteringByRegex(
+			TaskListener listener, MercurialTagAction baseline,
+			FilePath repository, HgExe hg, String remote,
+			PrintStream pluginLogger, String commitMessageInclusionRegex)
+			throws IOException, InterruptedException {
+		Set<String> changedFileNames = new HashSet<String>();
+		List<MercurialRevision> revisions = getRevisionsBetween(listener, baseline, repository, hg, remote);
+		MercurialRevision previousRevision = null;
+		Pattern compiledPattern = Pattern.compile(commitMessageInclusionRegex);
+		for(MercurialRevision currentRevision:revisions) {
+			if(previousRevision == null) {
+				previousRevision = currentRevision;
+				continue;
+			}
+			Matcher m = compiledPattern.matcher(currentRevision.getCommitMessage());
+			if(m.matches()) {
+				pluginLogger.println("Revision included: " + currentRevision.getCommitMessage());
+				changedFileNames.addAll(getChangedFileNamesBetweenRevisions(
+						listener, repository, hg, currentRevision.getId(), previousRevision.getId()));
+			} else {
+				pluginLogger.println("Revision excluded: " + currentRevision.getCommitMessage());
+			}
+			previousRevision = currentRevision;
+		}
+		return changedFileNames;
+	}
+
+	List<MercurialRevision> getRevisionsBetween(TaskListener listener,
+			MercurialTagAction baseline, FilePath repository, HgExe hg,
+			String remote) throws IOException, InterruptedException {
+		String rawRevisionsBetween = hg.popen(repository, listener, false, new ArgumentListBuilder("log", "--rev", baseline.id + ":" + remote, "--branch", revision, "--template", "{node|short} {desc}\n"));
+		List<MercurialRevision> result = new ArrayList<MercurialRevision>();
+		for(String singleRawRevision:rawRevisionsBetween.split("\n")) {
+			int idx = singleRawRevision.indexOf(" ");
+			String id = singleRawRevision.substring(0,idx);
+			String message = singleRawRevision.substring(idx+1);
+			result.add(new MercurialRevision(id,message));
+		}
+		
+		return result;
+	}
+
+	private Set<String> getChangedFileNamesStandard(TaskListener listener,
+			MercurialTagAction baseline, FilePath repository, HgExe hg,
+			String remote) throws IOException, InterruptedException {
+		return getChangedFileNamesBetweenRevisions(listener, repository, hg, remote,
+				baseline.id);
+	}
+
+	Set<String> getChangedFileNamesBetweenRevisions(
+			TaskListener listener, FilePath repository, HgExe hg,
+			String endId, String startId) throws IOException,
+			InterruptedException {
+		return parseStatus(hg.popen(repository, listener, false, new ArgumentListBuilder("status", "--rev", startId, "--rev", endId)));
+	}
 
     static Set<String> parseStatus(String status) {
         Set<String> result = new HashSet<String>();
@@ -960,11 +1041,33 @@ public class MercurialSCM extends SCM implements Serializable {
         // TODO implement support for SSHUserPrivateKey
         return CredentialsProvider.lookupCredentials(StandardUsernameCredentials.class, owner, null, URIRequirementBuilder.fromUri(source).build());
     }
+    
+    // bean to revision id and commitMessage
+    public static class MercurialRevision {
+    	private String id;
+    	private String commitMessage;
+    	
+    	public MercurialRevision(String id, String commitMessage) {
+    		this.id = id;
+    		this.commitMessage = commitMessage;
+    	}
+    	public String getId() {
+    		return id;
+    	}
+    	public String getCommitMessage() {
+    		return commitMessage;
+    	}
+    	public String toString() {
+    		return "id='" + id + "',commitMessage='" + commitMessage + "'";
+    	}
+    }
 
     @Extension
     public static final class DescriptorImpl extends SCMDescriptor<MercurialSCM> {
 
         private String hgExe;
+        
+        private String commitMessageInclusionRegex;
 
         public DescriptorImpl() {
             super(HgBrowser.class);
@@ -973,6 +1076,10 @@ public class MercurialSCM extends SCM implements Serializable {
 
         public String getDisplayName() {
             return "Mercurial";
+        }
+        
+        public String getCommitMessageInclusionRegex() {
+        	return commitMessageInclusionRegex;
         }
 
         /**
@@ -997,6 +1104,7 @@ public class MercurialSCM extends SCM implements Serializable {
         @Override
         public boolean configure(StaplerRequest req, JSONObject json) throws FormException {
             hgExe = req.getParameter("mercurial.hgExe");
+            commitMessageInclusionRegex = json.getString("commitMessageInclusionRegex");
             save();
             return true;
         }
