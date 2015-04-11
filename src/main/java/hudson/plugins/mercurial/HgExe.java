@@ -55,6 +55,8 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
@@ -343,6 +345,40 @@ public class HgExe {
             return null;
         }
         return id;
+    }
+
+    /**
+     * Gets the branch name of given revision number or of the current workspace.
+     * @param rev the revision to identify; defaults to current working copy
+     */
+    public @CheckForNull String branch(FilePath repository, @CheckForNull String rev) throws IOException, InterruptedException {
+        ArgumentListBuilder builder = new ArgumentListBuilder("id", "--branch");
+        if (rev != null)
+            builder.add("--rev", rev);
+        String branch = popen(repository, listener, false, builder).trim();
+        if (branch.isEmpty()) {
+            listener.error(Messages.HgExe_expected_to_get_a_branch_name_but_got_nothing());
+            return null;
+        }
+        return branch;
+    }
+
+    /**
+     * Gets the version of used Mercurial installation.
+     */
+    public @CheckForNull String version() throws IOException, InterruptedException {
+        String version = popen(null, listener, false, new ArgumentListBuilder("version"));
+        if (version.isEmpty()) {
+            listener.error(Messages.HgExe_expected_to_get_hg_version_name_but_got_nothing());
+            return null;
+        }
+        Matcher m = Pattern.compile("^Mercurial Distributed SCM \\(version ([0-9][^)]*)\\)").matcher(version);
+        if (!m.lookingAt() || m.groupCount() < 1)
+        {
+            listener.error(Messages.HgExe_cannot_extract_hg_version());
+            return null;
+        }
+        return m.group(1);
     }
 
     /**

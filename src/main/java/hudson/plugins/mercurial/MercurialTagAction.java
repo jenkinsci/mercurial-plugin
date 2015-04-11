@@ -32,10 +32,16 @@ public class MercurialTagAction extends SCMRevisionState {
      */
     public final String subdir;
 
-    public MercurialTagAction(@NonNull String id, @NonNull String rev, @Nullable String subdir) {
+    /**
+    * Branch name of current revision.
+    */
+    public final String branch;
+
+    public MercurialTagAction(@NonNull String id, @NonNull String rev, @Nullable String subdir, @Nullable String branch) {
         this.id = id;
         this.rev = rev;
         this.subdir = subdir;
+        this.branch = branch;
     }
 
     @Exported(name = "mercurialNodeName")
@@ -51,6 +57,11 @@ public class MercurialTagAction extends SCMRevisionState {
     @Exported
     public String getSubdir() {
         return subdir;
+    }
+
+    @Exported(name = "mercurialRevisionBranch")
+    public String getBranch() {
+        return branch;
     }
 
     /**
