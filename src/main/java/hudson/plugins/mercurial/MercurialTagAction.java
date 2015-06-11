@@ -1,5 +1,6 @@
 package hudson.plugins.mercurial;
 
+import java.lang.Deprecated;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import hudson.scm.SCMRevisionState;
@@ -36,6 +37,11 @@ public class MercurialTagAction extends SCMRevisionState {
     * Branch name of current revision.
     */
     public final String branch;
+    
+    @Deprecated
+    public MercurialTagAction(@NonNull String id, @NonNull String rev, @Nullable String subdir) {
+        this(id, rev, subdir, null);
+    }
 
     public MercurialTagAction(@NonNull String id, @NonNull String rev, @Nullable String subdir, @Nullable String branch) {
         this.id = id;
