@@ -350,7 +350,18 @@ public class MercurialSCM extends SCM implements Serializable {
             throws IOException, InterruptedException {
         // tag action is added during checkout, so this shouldn't be called, but just in case.
         EnvVars env = build.getEnvironment(listener);
-        HgExe hg = new HgExe(findInstallation(getInstallation()), getCredentials(build.getParent(), env), launcher, workspaceToNode(workspace), listener, env);
+        
+        //TODO: fall-back to the master's workspace?
+        if (workspace == null) {
+            throw new IOException("Workspace is not specified");
+        }
+        
+        final Node nodeWithTheWorkspace = workspaceToNode(workspace);
+        if (nodeWithTheWorkspace == null) {
+            throw new IOException("Cannot find a node for the specified workspace");
+        }
+        
+        HgExe hg = new HgExe(findInstallation(getInstallation()), getCredentials(build.getParent(), env), launcher, nodeWithTheWorkspace, listener, env);
         try {
         String tip = hg.tip(workspace2Repo(workspace, env), null);
         String rev = hg.tipNumber(workspace2Repo(workspace, env), null);
@@ -370,20 +381,29 @@ public class MercurialSCM extends SCM implements Serializable {
     @Override
     public PollingResult compareRemoteRevisionWith(Job<?, ?> project, Launcher launcher, FilePath workspace,
             TaskListener listener, SCMRevisionState _baseline) throws IOException, InterruptedException {
+        
+        final Jenkins jenkins = Jenkins.getInstance();
+        if (jenkins == null) {
+            throw new IOException("Jenkins instance is not ready");
+        }
+        
+        if (!(_baseline instanceof MercurialTagAction)) {
+            throw new IOException("SCM revision state is not a Mercurial one");
+        }
         MercurialTagAction baseline = (MercurialTagAction)_baseline;
 
         PrintStream output = listener.getLogger();
-        EnvVars env = project.getEnvironment(Jenkins.getInstance(), listener);
+        EnvVars env = project.getEnvironment(jenkins, listener);
         StandardUsernameCredentials credentials = getCredentials(project, env);
 
         if (!requiresWorkspaceForPolling()) {
-            launcher = Jenkins.getInstance().createLauncher(listener);
+            launcher = jenkins.createLauncher(listener);
             CachedRepo possiblyCachedRepo = cachedSource(Jenkins.getInstance(), env, launcher, listener, true, credentials);
             if (possiblyCachedRepo == null) {
                 throw new IOException("Could not use cache to poll for changes. See error messages above for more details");
             }
             FilePath repositoryCache = new FilePath(new File(possiblyCachedRepo.getRepoLocation()));
-            return compare(launcher, listener, baseline, output, Jenkins.getInstance(), repositoryCache, project);
+            return compare(launcher, listener, baseline, output, jenkins, repositoryCache, project);
         }
         // TODO do canUpdate check similar to in checkout, and possibly return INCOMPARABLE
 
@@ -586,9 +606,6 @@ public class MercurialSCM extends SCM implements Serializable {
         HgExe hg = new HgExe(findInstallation(getInstallation()), getCredentials(build.getParent(), build.getEnvironment(listener)), launcher, node, listener, build.getEnvironment(listener));
         try {
         String upstream = hg.config(repo, "paths.default");
-        if (upstream == null) {
-            return false;
-        }
         EnvVars env = build.getEnvironment(listener);
         if (HgExe.pathEquals(getSource(env), upstream)) {
             return true;
@@ -726,13 +743,19 @@ public class MercurialSCM extends SCM implements Serializable {
         String revToBuild = getRevision(env);
         if (build instanceof MatrixRun) {
             MatrixRun matrixRun = (MatrixRun) build;
-            MercurialTagAction parentRevision;
+            MercurialTagAction parentRevision = null;
 
-            if (Jenkins.getInstance().getPlugin("multiple-scms") != null) {
+            final Jenkins jenkins = Jenkins.getInstance();
+            if (jenkins != null && jenkins.getPlugin("multiple-scms") != null) {
                 MultiSCMRevisionState parentRevisions = matrixRun.getParentBuild().getAction(MultiSCMRevisionState.class);
                 if (parentRevisions != null) {
-                    parentRevision = (MercurialTagAction) parentRevisions.get(this, workspace, (MatrixRun) build);
-                } else {
+                    SCMRevisionState _parentRevisions = parentRevisions.get(this, workspace, (MatrixRun) build);
+                    if (_parentRevisions instanceof MercurialTagAction) {
+                        parentRevision = (MercurialTagAction)_parentRevisions;
+                    } // otherwise fall-back to the default behavior
+                } 
+                
+                if (parentRevisions == null) {
                     parentRevision = matrixRun.getParentBuild().getAction(MercurialTagAction.class);
                 }
             } else {
@@ -911,7 +934,8 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     static boolean CACHE_LOCAL_REPOS = false;
-    private @CheckForNull CachedRepo cachedSource(Node node, EnvVars env, Launcher launcher, TaskListener listener, boolean useTimeout, StandardUsernameCredentials credentials) {
+    private @CheckForNull CachedRepo cachedSource(Node node, EnvVars env, Launcher launcher, TaskListener listener, boolean useTimeout, StandardUsernameCredentials credentials) 
+            throws InterruptedException {
         if (!CACHE_LOCAL_REPOS && getSource(env).matches("(file:|[/\\\\]).+")) {
             return null;
         }
@@ -927,6 +951,8 @@ public class MercurialSCM extends SCM implements Serializable {
                 listener.error("Failed to use repository cache for " + getSource(env));
                 return null;
             }
+        } catch (InterruptedException x) {
+            throw x;
         } catch (Exception x) {
             x.printStackTrace(listener.error("Failed to use repository cache for " + getSource(env)));
             return null;
@@ -952,9 +978,10 @@ public class MercurialSCM extends SCM implements Serializable {
 
     }
 
+    @CheckForNull
     private static Node workspaceToNode(FilePath workspace) { // TODO https://trello.com/c/doFFMdUm/46-filepath-getcomputer
         Jenkins j = Jenkins.getInstance();
-        if (workspace.isRemote()) {
+        if (j != null && workspace.isRemote()) {
             for (Computer c : j.getComputers()) {
                 if (c.getChannel() == workspace.getChannel()) {
                     Node n = c.getNode();
