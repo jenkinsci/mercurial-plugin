@@ -23,8 +23,14 @@ import jenkins.model.Jenkins;
  */
 public abstract class ChangeComparator implements ExtensionPoint {
 	
-	public static ExtensionList<ChangeComparator> all() {
-        return Jenkins.getInstance().getExtensionList(ChangeComparator.class);
+    public static ExtensionList<ChangeComparator> all() {
+        // TODO: replace by ExtensionList.lookup() when it becomes available (1.580+)
+        final Jenkins jenkins = Jenkins.getInstance();
+        if (jenkins != null) {
+            return jenkins.getExtensionList(ChangeComparator.class);
+        } else {
+            return ExtensionList.create((Jenkins)null, ChangeComparator.class);
+        }
     }
 
 	/**

@@ -100,8 +100,16 @@ class Cache {
         }
 
             // Always update master cache first.
-            Node master = Jenkins.getInstance();
-            FilePath masterCaches = master.getRootPath().child("hgcache");
+            final Node master = Jenkins.getInstance();
+            if (master == null) { // Should not happen
+                throw new IOException("Cannot retrieve the Jenkins master node");
+            }
+            final FilePath rootPath = master.getRootPath();
+            if (rootPath == null) {
+                throw new IOException("Cannot retrieve the root directory of the Jenkins master node");
+            }
+            
+            FilePath masterCaches = rootPath.child("hgcache");
             FilePath masterCache = masterCaches.child(hash);
             Launcher masterLauncher = node == master ? launcher : master.createLauncher(listener);
 
@@ -155,7 +163,7 @@ class Cache {
         try {
             listener.getLogger().println("Acquired slave node cache lock for node " + node.getNodeName() + ".");            
 
-            FilePath localCaches = node.getRootPath().child("hgcache");
+            FilePath localCaches = rootPath.child("hgcache");
             FilePath localCache = localCaches.child(hash);
             
             // Bundle name is node-specific, as we may have more than one

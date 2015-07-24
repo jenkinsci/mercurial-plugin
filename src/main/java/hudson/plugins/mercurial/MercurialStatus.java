@@ -84,7 +84,12 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
         final List<Item> projects = Lists.newArrayList();
         boolean scmFound = false,
                 urlFound = false;
-        for (Item project : Jenkins.getInstance().getAllItems()) {
+        final Jenkins jenkins = Jenkins.getInstance();
+        if (jenkins == null) {
+            return HttpResponses.error(SC_SERVICE_UNAVAILABLE, "Jenkins instance is not ready");
+        }
+        
+        for (Item project : jenkins.getAllItems()) {
             SCMTriggerItem scmTriggerItem = SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project);
             if (scmTriggerItem == null) {
                 continue;
