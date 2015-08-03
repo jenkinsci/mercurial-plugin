@@ -54,13 +54,19 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
         return "mercurial";
     }
 
+    static private boolean isUnexpandedEnvVar(String str) {
+        return str.startsWith("$");
+    }
+
     static boolean looselyMatches(URI notifyUri, String repository) {
         boolean result = false;
         try {
-            URI repositoryUri = new URI(repository);
-            result = Objects.equal(notifyUri.getHost(), repositoryUri.getHost())
-                && Objects.equal(notifyUri.getPath(), repositoryUri.getPath())
-                && Objects.equal(notifyUri.getQuery(), repositoryUri.getQuery());
+            if (!isUnexpandedEnvVar(repository)) {
+                URI repositoryUri = new URI(repository);
+                result = Objects.equal(notifyUri.getHost(), repositoryUri.getHost())
+                    && Objects.equal(notifyUri.getPath(), repositoryUri.getPath())
+                    && Objects.equal(notifyUri.getQuery(), repositoryUri.getQuery());
+            }
         } catch ( URISyntaxException ex ) {
             LOGGER.log(Level.SEVERE, "could not parse repository uri " + repository, ex);
         }
