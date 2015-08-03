@@ -655,7 +655,7 @@ public class MercurialSCM extends SCM implements Serializable {
                 ArgumentListBuilder args = hg.seed(false);
                 args.add("log");
                 args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
-                args.add("--rev", revToBuild + ":0");
+                args.add("--rev", "'" + revToBuild.replace("'", "\\'") + "':0");
                 args.add("--follow");
                 args.add("--prune", prevTag.getId());
                 args.add("--encoding", "UTF-8");
