@@ -116,6 +116,7 @@ public final class MercurialSCMSource extends SCMSource {
         HgExe hg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars());
         try {
         String heads = hg.popen(cache, listener, true, new ArgumentListBuilder("heads", "--template", "{node} {branch}\\n"));
+        // TODO need to consider getCriteria() here as well
         Pattern p = Pattern.compile(Util.fixNull(branchPattern).length() == 0 ? ".+" : branchPattern);
         for (String line : heads.split("\r?\n")) {
             String[] nodeBranch = line.split(" ", 2);
