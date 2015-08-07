@@ -72,6 +72,9 @@ public class MercurialStatusTest {
       assertTrue( MercurialStatus.looselyMatches(new URI("http://somehost/path"), "ssh://somehost/path") );
       assertTrue( MercurialStatus.looselyMatches(new URI("https://somehost/path"), "http://somehost/path") );
       assertTrue( MercurialStatus.looselyMatches(new URI("ssh://somehost/path"), "https://somehost/path") );
+
+      assertFalse( MercurialStatus.looselyMatches(new URI("http://scm.foocompany.com/hg/foocomponent/"), "${REPO_URL}") );
+      assertFalse( MercurialStatus.looselyMatches(new URI("http://scm.foocompany.com/hg/foocomponent/"), "$REPO_URL") );
   }
   
 }

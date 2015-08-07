@@ -105,7 +105,11 @@ public final class MercurialSCMSource extends SCMSource {
             listener.error("Mercurial installation " + installation + " does not support caches");
             return;
         }
-        Node node = Jenkins.getInstance();
+        final Node node = Jenkins.getInstance();
+        if (node == null) { // Should not happen BTW
+            listener.error("Cannot retrieve the Jenkins master node");
+            return;
+        }
         Launcher launcher = node.createLauncher(listener);
         StandardUsernameCredentials credentials = getCredentials();
         FilePath cache = Cache.fromURL(source, credentials).repositoryCache(inst, node, launcher, listener, true);

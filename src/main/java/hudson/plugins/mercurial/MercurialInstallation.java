@@ -24,6 +24,7 @@
 
 package hudson.plugins.mercurial;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.SuppressWarnings;
 import hudson.CopyOnWrite;
 import hudson.EnvVars;
@@ -106,8 +107,13 @@ public class MercurialInstallation extends ToolInstallation implements
         return config;
     }
 
+    @NonNull
     public static MercurialInstallation[] allInstallations() {
-        return Jenkins.getInstance().getDescriptorByType(DescriptorImpl.class)
+        final Jenkins jenkins = Jenkins.getInstance();
+        if (jenkins == null) {
+            return new MercurialInstallation[0];
+        }
+        return jenkins.getDescriptorByType(DescriptorImpl.class)
                 .getInstallations();
     }
 

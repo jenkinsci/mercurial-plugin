@@ -43,12 +43,15 @@ import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 import hudson.util.ArgumentListBuilder;
+import hudson.util.Secret;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.StringReader;
 import java.net.URI;
+import java.nio.charset.Charset;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -117,10 +120,12 @@ public class HgExe {
             } else {
                 keyData = keys.get(0).getBytes("US-ASCII");
             }
-            if (cc.getPassphrase() != null && /* TODO JENKINS-21283 */ cc.getPassphrase().getPlainText().length() > 0) {
+            
+            final Secret passphrase = cc.getPassphrase();
+            if (passphrase != null && /* TODO JENKINS-21283 */ passphrase.getPlainText().length() > 0) {
                 try {
                     KeyPair kp = KeyPair.load(new JSch(), keyData, null);
-                    if (!kp.decrypt(cc.getPassphrase().getPlainText())) {
+                    if (!kp.decrypt(passphrase.getPlainText())) {
                         throw new IOException("Passphrase did not decrypt SSH private key");
                     }
                     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -176,10 +181,18 @@ public class HgExe {
     private static ArgumentListBuilder findHgExe(@CheckForNull MercurialInstallation inst, @CheckForNull StandardUsernameCredentials credentials, Node node, TaskListener listener, boolean allowDebug) throws IOException, InterruptedException {
         ArgumentListBuilder b = new ArgumentListBuilder();
         if (inst == null) {
-            b.add(Jenkins.getInstance().getDescriptorByType(MercurialSCM.DescriptorImpl.class).getHgExe());
+            final Jenkins jenkins = Jenkins.getInstance();
+            if (jenkins == null) {
+                throw new IOException("Jenkins instance is not ready");
+            }
+            b.add(jenkins.getDescriptorByType(MercurialSCM.DescriptorImpl.class).getHgExe());
         } else {
             // TODO what about forEnvironment?
-            b.add(inst.executableWithSubstitution(inst.forNode(node, listener).getHome()));
+            final String toolHome = inst.forNode(node, listener).getHome();
+            if (toolHome == null) {
+                throw new IOException("Cannot determine tool home for " + inst);
+            }
+            b.add(inst.executableWithSubstitution(toolHome));
             if (allowDebug && inst.getDebug()) {
                 b.add("--debug");
             }
@@ -391,13 +404,19 @@ public class HgExe {
     /**
      * Runs the command and captures the output.
      */
+    @NonNull
     public String popen(FilePath repository, TaskListener listener, boolean useTimeout, ArgumentListBuilder args)
             throws IOException, InterruptedException {
         args = seed(false).add(args.toCommandArray());
 
         ByteArrayOutputStream data = new ByteArrayOutputStream();
         if (joinWithPossibleTimeout(launch(args).pwd(repository).stdout(data), useTimeout, listener) == 0) {
-            return data.toString();
+            try {
+                //TODO: consider using another charset
+                return data.toString(Charset.defaultCharset().name());
+            } catch (UnsupportedCharsetException ex) { // Should never happen
+                throw new IOException("Cannot perform a conversion using the default charset", ex);
+            }
         } else {
             listener.error("Failed to run " + args.toStringWithQuote());
             listener.getLogger().write(data.toByteArray());

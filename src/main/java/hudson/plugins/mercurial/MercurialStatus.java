@@ -54,13 +54,19 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
         return "mercurial";
     }
 
+    static private boolean isUnexpandedEnvVar(String str) {
+        return str.startsWith("$");
+    }
+
     static boolean looselyMatches(URI notifyUri, String repository) {
         boolean result = false;
         try {
-            URI repositoryUri = new URI(repository);
-            result = Objects.equal(notifyUri.getHost(), repositoryUri.getHost())
-                && Objects.equal(notifyUri.getPath(), repositoryUri.getPath())
-                && Objects.equal(notifyUri.getQuery(), repositoryUri.getQuery());
+            if (!isUnexpandedEnvVar(repository)) {
+                URI repositoryUri = new URI(repository);
+                result = Objects.equal(notifyUri.getHost(), repositoryUri.getHost())
+                    && Objects.equal(notifyUri.getPath(), repositoryUri.getPath())
+                    && Objects.equal(notifyUri.getQuery(), repositoryUri.getQuery());
+            }
         } catch ( URISyntaxException ex ) {
             LOGGER.log(Level.SEVERE, "could not parse repository uri " + repository, ex);
         }
@@ -84,7 +90,12 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
         final List<Item> projects = Lists.newArrayList();
         boolean scmFound = false,
                 urlFound = false;
-        for (Item project : Jenkins.getInstance().getAllItems()) {
+        final Jenkins jenkins = Jenkins.getInstance();
+        if (jenkins == null) {
+            return HttpResponses.error(SC_SERVICE_UNAVAILABLE, "Jenkins instance is not ready");
+        }
+        
+        for (Item project : jenkins.getAllItems()) {
             SCMTriggerItem scmTriggerItem = SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project);
             if (scmTriggerItem == null) {
                 continue;
