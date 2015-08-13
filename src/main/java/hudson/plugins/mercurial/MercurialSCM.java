@@ -37,6 +37,7 @@ import hudson.scm.SCMRevisionState;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.ForkOutputStream;
 import hudson.util.ListBoxModel;
+import hudson.util.LogTaskListener;
 import hudson.util.VersionNumber;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -901,7 +902,7 @@ public class MercurialSCM extends SCM implements Serializable {
         if ( build != null )
         {
             try {
-                EnvVars env = build.getEnvironment( );
+                EnvVars env = build.getEnvironment(new LogTaskListener(LOGGER, Level.INFO));
                 return workspace2Repo(workspace, env);
             } catch (IOException ex) {
                 Logger.getLogger(MercurialSCM.class.getName()).log(Level.SEVERE, null, ex);
