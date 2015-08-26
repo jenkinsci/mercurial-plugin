@@ -3,6 +3,7 @@
   when a build history link (or number) is followed
   e.g http://<hudson server>/job/<project>/<build number>/
 -->
+<?jelly escape-by-default='true'?>
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
   <j:set var="browser" value="${it.build.parent.scm.effectiveBrowser}"/>
 
@@ -15,7 +16,7 @@
       <ol>
         <j:forEach var="cs" items="${it.logs}" varStatus="loop">
           <li>
-            ${cs.msgAnnotated}
+            <j:out value="${cs.msgAnnotated}"/>
             (<a href="changes#detail${loop.index}">detail</a>
             <j:set var="cslink" value="${browser.getChangeSetLink(cs)}"/>
             <j:if test="${cslink!=null}">

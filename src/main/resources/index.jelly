@@ -1,3 +1,4 @@
+<?jelly escape-by-default='true'?>
 <div>
   This plugin integrates <a href="http://www.selenic.com/mercurial/">Mercurial SCM</a> with Hudson.
   It includes repository browsing support for <code>hg serve</code>/<code>hgweb</code>,
