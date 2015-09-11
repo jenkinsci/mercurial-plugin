@@ -17,8 +17,12 @@ import hudson.scm.ChangeLogSet;
 import hudson.scm.ChangeLogSet.Entry;
 import hudson.scm.PollingResult;
 import hudson.scm.SCM;
+import hudson.triggers.SCMTrigger;
+import java.io.InputStream;
 import java.io.File;
 import java.io.IOException;
+import java.lang.Thread;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -29,6 +33,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import org.apache.commons.io.IOUtils;
 import org.jenkinsci.plugins.multiplescms.MultiSCM;
 import static org.junit.Assert.*;
 import org.junit.Before;
@@ -36,6 +41,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.Bug;
+import org.jvnet.hudson.test.CaptureEnvironmentBuilder;
 import org.jvnet.hudson.test.FakeLauncher;
 import org.jvnet.hudson.test.JenkinsRule;
 
@@ -805,5 +811,35 @@ public abstract class SCMTestBase {
         assertTrue(pollSCMChanges(p));
     }
      */
+
+
+    @Test public void testNotifyWithRevid() throws Exception {
+        FreeStyleProject project = j.createFreeStyleProject();
+        project.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, null, null, null, true));
+        // setup a trigger on the project to make it triggerable through notifyCommit
+        SCMTrigger trigger = new SCMTrigger("");
+        project.addTrigger(trigger);
+        // add two revisions to the repo
+        m.hg(repo, "init");
+        m.touchAndCommit(repo, "f1");
+        String revid = m.getLastChangesetId(repo);
+        m.touchAndCommit(repo, "f2");
+        // notifyCommit with revid specifying the first changeset
+        j.createWebClient().goTo("mercurial/notifyCommit?url=" + repo.getPath() + "&revid=" + revid,
+                                 "text/plain");
+        // retrieve the last build
+        while (!j.jenkins.getQueue().isEmpty()) {
+            Thread.sleep(100);
+        }
+        final FreeStyleBuild build = project.getLastBuild();
+        assertNotNull(build);
+        while (build.isBuilding()) {
+            Thread.sleep(100);
+        }
+        // ensure the build has been done on the first changeset
+        FilePath ws = build.getWorkspace();
+        String build_revid = m.getWDChangesetId(new File(ws.getRemote()));
+        assertEquals(revid, build_revid);
+    }
 
 }

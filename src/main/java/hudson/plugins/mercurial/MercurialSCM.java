@@ -742,6 +742,11 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private String getRevToBuild(Run<?, ?> build, FilePath workspace, EnvVars env) {
         String revToBuild = getRevision(env);
+        // is there an action specifying a revision identifier? (see notifyCommit handling)
+        final RevisionParameterAction rpa = build.getAction(RevisionParameterAction.class);
+        if (rpa != null) {
+            revToBuild = rpa.revid;
+        }
         if (build instanceof MatrixRun) {
             MatrixRun matrixRun = (MatrixRun) build;
             MercurialTagAction parentRevision = null;

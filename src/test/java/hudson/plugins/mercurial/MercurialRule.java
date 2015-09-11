@@ -123,4 +123,14 @@ public final class MercurialRule extends ExternalResource {
         return hgExe().popen(new FilePath(repo), listener, false, new ArgumentListBuilder("log", "-l1", "--template", "{node}"));
     }
 
+    /**
+     * Return changeset identifier of the working directory
+     * @param repo path
+     * @return changeset identifier
+     * @throws Exception
+     */
+    public String getWDChangesetId(File repo) throws Exception {
+        return hgExe().popen(new FilePath(repo), listener, false, new ArgumentListBuilder("log", "-r.", "--template", "{node}"));
+    }
+
 }
