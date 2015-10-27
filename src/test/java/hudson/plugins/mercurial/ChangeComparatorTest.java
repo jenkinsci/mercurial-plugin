@@ -13,6 +13,7 @@ import hudson.model.TaskListener;
 import hudson.scm.PollingResult;
 import hudson.scm.PollingResult.Change;
 import hudson.util.StreamTaskListener;
+import jenkins.model.Jenkins;
 
 import java.io.File;
 import java.io.IOException;
@@ -56,7 +57,7 @@ public class ChangeComparatorTest {
 				listener, 
 				new MercurialTagAction("tip","",null,null),
 				listener.getLogger(), 
-				Computer.currentComputer().getNode(), 
+				Jenkins.getInstance().toComputer().getNode(), 
 				new FilePath(tmp.getRoot()), 
 				project);
 		assertEquals(PollingResult.Change.SIGNIFICANT, pr.change);
