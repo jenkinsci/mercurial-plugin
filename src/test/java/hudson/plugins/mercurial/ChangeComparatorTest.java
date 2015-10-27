@@ -6,7 +6,6 @@ import org.jvnet.hudson.test.TestExtension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.AbstractProject;
-import hudson.model.Computer;
 import hudson.model.FreeStyleProject;
 import hudson.model.Node;
 import hudson.model.TaskListener;
@@ -57,7 +56,7 @@ public class ChangeComparatorTest {
 				listener, 
 				new MercurialTagAction("tip","",null,null),
 				listener.getLogger(), 
-				Jenkins.getInstance().toComputer().getNode(), 
+				j.jenkins, 
 				new FilePath(tmp.getRoot()), 
 				project);
 		assertEquals(PollingResult.Change.SIGNIFICANT, pr.change);
