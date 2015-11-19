@@ -874,6 +874,8 @@ public class MercurialSCM extends SCM implements Serializable {
             env.put(ENV_MERCURIAL_REVISION_NUMBER, a.rev);
             if (revisionType != RevisionType.BRANCH)
                 env.put(ENV_MERCURIAL_REVISION_BRANCH, a.getBranch());
+            else
+                env.put(ENV_MERCURIAL_REVISION_BRANCH, revision);
             env.put(ENV_MERCURIAL_REPOSITORY_URL, this.getSource());
         }
     }
