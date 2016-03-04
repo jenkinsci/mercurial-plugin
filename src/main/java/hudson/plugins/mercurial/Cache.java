@@ -92,7 +92,7 @@ class Cache {
      * @return
      *      The file path on the {@code node} to the local repository cache, cloned off from the master cache.
      */
-    @CheckForNull FilePath repositoryCache(MercurialInstallation inst, Node node, Launcher launcher, TaskListener listener, boolean useTimeout)
+    @CheckForNull FilePath repositoryCache(MercurialInstallation inst, Node node, Launcher launcher, TaskListener listener, boolean useTimeout, @Nullable String revision)
             throws IOException, InterruptedException {
         boolean masterWasLocked = masterLock.isLocked();
         if (masterWasLocked) {
@@ -221,8 +221,8 @@ class Cache {
 				// pull them for the slave's cached repository. When the repository is the cloned/updated into the workspace, the 
 				// clone can then bring in all the largefiles without a problem. Largefiles are shared (hardlinked) on a single machine 
 				// so we will not end up with extra copies.
-				if (masterHg.requiresLargefiles(masterCache)) {
-					slaveHg.lfpull(localCache, null, remote);
+				if (revision != null && masterHg.requiresLargefiles(masterCache)) {
+					slaveHg.lfpull(localCache, revision, remote);
 				}
 				
                 } finally {

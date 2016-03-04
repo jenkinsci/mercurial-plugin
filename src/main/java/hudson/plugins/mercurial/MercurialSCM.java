@@ -945,7 +945,7 @@ public class MercurialSCM extends SCM implements Serializable {
             return null;
         }
         try {
-            FilePath cache = Cache.fromURL(getSource(env), credentials).repositoryCache(inst, node, launcher, listener, useTimeout);
+            FilePath cache = Cache.fromURL(getSource(env), credentials).repositoryCache(inst, node, launcher, listener, useTimeout, revision);
             if (cache != null) {
                 return new CachedRepo(cache.getRemote(), inst.isUseSharing());
             } else {
