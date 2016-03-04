@@ -332,6 +332,18 @@ public class HgExe {
         return heads;
 
     }
+	
+	public bool requiresLargefiles(FilePath repo) throws IOException, InterruptedException {
+		FilePath requires = repo.child(".hg/requires");
+		return requires.exists() && requires.readToString().contains("largefiles");
+	}
+	
+	public ProcessStarter lfpull(FilePath repo, @Nullable string rev, @Nullable string remote) throws IOException, InterruptedException {
+		ArgumentListBuilder args = new ArgumentListBuilder("lfpull", "--rev", rev != null ? rev : ".");
+		if (remote != null)
+			args.add(remote);
+		return run(args);
+	}
 
     /**
      * Gets the revision ID or node of the tip of the workspace.

@@ -216,6 +216,15 @@ class Cache {
                         return null;
                     }
                 }
+				
+				// Fix for JENKINS-33255: if the clone of the repository on the master indicates that it requires largefiles, then 
+				// pull them for the slave's cached repository. When the repository is the cloned/updated into the workspace, the 
+				// clone can then bring in all the largefiles without a problem. Largefiles are shared (hardlinked) on a single machine 
+				// so we will not end up with extra copies.
+				if (masterHg.requiresLargefiles(masterCache)) {
+					slaveHg.lfpull(localCache, null, remote);
+				}
+				
                 } finally {
                     slaveHg.close();
                 }
