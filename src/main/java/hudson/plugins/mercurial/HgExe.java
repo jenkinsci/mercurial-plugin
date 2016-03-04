@@ -333,12 +333,12 @@ public class HgExe {
 
     }
 	
-	public bool requiresLargefiles(FilePath repo) throws IOException, InterruptedException {
+	public boolean requiresLargefiles(FilePath repo) throws IOException, InterruptedException {
 		FilePath requires = repo.child(".hg/requires");
 		return requires.exists() && requires.readToString().contains("largefiles");
 	}
 	
-	public ProcessStarter lfpull(FilePath repo, @Nullable string rev, @Nullable string remote) throws IOException, InterruptedException {
+	public ProcStarter lfpull(FilePath repo, @Nullable String rev, @Nullable String remote) throws IOException, InterruptedException {
 		ArgumentListBuilder args = new ArgumentListBuilder("lfpull", "--rev", rev != null ? rev : ".");
 		if (remote != null)
 			args.add(remote);
