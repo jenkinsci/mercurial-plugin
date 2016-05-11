@@ -39,8 +39,7 @@ public class MatrixProjectTest {
 
         createPretendSlave("slave_one");
         createPretendSlave("slave_two");
-
-        matrixProject = j.createMatrixProject("matrix_test");
+        matrixProject = j.createProject(MatrixProject.class, "matrix_test");
         matrixProject.setScm(new MercurialSCM(null, repo.getPath(), null, null, null, null, false));
         matrixProject.setAxes(new AxisList(new LabelAxis("label", Arrays.asList("slave_one", "slave_two"))));
 
