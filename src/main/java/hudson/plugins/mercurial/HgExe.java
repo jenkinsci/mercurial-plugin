@@ -64,6 +64,8 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+
+import jenkins.MasterToSlaveFileCallable;
 import jenkins.model.Jenkins;
 import org.ini4j.Ini;
 
@@ -164,7 +166,7 @@ public class HgExe {
         this.listener = listener;
         this.capability = Capability.get(this);
     }
-    private static final class DeleteOnExit implements FilePath.FileCallable<Void> {
+    private static final class DeleteOnExit extends MasterToSlaveFileCallable<Void> {
         private static final long serialVersionUID = 1;
         @Override public Void invoke(File f, VirtualChannel channel) throws IOException, InterruptedException {
             f.deleteOnExit();
