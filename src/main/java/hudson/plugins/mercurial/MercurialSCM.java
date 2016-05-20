@@ -1041,7 +1041,7 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Job<?,?> owner, @QueryParameter String source) {
-            if (owner == null || !owner.hasPermission(Item.CONFIGURE)) {
+            if (owner == null || !owner.hasPermission(Item.EXTENDED_READ)) {
                 return new ListBoxModel();
             }
             return new StandardUsernameListBoxModel()
