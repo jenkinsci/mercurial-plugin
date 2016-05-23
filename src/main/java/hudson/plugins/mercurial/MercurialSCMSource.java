@@ -166,7 +166,7 @@ public final class MercurialSCMSource extends SCMSource {
         }
 
         public ListBoxModel doFillCredentialsIdItems(@AncestorInPath SCMSourceOwner owner, @QueryParameter String source) {
-            if (owner == null || !owner.hasPermission(Item.CONFIGURE)) {
+            if (owner == null || !owner.hasPermission(Item.EXTENDED_READ)) {
                 return new ListBoxModel();
             }
             return new StandardUsernameListBoxModel()
