@@ -163,7 +163,11 @@ class Cache {
         try {
             listener.getLogger().println("Acquired slave node cache lock for node " + node.getNodeName() + ".");            
 
-            FilePath localCaches = rootPath.child("hgcache");
+            final FilePath nodeRootPath = node.getRootPath();
+            if (nodeRootPath == null) {
+                throw new IOException("Cannot retrieve the root directory of the Jenkins node");
+            }
+            FilePath localCaches = nodeRootPath.child("hgcache");
             FilePath localCache = localCaches.child(hash);
             
             // Bundle name is node-specific, as we may have more than one
