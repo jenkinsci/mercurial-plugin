@@ -151,10 +151,12 @@ public class PipelineTest {
         sampleRepo.write("file", "subsequent content");
         sampleRepo.hg("commit", "--message=tweaked");
         SemaphoreStep.success("wait/1", null);
-        WorkflowRun b2 = r.assertBuildStatusSuccess(p.scheduleBuild2(0));
+        sampleRepo.notifyCommit(r);
+        showIndexing(mp);
+        WorkflowRun b2 = p.getLastBuild();
         assertEquals(2, b2.getNumber());
-        r.assertLogContains("initial content", r.waitForCompletion(b1));
-        r.assertLogContains("SUBSEQUENT CONTENT", b2);
+        r.assertLogContains("initial content", r.assertBuildStatusSuccess(b1));
+        r.assertLogContains("SUBSEQUENT CONTENT", r.assertBuildStatusSuccess(b2));
     }
 
     // Copied from WorkflowMultiBranchProjectTest; do not want to depend on that due to its dependency on git:
