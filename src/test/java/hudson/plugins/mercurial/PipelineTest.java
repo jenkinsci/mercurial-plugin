@@ -32,6 +32,7 @@ import hudson.triggers.SCMTrigger;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.TreeSet;
 import javax.annotation.Nonnull;
 import jenkins.branch.BranchSource;
 import jenkins.util.VirtualFile;
@@ -157,6 +158,19 @@ public class PipelineTest {
         assertEquals(2, b2.getNumber());
         r.assertLogContains("initial content", r.assertBuildStatusSuccess(b1));
         r.assertLogContains("SUBSEQUENT CONTENT", r.assertBuildStatusSuccess(b2));
+        List<ChangeLogSet<? extends ChangeLogSet.Entry>> changeSets = b2.getChangeSets();
+        /* TODO JENKINS-29326 analogue, as per SubversionSCM:
+        assertEquals(1, changeSets.size());
+        */
+        ChangeLogSet<? extends ChangeLogSet.Entry> changeSet = changeSets.get(0);
+        assertEquals(b2, changeSet.getRun());
+        assertEquals("hg", changeSet.getKind());
+        Iterator<? extends ChangeLogSet.Entry> iterator = changeSet.iterator();
+        assertTrue(iterator.hasNext());
+        ChangeLogSet.Entry entry = iterator.next();
+        assertEquals("tweaked", entry.getMsg());
+        assertEquals("[Jenkinsfile, file]", new TreeSet<>(entry.getAffectedPaths()).toString());
+        assertFalse(iterator.hasNext());
     }
 
     // Copied from WorkflowMultiBranchProjectTest; do not want to depend on that due to its dependency on git:
