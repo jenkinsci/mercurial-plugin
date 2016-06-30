@@ -17,6 +17,7 @@ import hudson.scm.ChangeLogSet;
 import hudson.scm.ChangeLogSet.Entry;
 import hudson.scm.PollingResult;
 import hudson.scm.SCM;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,15 +30,18 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+
 import org.jenkinsci.plugins.multiplescms.MultiSCM;
-import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.Bug;
 import org.jvnet.hudson.test.FakeLauncher;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+
+import static org.junit.Assert.*;
 
 public abstract class SCMTestBase {
 
@@ -779,6 +783,25 @@ public abstract class SCMTestBase {
         assertNotNull(action);
         assertEquals(null, action.getBranch());
         assertEquals(null, b.getEnvironment().get("MERCURIAL_REVISION_BRANCH"));
+    }
+
+    @Issue("JENKINS-30295")
+    @Test public void testChangeSetApiVersion1407Methods() throws Exception {
+        FreeStyleProject p = j.createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, null, null, null, false));
+        m.hg(repo, "init");
+        m.touchAndCommit(repo, "f1");
+        p.scheduleBuild2(0).get();
+
+        m.touchAndCommit(repo, "f2");
+        MercurialChangeSet changeSet = (MercurialChangeSet) p.scheduleBuild2(0).get().getChangeSet().iterator().next();
+
+        String commitId = m.getLastChangesetId(repo);
+        long timestampInSeconds = m.getLastChangesetUnixTimestamp(repo);
+
+        assertEquals(commitId, changeSet.getCommitId());
+        assertEquals(timestampInSeconds * 1000, changeSet.getTimestamp());
+
     }
 
     /* TODO the following will pass, but canUpdate is not going to work without further changes:

@@ -5,8 +5,8 @@ import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.Action;
 import hudson.model.FreeStyleBuild;
-import hudson.model.TaskListener;
 import hudson.model.FreeStyleProject;
+import hudson.model.TaskListener;
 import hudson.scm.PollingResult;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.StreamTaskListener;
@@ -18,12 +18,12 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.TreeSet;
 
-import static org.junit.Assert.*;
 import org.junit.Assume;
 import org.junit.internal.AssumptionViolatedException;
 import org.junit.rules.ExternalResource;
-
 import org.jvnet.hudson.test.JenkinsRule;
+
+import static org.junit.Assert.*;
 
 public final class MercurialRule extends ExternalResource {
 
@@ -123,4 +123,9 @@ public final class MercurialRule extends ExternalResource {
         return hgExe().popen(new FilePath(repo), listener, false, new ArgumentListBuilder("log", "-l1", "--template", "{node}"));
     }
 
+    public long getLastChangesetUnixTimestamp(File repo) throws Exception {
+        //hgdate returns the date as a pair of numbers: "1157407993 25200" (Unix timestamp, timezone offset).
+        String date = hgExe().popen(new FilePath(repo), listener, false, new ArgumentListBuilder("log", "-l1", "--template", "{date|hgdate}"));
+        return Long.valueOf(date.split(" ")[0]);
+    }
 }
