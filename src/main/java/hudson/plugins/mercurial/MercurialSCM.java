@@ -113,6 +113,11 @@ public class MercurialSCM extends SCM implements Serializable {
             @Override public String getDisplayName() {
                 return "Tag";
             }
+        },
+        CHANGESET() {
+            @Override public String getDisplayName() {
+                return "Changeset";
+            }
         };
         public abstract String getDisplayName();
     }
@@ -225,7 +230,12 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     @Override public String getKey() {
-        return "hg " + getSource(new EnvVars()) + " " + revision;
+        String base = "hg " + getSource(new EnvVars());
+        if (revisionType == RevisionType.CHANGESET) {
+            return base;
+        } else {
+            return base + " " + revision;
+        }
     }
 
     public String getCredentialsId() {
@@ -478,7 +488,7 @@ public class MercurialSCM extends SCM implements Serializable {
         try {
         ArgumentListBuilder cmd = hg.seed(true);
         cmd.add("pull");
-        if (revisionType == RevisionType.BRANCH) {
+        if (revisionType == RevisionType.BRANCH || revisionType == RevisionType.CHANGESET) { // does not work for tags
             cmd.add("--rev", revision);
         }
         CachedRepo cachedSource = cachedSource(node, env, launcher, listener, true, credentials);
@@ -802,7 +812,7 @@ public class MercurialSCM extends SCM implements Serializable {
             }
         } else {
             args.add("clone");
-            if (revisionType == RevisionType.BRANCH) {
+            if (revisionType == RevisionType.BRANCH || revisionType == RevisionType.CHANGESET) {
                 args.add("--rev", toRevision);
             }
             args.add("--noupdate");

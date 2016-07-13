@@ -141,7 +141,7 @@ public final class MercurialSCMSource extends SCMSource {
     @SuppressWarnings("DB_DUPLICATE_BRANCHES")
     @Override public SCM build(SCMHead head, SCMRevision revision) {
         String rev = revision == null ? head.getName() : ((MercurialRevision) revision).hash;
-        return new MercurialSCM(installation, source, revision == null ? MercurialSCM.RevisionType.BRANCH : /* TODO use CHANGESET, when defined */MercurialSCM.RevisionType.BRANCH, rev, modules, subdir, browser, clean, credentialsId, false);
+        return new MercurialSCM(installation, source, revision == null ? MercurialSCM.RevisionType.BRANCH : MercurialSCM.RevisionType.CHANGESET, rev, modules, subdir, browser, clean, credentialsId, false);
     }
 
     private @CheckForNull StandardUsernameCredentials getCredentials() {
