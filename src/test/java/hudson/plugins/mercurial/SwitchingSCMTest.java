@@ -39,7 +39,6 @@ public class SwitchingSCMTest {
                                 "hg", false, true, true, Collections
                                         .<ToolProperty<?>> emptyList()));
 
-        MercurialSCM.CACHE_LOCAL_REPOS = true;
     }
 
     @Test public void switchingFromCachedToShared() throws Exception {

@@ -809,6 +809,7 @@ public class MercurialSCM extends SCM implements Serializable {
             args.add(getSource(env));
         }
         args.add(repository.getRemote());
+        repository.mkdirs();
         int cloneExitCode;
         try {
             cloneExitCode = hg.launch(args).join();
@@ -932,12 +933,8 @@ public class MercurialSCM extends SCM implements Serializable {
         return message != null && message.startsWith("Cannot run program") && message.endsWith("No such file or directory");
     }
 
-    static boolean CACHE_LOCAL_REPOS = false;
     private @CheckForNull CachedRepo cachedSource(Node node, EnvVars env, Launcher launcher, TaskListener listener, boolean useTimeout, StandardUsernameCredentials credentials) 
             throws InterruptedException {
-        if (!CACHE_LOCAL_REPOS && getSource(env).matches("(file:|[/\\\\]).+")) {
-            return null;
-        }
         MercurialInstallation inst = findInstallation(installation);
         if (inst == null || !inst.isUseCaches()) {
             return null;
