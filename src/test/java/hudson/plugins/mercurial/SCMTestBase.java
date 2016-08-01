@@ -681,6 +681,39 @@ public abstract class SCMTestBase {
         assertTrue(JenkinsRule.getLog(b), ws.child("f3").exists());
     }
 
+    @Test public void revsets() throws Exception {
+        m.hg(repo, "init");
+        m.touchAndCommit(repo, "f1");
+        m.touchAndCommit(repo, "f2");
+        m.hg(repo, "log");
+        FreeStyleProject p = j.createFreeStyleProject();
+        p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), MercurialSCM.RevisionType.REVSET, "first(parents(tip))", null, null, null, false, null));
+        FreeStyleBuild b = j.assertBuildStatusSuccess(p.scheduleBuild2(0));
+        FilePath ws = b.getWorkspace();
+        //We expect to be on the parent of f2: only f1 is present
+        assertTrue(ws.child("f1").exists());
+        assertFalse(ws.child("f2").exists());
+
+        m.hg(repo, "update", "-r", "0");
+        m.touchAndCommit(repo, "f3");
+        m.hg(repo, "merge");
+        m.hg(repo, "commit", "-m", "Merged some stuff");
+        b = j.assertBuildStatusSuccess(p.scheduleBuild2(0));
+        ws = b.getWorkspace();
+        //We expect to be on the first parent of the merge: f3 is not present
+        assertTrue(ws.child("f1").exists());
+        assertTrue(ws.child("f2").exists());
+        assertFalse(ws.child("f3").exists());
+
+        m.touchAndCommit(repo, "f4");
+        b = j.assertBuildStatusSuccess(p.scheduleBuild2(0));
+        ws = b.getWorkspace();
+        //We expect to be on the merge itself: f4 is not present
+        assertTrue(ws.child("f1").exists());
+        assertTrue(ws.child("f2").exists());
+        assertTrue(ws.child("f3").exists());
+        assertFalse(ws.child("f4").exists());
+    }
     private void assertChangeSetPaths(List<? extends Set<String>> expectedChangeSetPaths,
             AbstractBuild<?, ?> build) throws IOException {
         ChangeLogSet<? extends Entry> actualChangeLogSet = build.getChangeSet();

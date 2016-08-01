@@ -118,6 +118,11 @@ public class MercurialSCM extends SCM implements Serializable {
             @Override public String getDisplayName() {
                 return "Changeset";
             }
+        },
+        REVSET() {
+            @Override public String getDisplayName() {
+                return "Revset";
+            }
         };
         public abstract String getDisplayName();
     }
@@ -666,7 +671,12 @@ public class MercurialSCM extends SCM implements Serializable {
                 ArgumentListBuilder args = hg.seed(false);
                 args.add("log");
                 args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
-                args.add("--rev", "ancestors('" + revToBuild.replace("'", "\\'") + "') and not ancestors(" + prevTag.getId() + ")");
+                if(revisionType == RevisionType.REVSET) {
+                    args.add("--rev", "ancestors(" + revToBuild + ") and not ancestors(" + prevTag.getId() + ")");
+                }
+                else {
+                    args.add("--rev", "ancestors('" + revToBuild.replace("'", "\\'") + "') and not ancestors(" + prevTag.getId() + ")");
+                }
                 args.add("--encoding", "UTF-8");
                 args.add("--encodingmode", "replace");
 
