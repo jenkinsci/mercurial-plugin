@@ -148,7 +148,6 @@ public class PipelineTest {
         assertNotNull(b1);
         assertEquals(1, b1.getNumber());
         sampleRepo.write("Jenkinsfile", "node {checkout scm; echo readFile('file').toUpperCase()}");
-        sa.approveSignature("method java.lang.String toUpperCase");
         sampleRepo.write("file", "subsequent content");
         sampleRepo.hg("commit", "--message=tweaked");
         SemaphoreStep.success("wait/1", null);
