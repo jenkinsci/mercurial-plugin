@@ -73,20 +73,28 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
         return result;
     }
 
-    public HttpResponse doNotifyCommit(@QueryParameter(required=true) final String url) throws ServletException, IOException {
+    /**
+     * Called when there is a change notification on a specific repository url.
+     *
+     * @param url      the repository url.
+     * @param revid    the (optional) changeset id.
+     * @return HttpResponse
+     */
+    public HttpResponse doNotifyCommit(@QueryParameter(required=true) final String url,
+            @QueryParameter(required=false) String revid) throws ServletException, IOException {
         // run in high privilege to see all the projects anonymous users don't see.
         // this is safe because we only initiate polling.
         SecurityContext securityContext = ACL.impersonate(ACL.SYSTEM);
         try {
-            return handleNotifyCommit(new URI(url));
+            return handleNotifyCommit(new URI(url), revid);
         } catch ( URISyntaxException ex ) {
             throw HttpResponses.error(SC_BAD_REQUEST, ex);
         } finally {
             SecurityContextHolder.setContext(securityContext);
         }
     }
-    
-    private HttpResponse handleNotifyCommit(URI url) throws ServletException, IOException {
+
+    private HttpResponse handleNotifyCommit(URI url, String revid) throws ServletException, IOException {
         final List<Item> projects = Lists.newArrayList();
         boolean scmFound = false,
                 urlFound = false;
@@ -125,7 +133,13 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
             }
 
             LOGGER.log(Level.INFO, "Triggering polling of {0}", project.getFullName());
-            trigger.run();
+            if (revid != null)
+            {
+                scmTriggerItem.scheduleBuild2(scmTriggerItem.getQuietPeriod(),
+                        new RevisionParameterAction(revid));
+            } else {
+                trigger.run();
+            }
             projects.add(project);
             break SCMS;
             }
