@@ -42,12 +42,15 @@ import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import static org.junit.Assert.*;
+import org.junit.ClassRule;
+import org.jvnet.hudson.test.BuildWatcher;
 
 public abstract class SCMTestBase {
 
     @Rule public JenkinsRule j = new JenkinsRule();
     @Rule public MercurialRule m = new MercurialRule(j);
     @Rule public TemporaryFolder tmp = new TemporaryFolder();
+    @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
     private File repo;
 
     @Before public void setUp() throws Exception {
