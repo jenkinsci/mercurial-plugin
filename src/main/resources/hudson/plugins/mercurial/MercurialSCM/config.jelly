@@ -38,6 +38,13 @@
     <f:entry field="disableChangeLog" title="${%Disable Changelog}">
       <f:checkbox/>
     </f:entry>
+    <f:block>
+      <f:optionalBlock inline="true" checked="${instance['merge']}" name="merge" title="Merge a branch before build?">
+        <f:entry field="mergeBranch" title="Branch to merge in">
+          <f:textbox/>
+        </f:entry>
+      </f:optionalBlock>
+    </f:block>
   </f:advanced>
 
   <t:listScmBrowsers name="mercurial.browser" />

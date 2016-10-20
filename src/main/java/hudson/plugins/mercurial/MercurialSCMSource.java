@@ -47,9 +47,11 @@ public final class MercurialSCMSource extends SCMSource {
     private final String subdir;
     private final HgBrowser browser;
     private final boolean clean;
+    private final boolean merge;
+    private final String mergeBranch;
 
     @DataBoundConstructor
-    public MercurialSCMSource(String id, String installation, String source, String credentialsId, String branchPattern, String modules, String subdir, HgBrowser browser, boolean clean) {
+    public MercurialSCMSource(String id, String installation, String source, String credentialsId, String branchPattern, String modules, String subdir, HgBrowser browser, boolean clean, boolean merge, String mergeBranch) {
         super(id);
         this.installation = installation;
         this.source = source;
@@ -59,6 +61,8 @@ public final class MercurialSCMSource extends SCMSource {
         this.subdir = subdir;
         this.browser = browser;
         this.clean = clean;
+        this.merge = merge;
+        this.mergeBranch = mergeBranch;
     }
     
     public String getInstallation() {
@@ -92,6 +96,14 @@ public final class MercurialSCMSource extends SCMSource {
 
     public boolean isClean() {
         return clean;
+    }
+
+    public boolean isMerge() {
+        return merge;
+    }
+
+    public String getMergeBranche() {
+        return mergeBranch;
     }
 
     @Override
@@ -141,7 +153,7 @@ public final class MercurialSCMSource extends SCMSource {
     @SuppressWarnings("DB_DUPLICATE_BRANCHES")
     @Override public SCM build(SCMHead head, SCMRevision revision) {
         String rev = revision == null ? head.getName() : ((MercurialRevision) revision).hash;
-        return new MercurialSCM(installation, source, revision == null ? MercurialSCM.RevisionType.BRANCH : MercurialSCM.RevisionType.CHANGESET, rev, modules, subdir, browser, clean, credentialsId, false);
+        return new MercurialSCM(installation, source, revision == null ? MercurialSCM.RevisionType.BRANCH : MercurialSCM.RevisionType.CHANGESET, rev, modules, subdir, browser, clean, credentialsId, false, mergeBranch);
     }
 
     private @CheckForNull StandardUsernameCredentials getCredentials() {
