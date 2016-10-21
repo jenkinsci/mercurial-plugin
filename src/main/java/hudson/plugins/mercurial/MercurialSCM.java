@@ -1003,10 +1003,7 @@ public class MercurialSCM extends SCM implements Serializable {
         if (inst == null || !inst.isUseCaches()) {
             return null;
         }
-        if (isMerge()) {
-            LOGGER.log(Level.FINE, null, "Skipping cache due to pre-build merge.");
-            return null;
-        }
+
         try {
             FilePath cache = Cache.fromURL(getSource(env), credentials).repositoryCache(inst, node, launcher, listener, useTimeout);
             if (cache != null) {
