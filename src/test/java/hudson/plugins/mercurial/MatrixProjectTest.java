@@ -40,7 +40,7 @@ public class MatrixProjectTest {
         createPretendSlave("slave_one");
         createPretendSlave("slave_two");
         matrixProject = j.createProject(MatrixProject.class, "matrix_test");
-        matrixProject.setScm(new MercurialSCM(null, repo.getPath(), null, null, null, null, false));
+        matrixProject.setScm(new MercurialSCM(null, repo.getPath(), null, null, null, null, false, ""));
         matrixProject.setAxes(new AxisList(new LabelAxis("label", Arrays.asList("slave_one", "slave_two"))));
 
         m.hg(repo, "init");
@@ -51,8 +51,8 @@ public class MatrixProjectTest {
         repo2 = tmp.newFolder();
 
         matrixProject.setScm(new MultiSCM(Arrays.<SCM>asList(
-                new MercurialSCM(null, repo2.getPath(), null, null, "r2", null, false),
-                new MercurialSCM(null, repo.getPath(), null, null, "r1", null, false))));
+                new MercurialSCM(null, repo2.getPath(), null, null, "r2", null, false, ""),
+                new MercurialSCM(null, repo.getPath(), null, null, "r1", null, false, ""))));
 
         m.hg(repo2, "init");
         m.touchAndCommit(repo2, "r2f1");

@@ -83,7 +83,7 @@ public class EnvVarTest {
         project.addProperty(pdb);
         
         // Set up SCM.
-        project.setScm(new MercurialSCM("test", repo.getPath(), MercurialSCM.RevisionType.BRANCH, null, null, null, null, false, null, false));
+        project.setScm(new MercurialSCM("test", repo.getPath(), MercurialSCM.RevisionType.BRANCH, null, null, null, null, false, null, false, ""));
         
         // Ensure project builds correctly (again ensures path expansion works).
         FreeStyleBuild b = r.assertBuildStatusSuccess(project.scheduleBuild2(0));

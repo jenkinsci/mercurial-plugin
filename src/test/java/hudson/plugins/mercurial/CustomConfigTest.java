@@ -50,7 +50,7 @@ public class CustomConfigTest {
         m.touchAndCommit(repo, "f");
         r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(new MercurialInstallation("test", "", "hg", false, false, false, "[format]\nusestore = false", Collections.<ToolProperty<?>>emptyList()));
         FreeStyleProject p = r.createFreeStyleProject();
-        p.setScm(new MercurialSCM("test", repo.getPath(), MercurialSCM.RevisionType.BRANCH, null, null, null, null, false, null, false));
+        p.setScm(new MercurialSCM("test", repo.getPath(), MercurialSCM.RevisionType.BRANCH, null, null, null, null, false, null, false, ""));
         FreeStyleBuild b = r.assertBuildStatusSuccess(p.scheduleBuild2(0));
         FilePath ws = b.getWorkspace();
         assertNotNull(ws);
