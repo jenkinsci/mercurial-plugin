@@ -4,6 +4,7 @@ import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.SuppressWarnings;
 import hudson.EnvVars;
 import hudson.Extension;
@@ -27,12 +28,17 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import javax.annotation.CheckForNull;
 import jenkins.model.Jenkins;
+import jenkins.scm.api.SCMFile;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.SCMHeadObserver;
+import jenkins.scm.api.SCMProbe;
+import jenkins.scm.api.SCMProbeStat;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
+import jenkins.scm.api.SCMSourceCriteria;
 import jenkins.scm.api.SCMSourceDescriptor;
 import jenkins.scm.api.SCMSourceOwner;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -95,7 +101,9 @@ public final class MercurialSCMSource extends SCMSource {
     }
 
     @Override
-    protected void retrieve(SCMHeadObserver observer, TaskListener listener) throws IOException, InterruptedException {
+    protected void retrieve(@edu.umd.cs.findbugs.annotations.CheckForNull SCMSourceCriteria criteria,
+                            @NonNull SCMHeadObserver observer,
+                            @NonNull final TaskListener listener) throws IOException, InterruptedException {
         MercurialInstallation inst = MercurialSCM.findInstallation(installation);
         if (inst == null) {
             listener.error("No configured Mercurial installation");
@@ -112,22 +120,61 @@ public final class MercurialSCMSource extends SCMSource {
         }
         Launcher launcher = node.createLauncher(listener);
         StandardUsernameCredentials credentials = getCredentials();
-        FilePath cache = Cache.fromURL(source, credentials).repositoryCache(inst, node, launcher, listener, true);
+        final FilePath cache = Cache.fromURL(source, credentials).repositoryCache(inst, node, launcher, listener, true);
         if (cache == null) {
             listener.error("Could not use caches, not fetching branch heads");
             return;
         }
-        HgExe hg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars());
+        final HgExe hg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars());
         try {
         String heads = hg.popen(cache, listener, true, new ArgumentListBuilder("heads", "--template", "{node} {branch}\\n"));
-        // TODO need to consider getCriteria() here as well
+        // TODO need to consider criteria here as well
         Pattern p = Pattern.compile(Util.fixNull(branchPattern).length() == 0 ? ".+" : branchPattern);
         for (String line : heads.split("\r?\n")) {
-            String[] nodeBranch = line.split(" ", 2);
-            String name = nodeBranch[1];
+            final String[] nodeBranch = line.split(" ", 2);
+            final String name = nodeBranch[1];
             if (p.matcher(name).matches()) {
                 listener.getLogger().println("Found branch " + name);
                 SCMHead branch = new SCMHead(name);
+                if (criteria != null) {
+                    SCMProbe probe = new SCMProbe() {
+                        @NonNull
+                        @Override
+                        public SCMProbeStat stat(@NonNull String path) throws IOException {
+                            try {
+                                String files = hg.popen(cache, listener, true,
+                                        new ArgumentListBuilder("files", "-r", nodeBranch[0], "-I", path));
+                                if (StringUtils.isBlank(files)) {
+                                    return SCMProbeStat.fromType(SCMFile.Type.NONEXISTENT);
+                                }
+                                return SCMProbeStat.fromType(SCMFile.Type.REGULAR_FILE);
+                            } catch (InterruptedException e) {
+                                throw new IOException(e);
+                            }
+                        }
+
+                        @Override
+                        public void close() throws IOException {
+
+                        }
+
+                        @Override
+                        public String name() {
+                            return name;
+                        }
+
+                        @Override
+                        public long lastModified() {
+                            return 0;
+                        }
+                    };
+                    if (criteria.isHead(probe, listener)) {
+                        listener.getLogger().println("Met criteria");
+                    } else {
+                        listener.getLogger().println("Does not meet criteria");
+                        continue;
+                    }
+                }
                 observer.observe(branch, new MercurialRevision(branch, nodeBranch[0]));
             } else {
                 listener.getLogger().println("Ignoring branch " + name);
