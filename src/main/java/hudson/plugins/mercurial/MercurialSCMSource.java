@@ -112,7 +112,7 @@ public final class MercurialSCMSource extends SCMSource {
         }
         Launcher launcher = node.createLauncher(listener);
         StandardUsernameCredentials credentials = getCredentials();
-        FilePath cache = Cache.fromURL(source, credentials).repositoryCache(inst, node, launcher, listener, true);
+        FilePath cache = Cache.fromURL(source, credentials, inst.getMasterCacheRoot()).repositoryCache(inst, node, launcher, listener, true);
         if (cache == null) {
             listener.error("Could not use caches, not fetching branch heads");
             return;
