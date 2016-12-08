@@ -38,7 +38,7 @@ class Cache {
      */
     private final String remote;
 
-    private final String masterCacheRoot;
+    private final @CheckForNull String masterCacheRoot;
 
     private final StandardUsernameCredentials credentials;
 
@@ -62,7 +62,7 @@ class Cache {
 
     private static final Map<String, Cache> CACHES = new HashMap<String, Cache>();
 
-    public synchronized static @NonNull Cache fromURL(String remote, StandardUsernameCredentials credentials, String masterCacheRoot) {
+    public synchronized static @NonNull Cache fromURL(String remote, StandardUsernameCredentials credentials, @CheckForNull String masterCacheRoot) {
         String h = hashSource(remote, credentials, masterCacheRoot);
         Cache cache = CACHES.get(h);
         if (cache == null) {
@@ -81,10 +81,10 @@ class Cache {
         if (lock == null) {
             slaveNodesLocksMap.put(node, lock = new ReentrantLock(true));
         }
-
+    
         return lock;
     }
-
+    
 
     /**
      * Returns a local hg repository cache of the remote repository specified in the given {@link MercurialSCM}
@@ -129,7 +129,7 @@ class Cache {
             try {
 
         // Lock the block used to verify we end up having a cloned repo in the master,
-        // whether if it was previously cloned in a different build or if it's
+        // whether if it was previously cloned in a different build or if it's 
         // going to be cloned right now.
         masterLock.lockInterruptibly();
         try {
@@ -158,20 +158,20 @@ class Cache {
             }
             // Not on master, so need to create/update local cache as well.
 
-        // We are in a slave node that will need also an updated local cache: clone it or
+        // We are in a slave node that will need also an updated local cache: clone it or 
         // pull pending changes, if any. This can be safely done in parallel in
         // different slave nodes for a given repo, so we'll use different
         // node-specific locks to achieve this.
         ReentrantLock slaveNodeLock = getLockForSlaveNode(node.getNodeName());
-
+        
         boolean slaveNodeWasLocked = slaveNodeLock.isLocked();
         if (slaveNodeWasLocked) {
             listener.getLogger().println("Waiting for slave node cache lock in " + node.getNodeName() + " on hgcache/" + hash + " " + slaveNodeWasLocked + "...");
         }
-
+        
         slaveNodeLock.lockInterruptibly();
         try {
-            listener.getLogger().println("Acquired slave node cache lock for node " + node.getNodeName() + ".");
+            listener.getLogger().println("Acquired slave node cache lock for node " + node.getNodeName() + ".");            
 
             final FilePath nodeRootPath = node.getRootPath();
             if (nodeRootPath == null) {
@@ -179,7 +179,7 @@ class Cache {
             }
             FilePath localCaches = nodeRootPath.child("hgcache");
             FilePath localCache = localCaches.child(hash);
-
+            
             // Bundle name is node-specific, as we may have more than one
             // node being updated in parallel, and each one will use its own
             // bundle.
@@ -251,7 +251,7 @@ class Cache {
     /**
      * Hash a URL into a string that only contains characters that are safe as directory names.
      */
-    static String hashSource(String source, StandardUsernameCredentials credentials, String masterCacheRoot) {
+    static String hashSource(String source, StandardUsernameCredentials credentials, @CheckForNull String masterCacheRoot) {
         if (!source.endsWith("/")) {
             source += "/";
         }

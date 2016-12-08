@@ -1,7 +1,6 @@
 package hudson.plugins.mercurial;
 
 import java.io.File;
-import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.regex.Pattern;
 
@@ -33,7 +32,7 @@ public class CachingCustomDirSCMTest {
 		j.jenkins
 				.getDescriptorByType(MercurialInstallation.DescriptorImpl.class)
 				.setInstallations(new MercurialInstallation(CACHING_INSTALLATION, "", "hg",
-						false, true, Paths.get("target", "test-data", "custom-cache-dir").toString(), false, "",
+						false, true, new File(tmp.newFolder(),"custom-cache-dir").getAbsolutePath().toString(), false, "",
 						Collections.<ToolProperty<?>> emptyList()));
 	}
 
