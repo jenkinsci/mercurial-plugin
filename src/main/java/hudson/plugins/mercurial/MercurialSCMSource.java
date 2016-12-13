@@ -131,11 +131,11 @@ public final class MercurialSCMSource extends SCMSource {
         final HgExe hg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars());
         try {
             String version = hg.version();
-            boolean canProbe = new VersionNumber(version).isOlderThan(new VersionNumber("3.4"));
+            boolean canProbe = new VersionNumber(version).compareTo(new VersionNumber("3.4")) >= 0;
             if (canProbe) {
-                listener.getLogger().printf("Probe support enabled on Mercurial Version %s >= 3.4%n", version);
+                listener.getLogger().printf("Probe support enabled as Mercurial Version %s >= 3.4%n", version);
             } else {
-                listener.getLogger().printf("Probe support disabled on Mercurial Version %s < 3.4%n", version);
+                listener.getLogger().printf("Probe support disabled as Mercurial Version %s < 3.4%n", version);
             }
             String heads = hg.popen(cache, listener, true, new ArgumentListBuilder("heads", "--template", "{node} {branch}\\n"));
             Pattern p = Pattern.compile(Util.fixNull(branchPattern).length() == 0 ? ".+" : branchPattern);
