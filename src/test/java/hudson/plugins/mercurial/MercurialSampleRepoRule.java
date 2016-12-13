@@ -24,6 +24,9 @@
 
 package hudson.plugins.mercurial;
 
+import java.io.File;
+import jenkins.model.Jenkins;
+import org.apache.commons.io.FileUtils;
 import org.jenkinsci.plugins.workflow.steps.scm.AbstractSampleDVCSRepoRule;
 import static org.jenkinsci.plugins.workflow.steps.scm.AbstractSampleRepoRule.run;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -46,6 +49,22 @@ public final class MercurialSampleRepoRule extends AbstractSampleDVCSRepoRule {
         synchronousPolling(r);
         System.out.println(r.createWebClient().goTo("mercurial/notifyCommit?url=" + fileUrl(), "text/plain").getWebResponse().getContentAsString());
         r.waitUntilNoActivity();
+    }
+
+    public void registerHook(JenkinsRule r) throws Exception {
+        File hgDir = new File(sampleRepo, ".hg");
+        File hook = new File(hgDir, "hook.py");
+        FileUtils.write(hook, "import requests\n"
+                + "\n"
+                + "def commit(ui, repo, node, **kwargs):\n"
+                + "    ui.warn('Notify Commit hook response: %s\\n' % requests.post('"
+                +r.getURL()
+                +"mercurial/notifyCommit', data={\"url\":\""
+                +fileUrl()
+                +"\",\"branch\":repo[node].branch(),\"changesetId\":node}))\n"
+                + "    pass");
+        FileUtils.write(new File(hgDir, "hgrc"), "[hooks]\n"
+                + "commit.jenkins = python:"+hook.getAbsolutePath()+":commit");
     }
 
 }

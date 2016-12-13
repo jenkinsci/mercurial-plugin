@@ -25,6 +25,7 @@ package hudson.plugins.mercurial;
  */
 
 import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
+import hudson.console.AnnotatedLargeText;
 import hudson.scm.ChangeLogSet;
 import hudson.scm.SCM;
 import hudson.tools.ToolProperty;
@@ -33,8 +34,11 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import jenkins.branch.BranchSource;
+import jenkins.scm.api.SCMEvent;
+import jenkins.scm.api.SCMEvents;
 import jenkins.util.VirtualFile;
 import org.apache.commons.io.FileUtils;
 import org.jenkinsci.plugins.scriptsecurity.scripts.ScriptApproval;
@@ -172,6 +176,61 @@ public class PipelineTest {
         assertFalse(iterator.hasNext());
     }
 
+    @Test public void modernHook() throws Exception {
+        sampleRepo.init();
+        ScriptApproval sa = ScriptApproval.get();
+        sampleRepo.write("Jenkinsfile", "node {checkout scm; echo readFile('file')}");
+        sampleRepo.write("file", "initial content");
+        sampleRepo.hg("commit", "--addremove", "--message=flow");
+        WorkflowMultiBranchProject mp = r.jenkins.createProject(WorkflowMultiBranchProject.class, "p");
+        String instName = "caching";
+        r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(
+                new MercurialInstallation(instName, "", "hg", false, true, false, null, Collections.<ToolProperty<?>> emptyList()));
+        mp.getSourcesList().add(new BranchSource(new MercurialSCMSource(null, instName, sampleRepo.fileUrl(), null, null, null, null, null, true)));
+        WorkflowJob p = scheduleAndFindBranchProject(mp, "default");
+        r.waitUntilNoActivity();
+        WorkflowRun b1 = p.getLastBuild();
+        assertNotNull(b1);
+        assertEquals(1, b1.getNumber());
+
+        // capture the watermark before the event triggered
+        long watermark = SCMEvents.getWatermark();
+
+        sampleRepo.registerHook(r);
+        sampleRepo.write("Jenkinsfile", "node {checkout scm; echo readFile('file').toUpperCase()}");
+        sampleRepo.write("file", "subsequent content");
+        sampleRepo.hg("commit", "--message=tweaked");
+
+        // wait for the event to have completed processing
+        SCMEvents.awaitAll(watermark, 5, TimeUnit.SECONDS);
+
+        // ensure the queue has picked up the job being scheduled as we are at full tilt
+        r.jenkins.getQueue().maintain();
+
+        // now show the events log
+        showEvents(mp);
+
+        // and wait for the build to finish
+        r.waitUntilNoActivity();
+        WorkflowRun b2 = p.getLastBuild();
+        assertEquals(2, b2.getNumber());
+        r.assertLogContains("initial content", r.assertBuildStatusSuccess(b1));
+        r.assertLogContains("SUBSEQUENT CONTENT", r.assertBuildStatusSuccess(b2));
+        List<ChangeLogSet<? extends ChangeLogSet.Entry>> changeSets = b2.getChangeSets();
+        /* TODO JENKINS-29326 analogue, as per SubversionSCM:
+        assertEquals(1, changeSets.size());
+        */
+        ChangeLogSet<? extends ChangeLogSet.Entry> changeSet = changeSets.get(0);
+        assertEquals(b2, changeSet.getRun());
+        assertEquals("hg", changeSet.getKind());
+        Iterator<? extends ChangeLogSet.Entry> iterator = changeSet.iterator();
+        assertTrue(iterator.hasNext());
+        ChangeLogSet.Entry entry = iterator.next();
+        assertEquals("tweaked", entry.getMsg());
+        assertEquals("[Jenkinsfile, file]", new TreeSet<>(entry.getAffectedPaths()).toString());
+        assertFalse(iterator.hasNext());
+    }
+
     // Copied from WorkflowMultiBranchProjectTest; do not want to depend on that due to its dependency on git:
     public static @Nonnull WorkflowJob scheduleAndFindBranchProject(@Nonnull WorkflowMultiBranchProject mp, @Nonnull String name) throws Exception {
         mp.scheduleBuild2(0).getFuture().get();
@@ -191,6 +250,13 @@ public class PipelineTest {
         FolderComputation<?> indexing = mp.getIndexing();
         System.out.println("---%<--- " + indexing.getUrl());
         indexing.writeWholeLogTo(System.out);
+        System.out.println("---%<--- ");
+    }
+
+    static void showEvents(@Nonnull WorkflowMultiBranchProject mp) throws Exception {
+        AnnotatedLargeText<FolderComputation<WorkflowJob>> events = mp.getComputation().getEventsText();
+        System.out.println("---%<--- " + mp.getComputation().getUrl() + " EVENTS");
+        events.writeLogTo(0, System.out);
         System.out.println("---%<--- ");
     }
 

@@ -30,6 +30,7 @@ import javax.annotation.CheckForNull;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMFile;
 import jenkins.scm.api.SCMHead;
+import jenkins.scm.api.SCMHeadEvent;
 import jenkins.scm.api.SCMHeadObserver;
 import jenkins.scm.api.SCMProbe;
 import jenkins.scm.api.SCMProbeStat;
@@ -103,6 +104,7 @@ public final class MercurialSCMSource extends SCMSource {
     @Override
     protected void retrieve(@edu.umd.cs.findbugs.annotations.CheckForNull SCMSourceCriteria criteria,
                             @NonNull SCMHeadObserver observer,
+                            @edu.umd.cs.findbugs.annotations.CheckForNull SCMHeadEvent<?> event,
                             @NonNull final TaskListener listener) throws IOException, InterruptedException {
         MercurialInstallation inst = MercurialSCM.findInstallation(installation);
         if (inst == null) {
@@ -236,7 +238,7 @@ public final class MercurialSCMSource extends SCMSource {
 
     }
 
-    private static final class MercurialRevision extends SCMRevision {
+    /*package*/ static final class MercurialRevision extends SCMRevision {
         private final String hash;
         MercurialRevision(SCMHead branch, String hash) {
             super(branch);
