@@ -137,58 +137,58 @@ public final class MercurialSCMSource extends SCMSource {
             } else {
                 listener.getLogger().printf("Probe support disabled on Mercurial Version %s < 3.4%n", version);
             }
-        String heads = hg.popen(cache, listener, true, new ArgumentListBuilder("heads", "--template", "{node} {branch}\\n"));
-        Pattern p = Pattern.compile(Util.fixNull(branchPattern).length() == 0 ? ".+" : branchPattern);
-        for (String line : heads.split("\r?\n")) {
-            final String[] nodeBranch = line.split(" ", 2);
-            final String name = nodeBranch[1];
-            if (p.matcher(name).matches()) {
-                listener.getLogger().println("Found branch " + name);
-                SCMHead branch = new SCMHead(name);
-                if (canProbe && criteria != null) {
-                    SCMProbe probe = new SCMProbe() {
-                        @NonNull
-                        @Override
-                        public SCMProbeStat stat(@NonNull String path) throws IOException {
-                            try {
-                                String files = hg.popen(cache, listener, true,
-                                        new ArgumentListBuilder("files", "-r", nodeBranch[0], "-I", path));
-                                if (StringUtils.isBlank(files)) {
-                                    return SCMProbeStat.fromType(SCMFile.Type.NONEXISTENT);
+            String heads = hg.popen(cache, listener, true, new ArgumentListBuilder("heads", "--template", "{node} {branch}\\n"));
+            Pattern p = Pattern.compile(Util.fixNull(branchPattern).length() == 0 ? ".+" : branchPattern);
+            for (String line : heads.split("\r?\n")) {
+                final String[] nodeBranch = line.split(" ", 2);
+                final String name = nodeBranch[1];
+                if (p.matcher(name).matches()) {
+                    listener.getLogger().println("Found branch " + name);
+                    SCMHead branch = new SCMHead(name);
+                    if (canProbe && criteria != null) {
+                        SCMProbe probe = new SCMProbe() {
+                            @NonNull
+                            @Override
+                            public SCMProbeStat stat(@NonNull String path) throws IOException {
+                                try {
+                                    String files = hg.popen(cache, listener, true,
+                                            new ArgumentListBuilder("files", "-r", nodeBranch[0], "-I", path));
+                                    if (StringUtils.isBlank(files)) {
+                                        return SCMProbeStat.fromType(SCMFile.Type.NONEXISTENT);
+                                    }
+                                    return SCMProbeStat.fromType(SCMFile.Type.REGULAR_FILE);
+                                } catch (InterruptedException e) {
+                                    throw new IOException(e);
                                 }
-                                return SCMProbeStat.fromType(SCMFile.Type.REGULAR_FILE);
-                            } catch (InterruptedException e) {
-                                throw new IOException(e);
                             }
-                        }
 
-                        @Override
-                        public void close() throws IOException {
+                            @Override
+                            public void close() throws IOException {
 
-                        }
+                            }
 
-                        @Override
-                        public String name() {
-                            return name;
-                        }
+                            @Override
+                            public String name() {
+                                return name;
+                            }
 
-                        @Override
-                        public long lastModified() {
-                            return 0;
+                            @Override
+                            public long lastModified() {
+                                return 0;
+                            }
+                        };
+                        if (criteria.isHead(probe, listener)) {
+                            listener.getLogger().println("Met criteria");
+                        } else {
+                            listener.getLogger().println("Does not meet criteria");
+                            continue;
                         }
-                    };
-                    if (criteria.isHead(probe, listener)) {
-                        listener.getLogger().println("Met criteria");
-                    } else {
-                        listener.getLogger().println("Does not meet criteria");
-                        continue;
                     }
+                    observer.observe(branch, new MercurialRevision(branch, nodeBranch[0]));
+                } else {
+                    listener.getLogger().println("Ignoring branch " + name);
                 }
-                observer.observe(branch, new MercurialRevision(branch, nodeBranch[0]));
-            } else {
-                listener.getLogger().println("Ignoring branch " + name);
             }
-        }
         } finally {
             hg.close();
         }
