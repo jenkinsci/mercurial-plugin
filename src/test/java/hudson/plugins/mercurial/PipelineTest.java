@@ -25,16 +25,21 @@ package hudson.plugins.mercurial;
  */
 
 import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
+import hudson.EnvVars;
 import hudson.console.AnnotatedLargeText;
 import hudson.scm.ChangeLogSet;
 import hudson.scm.SCM;
 import hudson.tools.ToolProperty;
 import hudson.triggers.SCMTrigger;
+import hudson.util.LogTaskListener;
+import hudson.util.VersionNumber;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import jenkins.branch.BranchSource;
 import jenkins.scm.api.SCMEvent;
@@ -48,7 +53,11 @@ import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
 import org.junit.Test;
+
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeThat;
+
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.jvnet.hudson.test.BuildWatcher;
@@ -177,15 +186,23 @@ public class PipelineTest {
     }
 
     @Test public void modernHook() throws Exception {
+        String instName = "caching";
+        MercurialInstallation installation = new MercurialInstallation(instName, "", "hg", false, true, false, null,
+                Collections.<ToolProperty<?>>emptyList());
+        LogTaskListener listener = new LogTaskListener(Logger.getLogger(getClass().getName()), Level.INFO);
+        final HgExe hg = new HgExe(installation, null, r.jenkins.createLauncher(
+                listener), r.jenkins, listener, new EnvVars());
+        String version = hg.version();
+        assumeThat("Need mercurial 3.0 to have in-process hooks, have " + version, new VersionNumber(version).isNewerThan(new VersionNumber("3.0")),is(true));
+
         sampleRepo.init();
         ScriptApproval sa = ScriptApproval.get();
         sampleRepo.write("Jenkinsfile", "node {checkout scm; echo readFile('file')}");
         sampleRepo.write("file", "initial content");
         sampleRepo.hg("commit", "--addremove", "--message=flow");
         WorkflowMultiBranchProject mp = r.jenkins.createProject(WorkflowMultiBranchProject.class, "p");
-        String instName = "caching";
-        r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(
-                new MercurialInstallation(instName, "", "hg", false, true, false, null, Collections.<ToolProperty<?>> emptyList()));
+        r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(installation);
+        installation.forNode(r.jenkins, new LogTaskListener(Logger.getAnonymousLogger(), Level.FINE));
         mp.getSourcesList().add(new BranchSource(new MercurialSCMSource(null, instName, sampleRepo.fileUrl(), null, null, null, null, null, true)));
         WorkflowJob p = scheduleAndFindBranchProject(mp, "default");
         r.waitUntilNoActivity();
