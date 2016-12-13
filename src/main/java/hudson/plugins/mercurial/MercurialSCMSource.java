@@ -22,6 +22,7 @@ import hudson.scm.SCM;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+import hudson.util.VersionNumber;
 import java.io.IOException;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -129,8 +130,14 @@ public final class MercurialSCMSource extends SCMSource {
         }
         final HgExe hg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars());
         try {
+            String version = hg.version();
+            boolean canProbe = new VersionNumber(version).isOlderThan(new VersionNumber("3.4"));
+            if (canProbe) {
+                listener.getLogger().printf("Probe support enabled on Mercurial Version %s >= 3.4%n", version);
+            } else {
+                listener.getLogger().printf("Probe support disabled on Mercurial Version %s < 3.4%n", version);
+            }
         String heads = hg.popen(cache, listener, true, new ArgumentListBuilder("heads", "--template", "{node} {branch}\\n"));
-        // TODO need to consider criteria here as well
         Pattern p = Pattern.compile(Util.fixNull(branchPattern).length() == 0 ? ".+" : branchPattern);
         for (String line : heads.split("\r?\n")) {
             final String[] nodeBranch = line.split(" ", 2);
@@ -138,7 +145,7 @@ public final class MercurialSCMSource extends SCMSource {
             if (p.matcher(name).matches()) {
                 listener.getLogger().println("Found branch " + name);
                 SCMHead branch = new SCMHead(name);
-                if (criteria != null) {
+                if (canProbe && criteria != null) {
                     SCMProbe probe = new SCMProbe() {
                         @NonNull
                         @Override
