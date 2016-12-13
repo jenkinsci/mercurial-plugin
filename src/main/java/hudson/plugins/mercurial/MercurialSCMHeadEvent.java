@@ -34,6 +34,7 @@ import jenkins.scm.api.SCMHeadEvent;
 import jenkins.scm.api.SCMNavigator;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
+import org.apache.commons.io.FilenameUtils;
 
 /**
  * Implementation of {@link SCMHeadEvent} for {@link MercurialSCM} / {@link MercurialSCMSource}.
@@ -56,7 +57,8 @@ public class MercurialSCMHeadEvent extends SCMHeadEvent<MercurialCommitPayload> 
     @NonNull
     @Override
     public String getSourceName() {
-        return null; // because we do not have a Mercurial SCM Navigator
+        // doesn't matter what we return here as we never match a navigator.
+        return FilenameUtils.getBaseName(payload.getUrl().getPath());
     }
 
     @NonNull
