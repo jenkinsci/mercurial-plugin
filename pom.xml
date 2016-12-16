@@ -7,7 +7,7 @@
         <relativePath/>
     </parent>
     <artifactId>mercurial</artifactId>
-    <version>1.58-SNAPSHOT</version>
+    <version>1.58-beta-1-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <name>Jenkins Mercurial plugin</name>
     <description>Allows Jenkins to check out projects from the Mercurial SCM.</description>
