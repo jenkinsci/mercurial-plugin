@@ -47,7 +47,7 @@ public class MercurialStatusCrumbExclusion extends CrumbExclusion {
         if (StringUtils.isEmpty(pathInfo)) {
             return false;
         }
-        // Github will not follow redirects https://github.com/isaacs/github/issues/574
+        // in case the notifier cannot not follow redirects
         pathInfo = pathInfo.endsWith("/") ? pathInfo : pathInfo + '/';
         if (!pathInfo.equals(getExclusionPath())) {
             return false;
