@@ -32,6 +32,7 @@ import hudson.scm.SCM;
 import hudson.tools.ToolProperty;
 import hudson.triggers.SCMTrigger;
 import hudson.util.LogTaskListener;
+import hudson.util.StreamTaskListener;
 import hudson.util.VersionNumber;
 import java.util.Collections;
 import java.util.Iterator;
@@ -193,16 +194,18 @@ public class PipelineTest {
         final HgExe hg = new HgExe(installation, null, r.jenkins.createLauncher(
                 listener), r.jenkins, listener, new EnvVars());
         String version = hg.version();
-        assumeThat("Need mercurial 3.0 to have in-process hooks, have " + version, new VersionNumber(version).isNewerThan(new VersionNumber("3.0")),is(true));
+        // I could not finx the exact version when the new hooks were added, but not found on any 2.x
+        // and found in all the 3.x versions I could get my hands on
+        assumeThat("Need mercurial 3.0ish to have in-process hooks, have " + version,
+                new VersionNumber(version).isNewerThan(new VersionNumber("3.0")),is(true));
 
         sampleRepo.init();
-        ScriptApproval sa = ScriptApproval.get();
         sampleRepo.write("Jenkinsfile", "node {checkout scm; echo readFile('file')}");
         sampleRepo.write("file", "initial content");
         sampleRepo.hg("commit", "--addremove", "--message=flow");
         WorkflowMultiBranchProject mp = r.jenkins.createProject(WorkflowMultiBranchProject.class, "p");
         r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(installation);
-        installation.forNode(r.jenkins, new LogTaskListener(Logger.getAnonymousLogger(), Level.FINE));
+        installation.forNode(r.jenkins, StreamTaskListener.fromStdout());
         mp.getSourcesList().add(new BranchSource(new MercurialSCMSource(null, instName, sampleRepo.fileUrl(), null, null, null, null, null, true)));
         WorkflowJob p = scheduleAndFindBranchProject(mp, "default");
         r.waitUntilNoActivity();

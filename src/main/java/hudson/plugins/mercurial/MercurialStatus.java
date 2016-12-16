@@ -88,7 +88,7 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
      * commit.jenkins = wget -q -O /dev/null &lt;jenkins root&gt;/mercurial/notifyCommit?url=&lt;repository remote url&gt;
      * </pre>
      * </li>
-     * <li>Mondern notifications such as from hooks like:
+     * <li>Modern notifications such as from hooks like:
      * <pre>
      * commit.jenkins = python:&lt;path to hook.py&gt;
      * </pre>
@@ -121,7 +121,6 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
         SecurityContext securityContext = ACL.impersonate(ACL.SYSTEM);
         try {
             if (StringUtils.isNotBlank(branch) && StringUtils.isNotBlank(changesetId)) {
-                // TODO if adding support for
                 SCMHeadEvent.fireNow(new MercurialSCMHeadEvent(
                         SCMEvent.Type.UPDATED, new MercurialCommitPayload(new URI(url), branch, changesetId)));
                 return HttpResponses.ok();
@@ -143,7 +142,6 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
             return HttpResponses.error(SC_SERVICE_UNAVAILABLE, "Jenkins instance is not ready");
         }
 
-        // TODO switch to SCMEvent if the hook contains details of the affected branches
         for (Item project : jenkins.getAllItems()) {
             SCMTriggerItem scmTriggerItem = SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project);
             if (scmTriggerItem == null) {

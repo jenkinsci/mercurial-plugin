@@ -132,12 +132,6 @@ public final class MercurialSCMSource extends SCMSource {
         try {
             String version = hg.version();
             // see https://www.mercurial-scm.org/wiki/WhatsNew/Archive the files command added in 3.2
-            boolean canProbe = new VersionNumber(version).compareTo(new VersionNumber("3.2")) >= 0;
-            if (canProbe) {
-                listener.getLogger().printf("Probe support enabled as Mercurial Version %s >= 3.2%n", version);
-            } else {
-                listener.getLogger().printf("Probe support disabled as Mercurial Version %s < 3.2%n", version);
-            }
             String heads = hg.popen(cache, listener, true, new ArgumentListBuilder("heads", "--template", "{node} {branch}\\n"));
             Pattern p = Pattern.compile(Util.fixNull(branchPattern).length() == 0 ? ".+" : branchPattern);
             for (String line : heads.split("\r?\n")) {
@@ -146,14 +140,14 @@ public final class MercurialSCMSource extends SCMSource {
                 if (p.matcher(name).matches()) {
                     listener.getLogger().println("Found branch " + name);
                     SCMHead branch = new SCMHead(name);
-                    if (canProbe && criteria != null) {
+                    if (criteria != null) {
                         SCMProbe probe = new SCMProbe() {
                             @NonNull
                             @Override
                             public SCMProbeStat stat(@NonNull String path) throws IOException {
                                 try {
                                     String files = hg.popen(cache, listener, true,
-                                            new ArgumentListBuilder("files", "-r", nodeBranch[0], "-I", path));
+                                            new ArgumentListBuilder("locate", "-r", nodeBranch[0], "-I", "path:" + path));
                                     if (StringUtils.isBlank(files)) {
                                         return SCMProbeStat.fromType(SCMFile.Type.NONEXISTENT);
                                     }
