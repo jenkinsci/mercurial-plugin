@@ -47,7 +47,7 @@ public class MercurialStatusCrumbExclusion extends CrumbExclusion {
         if (StringUtils.isEmpty(pathInfo)) {
             return false;
         }
-        // in case the notifier cannot not follow redirects
+        // in case the notifier cannot follow redirects
         pathInfo = pathInfo.endsWith("/") ? pathInfo : pathInfo + '/';
         if (!pathInfo.equals(getExclusionPath())) {
             return false;
