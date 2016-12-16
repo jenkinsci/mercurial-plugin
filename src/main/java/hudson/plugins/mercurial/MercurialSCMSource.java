@@ -130,8 +130,6 @@ public final class MercurialSCMSource extends SCMSource {
         }
         final HgExe hg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars());
         try {
-            String version = hg.version();
-            // see https://www.mercurial-scm.org/wiki/WhatsNew/Archive the files command added in 3.2
             String heads = hg.popen(cache, listener, true, new ArgumentListBuilder("heads", "--template", "{node} {branch}\\n"));
             Pattern p = Pattern.compile(Util.fixNull(branchPattern).length() == 0 ? ".+" : branchPattern);
             for (String line : heads.split("\r?\n")) {
