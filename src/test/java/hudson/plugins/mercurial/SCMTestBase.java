@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.jenkinsci.plugins.multiplescms.MultiSCM;
+import org.jenkinsci.test.acceptance.docker.DockerRule;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -50,6 +51,7 @@ public abstract class SCMTestBase {
     @Rule public JenkinsRule j = new JenkinsRule();
     @Rule public MercurialRule m = new MercurialRule(j);
     @Rule public TemporaryFolder tmp = new TemporaryFolder();
+    @Rule public DockerRule<MercurialContainer> container = new DockerRule<MercurialContainer>(MercurialContainer.class);
     @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
     private File repo;
 
@@ -86,14 +88,18 @@ public abstract class SCMTestBase {
     @Bug(15829)
     @Test public void basicOpsSlave() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
-        p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, null,
+        Slave slave = container.get().createSlave(j);
+        FilePath remoteRepo = slave.getRootPath().child("repo");
+        remoteRepo.mkdirs();
+        p.setScm(new MercurialSCM(hgInstallation(), remoteRepo.getRemote(), null, null,
                 null, null, false));
-        p.setAssignedNode(j.createOnlineSlave());
-        m.hg(repo, "init");
-        m.touchAndCommit(repo, "a");
+        p.setAssignedNode(slave);
+        m.withNode(slave);
+        m.hg(remoteRepo, "init");
+        m.touchAndCommit(remoteRepo, "a");
         String log = m.buildAndCheck(p, "a");
         assertClone(log, true);
-        m.touchAndCommit(repo, "b");
+        m.touchAndCommit(remoteRepo, "b");
         log = m.buildAndCheck(p, "b");
         assertClone(log, false);
     }

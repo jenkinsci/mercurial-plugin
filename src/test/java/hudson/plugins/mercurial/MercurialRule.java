@@ -6,6 +6,7 @@ import hudson.Launcher;
 import hudson.model.Action;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
+import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.scm.PollingResult;
 import hudson.util.ArgumentListBuilder;
@@ -30,6 +31,7 @@ public final class MercurialRule extends ExternalResource {
     private TaskListener listener;
 
     private final JenkinsRule j;
+    private Node node;
 
     public MercurialRule(JenkinsRule j) {
         this.j = j;
@@ -50,16 +52,25 @@ public final class MercurialRule extends ExternalResource {
         }
     }
 
+    public MercurialRule withNode(Node node) {
+        this.node = node;
+        return this;
+    }
+
+    private Node node() {
+        return node != null ? node : j.jenkins;
+    }
+
     private Launcher launcher() {
-        return j.jenkins.createLauncher(listener);
+        return node().createLauncher(listener);
     }
 
     private HgExe hgExe() throws Exception {
-        return new HgExe(null, null, launcher(), j.jenkins, listener, new EnvVars());
+        return new HgExe(null, null, launcher(), node(), listener, new EnvVars());
     }
 
     private HgExe hgExe(EnvVars env) throws Exception {
-        return new HgExe(null, null, launcher(), j.jenkins, listener, env);
+        return new HgExe(null, null, launcher(), node(), listener, env);
     }
 
     public void hg(String... args) throws Exception {
@@ -68,13 +79,21 @@ public final class MercurialRule extends ExternalResource {
     }
 
     public void hg(File repo, String... args) throws Exception {
+        hg(new FilePath(repo), args);
+    }
+
+    public void hg(FilePath repo, String... args) throws Exception {
         HgExe hg = hgExe();
         assertEquals(0, hg.launch(nobody(hg.seed(false)).add(args)).pwd(repo).join());
     }
 
     public void hg(File repo, EnvVars env, String... args) throws Exception {
+        hg(new FilePath(repo), env, args);
+    }
+
+    public void hg(FilePath repo, EnvVars env, String... args) throws Exception {
         HgExe hg = hgExe(env);
-        assertEquals(0, hg.launch(nobody(hg.seed(false)).add(args)).envs( env ).pwd(new File(env.expand(repo.getPath()))).join());
+        assertEquals(0, hg.launch(nobody(hg.seed(false)).add(args)).envs( env ).pwd(repo.child(env.expand(repo.getRemote()))).join());
     }
 
     private static ArgumentListBuilder nobody(ArgumentListBuilder args) {
@@ -82,8 +101,12 @@ public final class MercurialRule extends ExternalResource {
     }
 
     public void touchAndCommit(File repo, String... names) throws Exception {
+        touchAndCommit(new FilePath(repo), names);
+    }
+
+    public void touchAndCommit(FilePath repo, String... names) throws Exception {
         for (String name : names) {
-            FilePath toTouch = new FilePath(repo).child(name);
+            FilePath toTouch = repo.child(name);
             if (!toTouch.exists()) {
                 toTouch.getParent().mkdirs();
                 toTouch.touch(0);
@@ -120,12 +143,21 @@ public final class MercurialRule extends ExternalResource {
     }
 
     public String getLastChangesetId(File repo) throws Exception {
-        return hgExe().popen(new FilePath(repo), listener, false, new ArgumentListBuilder("log", "-l1", "--template", "{node}"));
+        return getLastChangesetId(new FilePath(repo));
+    }
+
+    public String getLastChangesetId(FilePath repo) throws Exception {
+        return hgExe().popen(repo, listener, false, new ArgumentListBuilder("log", "-l1", "--template", "{node}"));
     }
 
     public long getLastChangesetUnixTimestamp(File repo) throws Exception {
+        return getLastChangesetUnixTimestamp(new FilePath(repo));
+    }
+
+    public long getLastChangesetUnixTimestamp(FilePath repo) throws Exception {
         //hgdate returns the date as a pair of numbers: "1157407993 25200" (Unix timestamp, timezone offset).
-        String date = hgExe().popen(new FilePath(repo), listener, false, new ArgumentListBuilder("log", "-l1", "--template", "{date|hgdate}"));
+        String date = hgExe().popen(repo, listener, false, new ArgumentListBuilder("log", "-l1", "--template", "{date|hgdate}"));
         return Long.valueOf(date.split(" ")[0]);
     }
+
 }
