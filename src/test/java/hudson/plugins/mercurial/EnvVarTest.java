@@ -30,9 +30,7 @@ import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.StringParameterDefinition;
-import hudson.tools.ToolProperty;
 import java.io.File;
-import java.util.Collections;
 import static org.junit.Assert.*;
 import org.junit.Rule;
 import org.junit.Test;
@@ -71,7 +69,7 @@ public class EnvVarTest {
         m.touchAndCommit(repoExpanded, "f");
         
         // Set up installation.
-        r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(new MercurialInstallation("test", "", "hg", false, false, false, "[format]\nusestore = false", Collections.<ToolProperty<?>>emptyList()));
+        r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(new MercurialInstallation("test", "", "hg", false, false, false, "[format]\nusestore = false", null));
  
         // Create free style project.
         FreeStyleProject project = r.createFreeStyleProject();

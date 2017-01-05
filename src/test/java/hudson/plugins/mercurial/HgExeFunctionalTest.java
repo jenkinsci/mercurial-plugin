@@ -40,7 +40,6 @@ import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.io.FileUtils;
-import static org.junit.Assert.assertEquals;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -118,7 +117,7 @@ public class HgExeFunctionalTest {
 
     @Bug(5723)
     @Test public void customConfiguration() throws Exception {
-        HgExe hgexe = new HgExe(new MercurialInstallation(INSTALLATION, "", "hg", false, false, false, "[defaults]\nclone = --uncompressed\n", Collections.<ToolProperty<?>>emptyList()), null, this.launcher, j.jenkins, this.listener, this.vars);
+        HgExe hgexe = new HgExe(new MercurialInstallation(INSTALLATION, "", "hg", false, false, false, "[defaults]\nclone = --uncompressed\n", null), null, this.launcher, j.jenkins, this.listener, this.vars);
         ArgumentListBuilder b = hgexe.seed(false).add("clone", "http://some.thing/");
         assertEquals("hg --config defaults.clone=--uncompressed clone http://some.thing/", b.toString());
     }

@@ -27,9 +27,7 @@ package hudson.plugins.mercurial;
 import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
 import hudson.scm.ChangeLogSet;
 import hudson.scm.SCM;
-import hudson.tools.ToolProperty;
 import hudson.triggers.SCMTrigger;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
@@ -140,7 +138,7 @@ public class PipelineTest {
         WorkflowMultiBranchProject mp = r.jenkins.createProject(WorkflowMultiBranchProject.class, "p");
         String instName = "caching";
         r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(
-                new MercurialInstallation(instName, "", "hg", false, true, false, null, Collections.<ToolProperty<?>> emptyList()));
+                new MercurialInstallation(instName, "", "hg", false, true, false, null, null));
         mp.getSourcesList().add(new BranchSource(new MercurialSCMSource(null, instName, sampleRepo.fileUrl(), null, null, null, null, null, true)));
         WorkflowJob p = scheduleAndFindBranchProject(mp, "default");
         SemaphoreStep.waitForStart("wait/1", null);

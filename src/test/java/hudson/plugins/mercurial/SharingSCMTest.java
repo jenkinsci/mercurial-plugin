@@ -1,5 +1,6 @@
 package hudson.plugins.mercurial;
 
+import hudson.model.Slave;
 import hudson.tools.ToolProperty;
 
 import java.util.Collections;
@@ -20,7 +21,10 @@ public class SharingSCMTest extends SCMTestBase {
                                         .<ToolProperty<?>> emptyList()));
     }
 
-    @Override protected String hgInstallation() {
+    @Override protected String hgInstallation(Slave slave) throws Exception {
+        if (slave != null) {
+            return container.get().createInstallation(j, MercurialContainer.Version.HG4, false, true, true, "", slave).getName();
+        }
         return SHARING_INSTALLATION;
     }
 

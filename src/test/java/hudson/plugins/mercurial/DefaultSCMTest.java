@@ -24,9 +24,14 @@
 
 package hudson.plugins.mercurial;
 
+import hudson.model.Slave;
+
 public class DefaultSCMTest extends SCMTestBase {
 
-    @Override protected String hgInstallation() {
+    @Override protected String hgInstallation(Slave slave) throws Exception {
+        if (slave != null) {
+            return container.get().createInstallation(j, MercurialContainer.Version.HG4, false, false, false, "", slave).getName();
+        }
         return null;
     }
 

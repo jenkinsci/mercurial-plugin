@@ -74,7 +74,7 @@ public class MercurialInstallation extends ToolInstallation implements
         this(name, home, executable, debug, useCaches, useSharing, null, properties);
     }
 
-    @DataBoundConstructor public MercurialInstallation(String name, String home, String executable, boolean debug, boolean useCaches, boolean useSharing, String config, List<? extends ToolProperty<?>> properties) {
+    @DataBoundConstructor public MercurialInstallation(String name, String home, String executable, boolean debug, boolean useCaches, boolean useSharing, String config, @CheckForNull List<? extends ToolProperty<?>> properties) {
         super(name, home, properties);
         this.executable = Util.fixEmpty(executable);
         this.debug = debug;
@@ -88,7 +88,12 @@ public class MercurialInstallation extends ToolInstallation implements
     }
 
     String executableWithSubstitution(String home) {
-        return getExecutable().replace("INSTALLATION", home);
+        String _executable = getExecutable();
+        if (home.isEmpty() && _executable.contains("INSTALLATION")) {
+            // No home location defined on this node, so fall back to looking for Mercurial in the path.
+            return "hg";
+        }
+        return _executable.replace("INSTALLATION", home);
     }
 
     public boolean getDebug() {

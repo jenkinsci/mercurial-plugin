@@ -27,9 +27,7 @@ package hudson.plugins.mercurial;
 import hudson.FilePath;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
-import hudson.tools.ToolProperty;
 import java.io.File;
-import java.util.Collections;
 import static org.junit.Assert.*;
 import org.junit.Rule;
 import org.junit.Test;
@@ -48,7 +46,7 @@ public class CustomConfigTest {
         File repo = tmp.getRoot();
         m.hg(repo, "init");
         m.touchAndCommit(repo, "f");
-        r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(new MercurialInstallation("test", "", "hg", false, false, false, "[format]\nusestore = false", Collections.<ToolProperty<?>>emptyList()));
+        r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(new MercurialInstallation("test", "", "hg", false, false, false, "[format]\nusestore = false", null));
         FreeStyleProject p = r.createFreeStyleProject();
         p.setScm(new MercurialSCM("test", repo.getPath(), MercurialSCM.RevisionType.BRANCH, null, null, null, null, false, null, false));
         FreeStyleBuild b = r.assertBuildStatusSuccess(p.scheduleBuild2(0));

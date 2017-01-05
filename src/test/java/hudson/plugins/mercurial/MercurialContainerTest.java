@@ -44,8 +44,10 @@ public class MercurialContainerTest {
     @Test public void smokes() throws Exception {
         Slave slave = container.get().createSlave(r);
         TaskListener listener = StreamTaskListener.fromStdout();
-        HgExe hgExe = new HgExe(null, null, slave.createLauncher(listener), slave, listener, new EnvVars());
-        assertThat(hgExe.popen(slave.getRootPath(), listener, true, new ArgumentListBuilder("version")), containsString("Mercurial Distributed SCM (version "));
+        for (MercurialContainer.Version v : MercurialContainer.Version.values()) {
+            HgExe hgExe = new HgExe(container.get().createInstallation(r, v, false, false, false, "", slave), null, slave.createLauncher(listener), slave, listener, new EnvVars());
+            assertThat(hgExe.popen(slave.getRootPath(), listener, true, new ArgumentListBuilder("version")), containsString("Mercurial Distributed SCM (version " + v.exactVersion + ")"));
+        }
     }
 
 }

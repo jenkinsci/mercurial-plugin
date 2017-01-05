@@ -32,6 +32,7 @@ public final class MercurialRule extends ExternalResource {
 
     private final JenkinsRule j;
     private Node node;
+    private MercurialInstallation inst;
 
     public MercurialRule(JenkinsRule j) {
         this.j = j;
@@ -57,6 +58,11 @@ public final class MercurialRule extends ExternalResource {
         return this;
     }
 
+    public MercurialRule withInstallation(MercurialInstallation inst) {
+        this.inst = inst;
+        return this;
+    }
+
     private Node node() {
         return node != null ? node : j.jenkins;
     }
@@ -66,11 +72,11 @@ public final class MercurialRule extends ExternalResource {
     }
 
     private HgExe hgExe() throws Exception {
-        return new HgExe(null, null, launcher(), node(), listener, new EnvVars());
+        return new HgExe(inst, null, launcher(), node(), listener, new EnvVars());
     }
 
     private HgExe hgExe(EnvVars env) throws Exception {
-        return new HgExe(null, null, launcher(), node(), listener, env);
+        return new HgExe(inst, null, launcher(), node(), listener, env);
     }
 
     public void hg(String... args) throws Exception {
