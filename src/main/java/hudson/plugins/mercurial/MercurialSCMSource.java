@@ -212,7 +212,7 @@ public final class MercurialSCMSource extends SCMSource {
     protected List<Action> retrieveActions(@NonNull SCMHead head,
                                            @edu.umd.cs.findbugs.annotations.CheckForNull SCMHeadEvent event,
                                            @NonNull TaskListener listener) throws IOException, InterruptedException {
-        // TODO for Mecrurial 2.4+ check for the bookmark called @ and resolve that to determine the primary
+        // TODO for Mercurial 2.4+ check for the bookmark called @ and resolve that to determine the primary
         if ("default".equals(head.getName())) {
             return Collections.<Action>singletonList(new PrimaryInstanceMetadataAction());
         }
