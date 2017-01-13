@@ -12,6 +12,9 @@
   <f:entry field="useCaches" title="${%Use Repository Caches}">
     <f:checkbox/>
   </f:entry>
+  <f:entry field="masterCacheRoot" title="${%Master cache directory}">
+    <f:textbox/>
+  </f:entry>
   <f:entry field="useSharing" title="${%Use Repository Sharing}">
     <f:checkbox/>
   </f:entry>
