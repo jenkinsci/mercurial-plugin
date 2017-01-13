@@ -54,15 +54,19 @@ public final class MercurialSampleRepoRule extends AbstractSampleDVCSRepoRule {
     public void registerHook(JenkinsRule r) throws Exception {
         File hgDir = new File(sampleRepo, ".hg");
         File hook = new File(hgDir, "hook.py");
-        FileUtils.write(hook, "import requests\n"
+        FileUtils.write(hook, "import urllib\n"
+                + "import urllib2\n"
                 + "\n"
                 + "def commit(ui, repo, node, **kwargs):\n"
-                + "    ui.warn('Notify Commit hook response: %s\\n' % requests.post('"
-                +r.getURL()
-                +"mercurial/notifyCommit', data={\"url\":\""
-                +fileUrl()
-                +"\",\"branch\":repo[node].branch(),\"changesetId\":node}))\n"
-                + "    pass");
+                + "    data = {\n"
+                + "        'url': '" + fileUrl() + "',\n"
+                + "        'branch': repo[node].branch(),\n"
+                + "        'changesetId': node,\n"
+                + "    }\n"
+                + "    req = urllib2.Request('" + r.getURL() + "mercurial/notifyCommit')\n"
+                + "    rsp = urllib2.urlopen(req, urllib.urlencode(data))\n"
+                + "    ui.warn('Notify Commit hook response: %s\\n' % rsp.read())\n"
+                + "    pass\n");
         FileUtils.write(new File(hgDir, "hgrc"), "[hooks]\n"
                 + "commit.jenkins = python:"+hook.getAbsolutePath()+":commit");
     }
