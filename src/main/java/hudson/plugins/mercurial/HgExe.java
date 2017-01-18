@@ -52,6 +52,7 @@ import java.io.StringReader;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -83,7 +84,7 @@ public class HgExe {
     public final Node node;
     public final TaskListener listener;
     private final Capability capability;
-    private final FilePath sshPrivateKey;
+    private final ArrayList<FilePath> sshPrivateKeys;
 
     @Deprecated
     public HgExe(MercurialSCM scm, Launcher launcher, AbstractBuild build, TaskListener listener) throws IOException, InterruptedException {
@@ -112,52 +113,66 @@ public class HgExe {
         // TODO might be more efficient to have a single call returning ArgumentListBuilder[2]?
         baseNoDebug = findHgExe(inst, credentials, node, listener, false);
         if (credentials instanceof SSHUserPrivateKey) {
+            sshPrivateKeys = new ArrayList<FilePath>();
+            FilePath slaveRoot = node.getRootPath();
+            if (slaveRoot == null) {
+                throw new IOException(node.getDisplayName() + " is offline");
+            }
             final SSHUserPrivateKey cc = (SSHUserPrivateKey) credentials;
             List<String> keys = cc.getPrivateKeys();
             byte[] keyData;
             if (keys.isEmpty()) {
                 throw new IOException("No private key available");
-            } else if (keys.size() > 1) {
-                throw new IOException("Multiple private keys found.");
-            } else {
-                keyData = keys.get(0).getBytes("US-ASCII");
             }
-            
             final Secret passphrase = cc.getPassphrase();
-            if (passphrase != null && /* TODO JENKINS-21283 */ passphrase.getPlainText().length() > 0) {
-                try {
-                    KeyPair kp = KeyPair.load(new JSch(), keyData, null);
-                    if (!kp.decrypt(passphrase.getPlainText())) {
-                        throw new IOException("Passphrase did not decrypt SSH private key");
+            boolean hasPassphrase =
+                (passphrase != null && /* TODO JENKINS-21283 */ passphrase.getPlainText().length() > 0);
+            ArrayList<IOException> decryptFails = new ArrayList<IOException>();
+            for (int i = 0; i < keys.size(); i++) {
+                keyData = keys.get(i).getBytes("US-ASCII");
+
+                if (hasPassphrase) {
+                    try {
+                        KeyPair kp = KeyPair.load(new JSch(), keyData, null);
+                        if (!kp.decrypt(passphrase.getPlainText())) {
+                            decryptFails.add(new IOException("Passphrase did not decrypt SSH private key"));
+                            continue;
+                        }
+                        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                        kp.writePrivateKey(baos);
+                        keyData = baos.toByteArray();
+                    } catch (JSchException x) {
+                        decryptFails.add(new IOException("Did not manage to decrypt SSH private key: " + x, x));
+                        continue;
                     }
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    kp.writePrivateKey(baos);
-                    keyData = baos.toByteArray();
-                } catch (JSchException x) {
-                    throw new IOException("Did not manage to decrypt SSH private key: " + x, x);
                 }
+                FilePath sshPrivateKey = slaveRoot.createTempFile("jenkins-mercurial", ".sshkey" + i);
+                sshPrivateKey.chmod(0600);
+                // just in case slave goes offline during command; createTempFile fails to do it:
+                sshPrivateKey.act(new DeleteOnExit());
+                OutputStream os = sshPrivateKey.write();
+                try {
+                    os.write(keyData);
+                } finally {
+                    os.close();
+                }
+                sshPrivateKeys.add(sshPrivateKey);
+                sshPrivateKey = null;
             }
-            FilePath slaveRoot = node.getRootPath();
-            if (slaveRoot == null) {
-                throw new IOException(node.getDisplayName() + " is offline");
-            }
-            sshPrivateKey = slaveRoot.createTempFile("jenkins-mercurial", ".sshkey");
-            sshPrivateKey.chmod(0600);
-            // just in case slave goes offline during command; createTempFile fails to do it:
-            sshPrivateKey.act(new DeleteOnExit());
-            OutputStream os = sshPrivateKey.write();
-            try {
-                os.write(keyData);
-            } finally {
-                os.close();
+            if (decryptFails.size() > 0 && sshPrivateKeys.size() > 0) {
+                throw decryptFails.get(0);
             }
             for (ArgumentListBuilder b : new ArgumentListBuilder[] {base, baseNoDebug}) {
                 b.add("--config");
                 // TODO do we really want to pass -l username? Usually the username is ‘hg’ and encoded in the URL. But seems harmless at least on bitbucket.
-                b.addMasked(String.format("ui.ssh=ssh -i %s -l %s", sshPrivateKey.getRemote(), cc.getUsername()));
+                StringBuilder sshKeys = new StringBuilder();
+                for (int i = 0; i < sshPrivateKeys.size(); i++) {
+                    sshKeys.append(String.format("-i %s", sshPrivateKeys.get(i).getRemote()));
+                }
+                b.addMasked(String.format("ui.ssh=ssh %s -l %s", sshKeys.toString(), cc.getUsername()));
             }
         } else {
-            sshPrivateKey = null;
+            sshPrivateKeys = null;
         }
         this.node = node;
         this.env = env;
@@ -175,8 +190,11 @@ public class HgExe {
     }
 
     public void close() throws IOException, InterruptedException { // TODO implement AutoCloseable in Java 7+
-        if (sshPrivateKey != null) {
-            sshPrivateKey.delete();
+        if (sshPrivateKeys != null) {
+            for (int i = 0; i < sshPrivateKeys.size(); i++) {
+                sshPrivateKeys.get(i).delete();
+            }
+            sshPrivateKeys.clear();
         }
     }
 
