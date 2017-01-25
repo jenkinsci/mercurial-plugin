@@ -10,6 +10,7 @@ import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.util.ArgumentListBuilder;
 
+import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
@@ -37,6 +38,8 @@ class Cache {
      */
     private final String remote;
 
+    private final @CheckForNull String masterCacheRoot;
+
     private final StandardUsernameCredentials credentials;
 
     /**
@@ -50,19 +53,20 @@ class Cache {
     private final ReentrantLock masterLock = new ReentrantLock(true);
     private final Map<String, ReentrantLock> slaveNodesLocksMap = new HashMap<String, ReentrantLock>();
 
-    private Cache(String remote, String hash, StandardUsernameCredentials credentials) {
+    private Cache(String remote, String hash, StandardUsernameCredentials credentials, String masterCacheRoot) {
         this.remote = remote;
         this.hash = hash;
         this.credentials = credentials;
+        this.masterCacheRoot = masterCacheRoot;
     }
 
     private static final Map<String, Cache> CACHES = new HashMap<String, Cache>();
 
-    public synchronized static @NonNull Cache fromURL(String remote, StandardUsernameCredentials credentials) {
-        String h = hashSource(remote, credentials);
+    public synchronized static @NonNull Cache fromURL(String remote, StandardUsernameCredentials credentials, @CheckForNull String masterCacheRoot) {
+        String h = hashSource(remote, credentials, masterCacheRoot);
         Cache cache = CACHES.get(h);
         if (cache == null) {
-            CACHES.put(h, cache = new Cache(remote, h, credentials));
+            CACHES.put(h, cache = new Cache(remote, h, credentials, masterCacheRoot));
         }
         return cache;
     }
@@ -104,12 +108,18 @@ class Cache {
             if (master == null) { // Should not happen
                 throw new IOException("Cannot retrieve the Jenkins master node");
             }
-            final FilePath rootPath = master.getRootPath();
-            if (rootPath == null) {
-                throw new IOException("Cannot retrieve the root directory of the Jenkins master node");
+
+            FilePath masterCaches = null;
+            if (masterCacheRoot != null){
+                masterCaches = new FilePath(master.getChannel(), masterCacheRoot);
+            } else {
+                FilePath rootPath = master.getRootPath();
+                if (rootPath == null) {
+                    throw new IOException("Cannot retrieve the root directory of the Jenkins master node");
+                }
+                masterCaches = rootPath.child("hgcache");
             }
-            
-            FilePath masterCaches = rootPath.child("hgcache");
+
             FilePath masterCache = masterCaches.child(hash);
             Launcher masterLauncher = node == master ? launcher : master.createLauncher(listener);
 
@@ -241,12 +251,19 @@ class Cache {
     /**
      * Hash a URL into a string that only contains characters that are safe as directory names.
      */
-    static String hashSource(String source, StandardUsernameCredentials credentials) {
+    static String hashSource(String source, StandardUsernameCredentials credentials, @CheckForNull String masterCacheRoot) {
         if (!source.endsWith("/")) {
             source += "/";
         }
         Matcher m = Pattern.compile(".+[/]([^/:]+)(:\\d+)?[/]?").matcher(source);
-        String digestible = credentials == null ? source : source + '#' + credentials.getId();
+        String digestible = source;
+        if (credentials != null){
+            digestible +=  '#' + credentials.getId();
+        }
+        if (masterCacheRoot != null){
+            digestible += "#" + masterCacheRoot.replaceAll(File.pathSeparator, "_");
+        }
+
         BigInteger hash;
         try {
             hash = new BigInteger(1, MessageDigest.getInstance("SHA-1").digest(digestible.getBytes("UTF-8")));
