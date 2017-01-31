@@ -11,6 +11,7 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
+import hudson.AbortException;
 import hudson.model.Action;
 import hudson.model.Descriptor;
 import hudson.model.Item;
@@ -155,6 +156,8 @@ public final class MercurialSCMSource extends SCMSource {
                                     return SCMProbeStat.fromType(SCMFile.Type.REGULAR_FILE);
                                 } catch (InterruptedException e) {
                                     throw new IOException(e);
+                                } catch (AbortException e) {
+                                    return SCMProbeStat.fromType(SCMFile.Type.NONEXISTENT);
                                 }
                             }
 
