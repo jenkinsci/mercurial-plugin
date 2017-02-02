@@ -84,6 +84,7 @@ public class HgExe {
     public final TaskListener listener;
     private final Capability capability;
     private final FilePath sshPrivateKey;
+    private final Pattern versionPattern = Pattern.compile("(\\d+)\\.(\\d+).*");
 
     @Deprecated
     public HgExe(MercurialSCM scm, Launcher launcher, AbstractBuild build, TaskListener listener) throws IOException, InterruptedException {
@@ -270,6 +271,9 @@ public class HgExe {
 
     public ProcStarter bundle(Collection<String> bases, String file) {
         ArgumentListBuilder args = seed(true).add("bundle");
+        if(this.versionIsAtLeast(2,5)) {
+            args.add("--hidden");
+        }
         for (String head : bases) {
             args.add("--base", head);
         }
@@ -325,6 +329,9 @@ public class HgExe {
 
     private Set<String> heads(FilePath repo, boolean useTimeout, boolean usingHg15Syntax) throws IOException, InterruptedException {
         ArgumentListBuilder args = new ArgumentListBuilder("heads", "--template", "{node}\\n");
+        if(this.versionIsAtLeast(2,5)) {
+            args.add("--hidden");
+        }
         if(usingHg15Syntax)
             args.add("--topo", "--closed");
         String output = popen(repo,listener,useTimeout,args);
@@ -394,6 +401,23 @@ public class HgExe {
             return null;
         }
         return m.group(1);
+    }
+
+    public boolean versionIsAtLeast(int major, int minor){
+        try{
+            Matcher m = versionPattern.matcher(this.version());
+            m.find();
+            if(Integer.parseInt(m.group(1))> major ||
+                    (Integer.parseInt(m.group(1))>= major &&
+                            Integer.parseInt(m.group(2)) >= minor )) {
+                return true;
+            }
+        }catch (InterruptedException e){
+            listener.error("Error parsing hg version: " + e.getMessage());
+        } catch (IOException e) {
+            listener.error("Error parsing hg version: " + e.getMessage());
+        }
+        return false;
     }
 
     /**

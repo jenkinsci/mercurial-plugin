@@ -655,6 +655,9 @@ public class MercurialSCM extends SCM implements Serializable {
         try {
 
         ArgumentListBuilder logCommand = hg.seed(true).add("log", "--rev", prevTag.getId(), "--template", "exists\\n");
+            if(hg.versionIsAtLeast(2,5)) {
+                logCommand.add("--hidden");
+            }
         int exitCode = hg.launch(logCommand).pwd(repository).join();
         if(exitCode != 0) {
             listener.error("Previously built revision " + prevTag.getId() + " is not known in this clone; unable to determine change log");
@@ -670,6 +673,9 @@ public class MercurialSCM extends SCM implements Serializable {
                 os.write("<changesets>\n".getBytes("UTF-8"));
                 ArgumentListBuilder args = hg.seed(false);
                 args.add("log");
+                if(hg.versionIsAtLeast(2,5)) {
+                    args.add("--hidden");
+                }
                 args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
                 if(revisionType == RevisionType.REVSET) {
                     args.add("--rev", "ancestors(" + revToBuild + ") and not ancestors(" + prevTag.getId() + ")");
