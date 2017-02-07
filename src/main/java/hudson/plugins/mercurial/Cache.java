@@ -10,9 +10,11 @@ import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.util.ArgumentListBuilder;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.util.HashMap;
 import java.util.Map;
@@ -21,6 +23,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import jenkins.model.Jenkins;
+import org.apache.commons.lang.StringUtils;
 
 /**
  * Mercurial repository that serves as a cache to hg operations in the Hudson cluster.
@@ -137,6 +140,31 @@ class Cache {
             // TODO use getCredentials()
             if (masterCache.isDirectory()) {
                 ArgumentListBuilder args = masterHg.seed(true).add("pull");
+                // delete local bookmarks
+                ArgumentListBuilder showLocalArgs = masterHg.seed(true).add("bookmarks").add("-q");
+                ArgumentListBuilder deleteLocalArgs = masterHg.seed(true).add("bookmarks").add("-q");
+                ByteArrayOutputStream lbdata = new ByteArrayOutputStream();
+                HgExe.joinWithPossibleTimeout(masterHg.launch(showLocalArgs).pwd(masterCache).stdout(lbdata), true, listener);
+                Pattern lbr = Pattern.compile("^\\s*([^\\s]+)(\\s+([a-z0-9]+))?\\s*$");
+                for (String line : lbdata.toString(Charset.defaultCharset().name()).replace("*", " ").split("\r?\n")) {
+                    Matcher m = lbr.matcher(line);
+                    if(m.find( )) {
+                        deleteLocalArgs.add("-d").add(m.group(0));
+                    }
+                }
+                HgExe.joinWithPossibleTimeout(masterHg.launch(deleteLocalArgs).pwd(masterCache), true, listener);
+                // get remote bookmarks
+                ArgumentListBuilder rbargs = masterHg.seed(true).add("incoming").add("-B").add("-q");
+                ByteArrayOutputStream data = new ByteArrayOutputStream();
+                Pattern r = Pattern.compile("^\\s+([^\\s]+)\\s+([a-z0-9]+)\\s*$");
+                if (HgExe.joinWithPossibleTimeout(masterHg.launch(rbargs).pwd(masterCache).stdout(data), true, listener) != 0) {
+                    for (String line : data.toString(Charset.defaultCharset().name()).split("\r?\n")) {
+                        Matcher m = r.matcher(line);
+                        if(m.find( )) {
+                            args.add("-B").add(m.group(0));
+                        }
+                    }
+                }
                 if (HgExe.joinWithPossibleTimeout(masterHg.launch(args).pwd(masterCache), true, listener) != 0) {
                     listener.error("Failed to update " + masterCache);
                     return null;

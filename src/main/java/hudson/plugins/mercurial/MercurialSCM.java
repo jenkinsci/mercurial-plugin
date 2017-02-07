@@ -47,6 +47,7 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.net.MalformedURLException;
+import java.nio.charset.Charset;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +60,7 @@ import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
+import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.plugins.multiplescms.MultiSCMRevisionState;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -491,18 +493,43 @@ public class MercurialSCM extends SCM implements Serializable {
     private int pull(Launcher launcher, FilePath repository, TaskListener listener, Node node, String revision, StandardUsernameCredentials credentials, EnvVars env) throws IOException, InterruptedException {
         HgExe hg = new HgExe(findInstallation(getInstallation()), credentials, launcher, node, listener, env);
         try {
-        ArgumentListBuilder cmd = hg.seed(true);
-        cmd.add("pull");
-        if (revisionType == RevisionType.BRANCH || revisionType == RevisionType.CHANGESET) { // does not work for tags
-            cmd.add("--rev", revision);
-        }
-        CachedRepo cachedSource = cachedSource(node, env, launcher, listener, true, credentials);
-        if (cachedSource != null) {
-            cmd.add(cachedSource.getRepoLocation());
-        }
-        return HgExe.joinWithPossibleTimeout(
-                hg.launch(cmd).pwd(repository),
-                true, listener);
+            ArgumentListBuilder cmd = hg.seed(true);
+            cmd.add("pull");
+            // delete local bookmarks
+            ArgumentListBuilder showLocalArgs = hg.seed(true).add("bookmarks").add("-q");
+            ArgumentListBuilder deleteLocalArgs = hg.seed(true).add("bookmarks").add("-q");
+            ByteArrayOutputStream lbdata = new ByteArrayOutputStream();
+            HgExe.joinWithPossibleTimeout(hg.launch(showLocalArgs).pwd(repository).stdout(lbdata), true, listener);
+            Pattern lbr = Pattern.compile("^\\s*([^\\s]+)(\\s+([a-z0-9]+))?\\s*$");
+            for (String line : lbdata.toString(Charset.defaultCharset().name()).replace("*", " ").split("\r?\n")) {
+                Matcher m = lbr.matcher(line);
+                if(m.find( )) {
+                    deleteLocalArgs.add("-d").add(m.group(0));
+                }
+            }
+            HgExe.joinWithPossibleTimeout(hg.launch(deleteLocalArgs).pwd(repository), true, listener);
+            // get remote bookmarks
+            ArgumentListBuilder rbargs = hg.seed(true).add("incoming").add("-B").add("-q");
+            ByteArrayOutputStream rbdata = new ByteArrayOutputStream();
+            Pattern rbr = Pattern.compile("^\\s+([^\\s]+)\\s+([a-z0-9]+)\\s*$");
+            if (HgExe.joinWithPossibleTimeout(hg.launch(rbargs).pwd(repository).stdout(rbdata), true, listener) != 0) {
+                for (String line : rbdata.toString(Charset.defaultCharset().name()).split("\r?\n")) {
+                    Matcher m = rbr.matcher(line);
+                    if(m.find( )) {
+                        cmd.add("-B").add(m.group(0));
+                    }
+                }
+            }
+            if (revisionType == RevisionType.BRANCH || revisionType == RevisionType.CHANGESET) { // does not work for tags
+                cmd.add("--rev", revision);
+            }
+            CachedRepo cachedSource = cachedSource(node, env, launcher, listener, true, credentials);
+            if (cachedSource != null) {
+                cmd.add(cachedSource.getRepoLocation());
+            }
+            return HgExe.joinWithPossibleTimeout(
+                    hg.launch(cmd).pwd(repository),
+                    true, listener);
         } finally {
             hg.close();
         }
