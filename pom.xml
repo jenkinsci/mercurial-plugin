@@ -16,7 +16,7 @@
     <properties>
       <jenkins.version>1.642.3</jenkins.version>
       <no-test-jar>false</no-test-jar>  
-      <scm-api.version>2.0.3-SNAPSHOT</scm-api.version>
+      <scm-api.version>2.0.3</scm-api.version>
     </properties>
     
     <developers>
