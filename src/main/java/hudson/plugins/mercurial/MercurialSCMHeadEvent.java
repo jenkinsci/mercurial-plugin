@@ -44,8 +44,14 @@ import org.apache.commons.io.FilenameUtils;
 public class MercurialSCMHeadEvent extends SCMHeadEvent<MercurialCommitPayload> {
     private final MercurialCommitPayload payload;
 
+    @Deprecated
     public MercurialSCMHeadEvent(Type type, MercurialCommitPayload payload) {
         super(type, payload);
+        this.payload = payload;
+    }
+
+    public MercurialSCMHeadEvent(Type type, MercurialCommitPayload payload, String origin) {
+        super(type, payload, origin);
         this.payload = payload;
     }
 
