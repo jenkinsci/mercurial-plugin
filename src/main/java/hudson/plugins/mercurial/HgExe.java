@@ -436,7 +436,8 @@ public class HgExe {
         args = seed(false).add(args.toCommandArray());
 
         ByteArrayOutputStream data = new ByteArrayOutputStream();
-        if (joinWithPossibleTimeout(launch(args).pwd(repository).stdout(data), useTimeout, listener) == 0) {
+        ByteArrayOutputStream errmsg = new ByteArrayOutputStream();
+        if (joinWithPossibleTimeout(launch(args).pwd(repository).stdout(data).stderr(errmsg), useTimeout, listener) == 0) {
             try {
                 //TODO: consider using another charset
                 return data.toString(Charset.defaultCharset().name());
@@ -446,6 +447,7 @@ public class HgExe {
         } else {
             listener.error("Failed to run " + args.toStringWithQuote());
             listener.getLogger().write(data.toByteArray());
+            listener.getLogger().write(errmsg.toByteArray());
             throw new AbortException();
         }
     }
