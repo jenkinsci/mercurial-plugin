@@ -17,6 +17,7 @@ import org.kohsuke.accmod.restrictions.NoExternalUse;
 import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.HttpResponses;
 import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
@@ -132,16 +133,18 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
     public HttpResponse doNotifyCommit(@QueryParameter(required=true) final String url,
                                        @QueryParameter String branch,
                                        @QueryParameter String changesetId) throws ServletException, IOException {
+        String origin = SCMEvent.originOf(Stapler.getCurrentRequest());
         // run in high privilege to see all the projects anonymous users don't see.
         // this is safe because we only initiate polling.
         SecurityContext securityContext = ACL.impersonate(ACL.SYSTEM);
         try {
             if (StringUtils.isNotBlank(branch) && StringUtils.isNotBlank(changesetId)) {
                 SCMHeadEvent.fireNow(new MercurialSCMHeadEvent(
-                        SCMEvent.Type.UPDATED, new MercurialCommitPayload(new URI(url), branch, changesetId)));
+                        SCMEvent.Type.UPDATED, new MercurialCommitPayload(new URI(url), branch, changesetId),
+                        origin));
                 return HttpResponses.ok();
             }
-            return handleNotifyCommit(new URI(url));
+            return handleNotifyCommit(origin, new URI(url));
         } catch ( URISyntaxException ex ) {
             throw HttpResponses.error(SC_BAD_REQUEST, ex);
         } finally {
@@ -149,7 +152,7 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
         }
     }
 
-    private HttpResponse handleNotifyCommit(URI url) throws ServletException, IOException {
+    private HttpResponse handleNotifyCommit(String origin, URI url) throws ServletException, IOException {
         final List<Item> projects = Lists.newArrayList();
         boolean scmFound = false,
                 urlFound = false;
@@ -187,7 +190,9 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
                 continue;
             }
 
-            LOGGER.log(Level.INFO, "Triggering polling of {0}", project.getFullName());
+            LOGGER.log(Level.INFO, "Triggering polling of {0} after event from {1}", new Object[]{
+                    project.getFullName(), origin
+            });
             trigger.run();
             projects.add(project);
             break SCMS;
@@ -210,7 +215,9 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
                     continue;
                 }
                 urlFound = true;
-                LOGGER.log(Level.INFO, "Scheduling {0} for refresh", project.getFullName());
+                LOGGER.log(Level.INFO, "Scheduling {0} for refresh after event from {1}", new Object[]{
+                        project.getFullName(), origin
+                });
                 project.onSCMSourceUpdated(source);
                 projects.add(project);
             }
