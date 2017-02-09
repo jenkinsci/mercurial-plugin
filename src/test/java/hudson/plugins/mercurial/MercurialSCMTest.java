@@ -50,7 +50,7 @@ public class MercurialSCMTest {
     @Test public void buildEnvVarsSetsShortId() throws IOException {
         Map<String,String> actualEnvironment = new HashMap<String,String>();
         final String EXPECTED_SHORT_ID = "123456789012";
-        new MercurialSCM("","","", "", "", null, true).buildEnvVarsFromActionable(new Actionable() {
+        new MercurialSCM("","","", "", "", null, true, "").buildEnvVarsFromActionable(new Actionable() {
             @Override public List<Action> getActions() {
                 return Collections.<Action>singletonList(new MercurialTagAction(EXPECTED_SHORT_ID + "1627e63489b4096a8858e559a456", "rev", null, null));
             }
@@ -63,7 +63,7 @@ public class MercurialSCMTest {
     @Test public void buildEnvVarsSetsUrl() throws IOException {
         Map<String,String> actualEnvironment = new HashMap<String,String>();
         final String EXPECTED_REPOSITORY_URL = "http://mercurialserver/testrepo";
-        new MercurialSCM("",EXPECTED_REPOSITORY_URL,"", "", "", null, true).buildEnvVarsFromActionable(new Actionable() {
+        new MercurialSCM("",EXPECTED_REPOSITORY_URL,"", "", "", null, true, "").buildEnvVarsFromActionable(new Actionable() {
             @Override public List<Action> getActions() {
                 return Collections.<Action>singletonList(new MercurialTagAction("1627e63489b4096a8858e559a456", "rev", null, null));            }
             @Override public String getDisplayName() {return null;}

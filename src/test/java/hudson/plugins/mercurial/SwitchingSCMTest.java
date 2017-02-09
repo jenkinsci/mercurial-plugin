@@ -44,7 +44,7 @@ public class SwitchingSCMTest {
     @Test public void switchingFromCachedToShared() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(cachingInstallation, repo.getPath(), null,
-                null, null, null, false));
+                null, null, null, false, ""));
 
         m.hg(repo, "init");
         m.touchAndCommit(repo, "a");
@@ -53,7 +53,7 @@ public class SwitchingSCMTest {
                 .exists());
 
         p.setScm(new MercurialSCM(sharingInstallation, repo.getPath(), null,
-                null, null, null, false));
+                null, null, null, false, ""));
 
         m.touchAndCommit(repo, "b");
         m.buildAndCheck(p, "b");
@@ -65,7 +65,7 @@ public class SwitchingSCMTest {
     public void testSwitchingFromSharedToCached() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(sharingInstallation, repo.getPath(), null,
-                null, null, null, false));
+                null, null, null, false, ""));
 
         m.hg(repo, "init");
         m.touchAndCommit(repo, "a");
@@ -75,7 +75,7 @@ public class SwitchingSCMTest {
                 .exists());
 
         p.setScm(new MercurialSCM(cachingInstallation, repo.getPath(), null,
-                null, null, null, false));
+                null, null, null, false, ""));
 
         m.touchAndCommit(repo, "b");
         m.buildAndCheck(p, "b");

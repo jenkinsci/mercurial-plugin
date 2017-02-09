@@ -155,7 +155,7 @@ public class PipelineTest {
         String instName = "caching";
         r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(
                 new MercurialInstallation(instName, "", "hg", false, true, false, null, Collections.<ToolProperty<?>> emptyList()));
-        mp.getSourcesList().add(new BranchSource(new MercurialSCMSource(null, instName, sampleRepo.fileUrl(), null, null, null, null, null, true)));
+        mp.getSourcesList().add(new BranchSource(new MercurialSCMSource(null, instName, sampleRepo.fileUrl(), null, null, null, null, null, true, false, "")));
         WorkflowJob p = scheduleAndFindBranchProject(mp, "default");
         SemaphoreStep.waitForStart("wait/1", null);
         WorkflowRun b1 = p.getLastBuild();

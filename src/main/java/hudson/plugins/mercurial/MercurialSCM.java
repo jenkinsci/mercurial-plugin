@@ -148,27 +148,31 @@ public class MercurialSCM extends SCM implements Serializable {
 
     private boolean disableChangeLog;
 
+    private boolean merge;
+
+    private String mergeBranch;
+
     @DataBoundConstructor public MercurialSCM(String source) {
         this.source = Util.fixEmptyAndTrim(source);
     }
 
     @Deprecated
-    public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean) {
-        this(installation, source, branch, modules, subdir, browser, clean, null);
+    public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean, String mergeBranch) {
+        this(installation, source, branch, modules, subdir, browser, clean, null, mergeBranch);
     }
 
     @Deprecated
-    public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean, String credentialsId) {
-        this(installation, source, RevisionType.BRANCH, branch, modules, subdir, browser, clean, credentialsId);
+    public MercurialSCM(String installation, String source, String branch, String modules, String subdir, HgBrowser browser, boolean clean, String credentialsId, String mergeBranch) {
+        this(installation, source, RevisionType.BRANCH, branch, modules, subdir, browser, clean, credentialsId, mergeBranch);
     }
 
     @Deprecated
-    public MercurialSCM(String installation, String source, @NonNull RevisionType revisionType, @NonNull String revision, String modules, String subdir, HgBrowser browser, boolean clean, String credentialsId) {
-      this(installation, source, revisionType, revision, modules, subdir, browser, clean, credentialsId, false);
+    public MercurialSCM(String installation, String source, @NonNull RevisionType revisionType, @NonNull String revision, String modules, String subdir, HgBrowser browser, boolean clean, String credentialsId, String mergeBranch) {
+      this(installation, source, revisionType, revision, modules, subdir, browser, clean, credentialsId, false, mergeBranch);
     }
 
     @Deprecated
-    public MercurialSCM(String installation, String source, @NonNull RevisionType revisionType, @NonNull String revision, String modules, String subdir, HgBrowser browser, boolean clean, String credentialsId, boolean disableChangeLog) {
+    public MercurialSCM(String installation, String source, @NonNull RevisionType revisionType, @NonNull String revision, String modules, String subdir, HgBrowser browser, boolean clean, String credentialsId, boolean disableChangeLog, String mergeBranch) {
         this(source);
         setInstallation(installation);
         setModules(modules);
@@ -359,6 +363,26 @@ public class MercurialSCM extends SCM implements Serializable {
 
     @DataBoundSetter public final void setClean(boolean clean) {
         this.clean = clean;
+    }
+
+    public boolean isMerge() {
+        return merge;
+    }
+
+    public String getMergeBranch() {
+        return mergeBranch;
+    }
+
+    public String getMergeBranch(EnvVars env) {
+        return env.expand(mergeBranch);
+    }
+
+    @DataBoundSetter public final void setMerge(boolean merge) {
+        this.merge = merge;
+    }
+
+    @DataBoundSetter public final void setMergeBranch(String mergeBranch) {
+        this.mergeBranch = mergeBranch;
     }
 
     @Override
@@ -590,6 +614,26 @@ public class MercurialSCM extends SCM implements Serializable {
             update(build, launcher, repository, node, listener, revToBuild, credentials);
         } else {
             clone(build, launcher, repository, node, listener, revToBuild, credentials);
+        }
+
+        if (isMerge()) {
+            EnvVars env = build.getEnvironment(listener);
+            HgExe hg = new HgExe(mercurialInstallation, credentials, launcher, node, listener, env);
+
+            pull(launcher, repository, listener, node, getMergeBranch(env), credentials, env);
+
+            int mergeExitCode;
+            try {
+                mergeExitCode = hg.run("merge", "--rev", getMergeBranch(env)).pwd(repository).join();
+            } catch (IOException e) {
+                listener.error("Failed to merge");
+                e.printStackTrace(listener.getLogger());
+                throw new AbortException("Failed to merge");
+            }
+            if (mergeExitCode != 0) {
+                listener.error("Failed to merge");
+                throw new AbortException("Failed to merge");
+            }
         }
 
         if (changelogFile != null) {
@@ -959,6 +1003,7 @@ public class MercurialSCM extends SCM implements Serializable {
         if (inst == null || !inst.isUseCaches()) {
             return null;
         }
+
         try {
             FilePath cache = Cache.fromURL(getSource(env), credentials, inst.getMasterCacheRoot()).repositoryCache(inst, node, launcher, listener, useTimeout);
             if (cache != null) {

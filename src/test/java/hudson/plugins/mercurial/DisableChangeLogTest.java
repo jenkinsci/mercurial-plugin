@@ -41,7 +41,7 @@ public class DisableChangeLogTest {
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(),
                 MercurialSCM.RevisionType.BRANCH, null, null,
-                null, null, false, null, true));
+                null, null, false, null, true, ""));
         m.hg(repo, "init");
         m.touchAndCommit(repo, "dir1/f1");
         b = p.scheduleBuild2(0).get();

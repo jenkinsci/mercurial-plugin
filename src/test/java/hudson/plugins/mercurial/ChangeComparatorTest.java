@@ -44,7 +44,7 @@ public class ChangeComparatorTest {
 		
 		FreeStyleProject project = j.createFreeStyleProject();
 		
-        MercurialSCM scm = new MercurialSCM(null, tmp.getRoot().getPath(), null, null, null, null, false, null);
+        MercurialSCM scm = new MercurialSCM(null, tmp.getRoot().getPath(), null, null, null, null, false, null, "");
 		project.setScm(scm);
 		File repo = tmp.getRoot();
 		
