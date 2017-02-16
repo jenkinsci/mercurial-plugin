@@ -319,8 +319,8 @@ public abstract class SCMTestBase {
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), "${BRANCH}",
                 null, null, null, false));
-        // This is not how a real parameterized build runs, but using
-        // ParametersDefinitionProperty just looks untestable:
+        // SECURITY-170 - have to use ParametersDefinitionProperty
+        p.addProperty(new ParametersDefinitionProperty(new StringParameterDefinition("BRANCH", "b")));
         String log = m.buildAndCheck(p, "variant", new ParametersAction(
                 new StringParameterValue("BRANCH", "b")));
         assertTrue(log, log.contains("--rev b"));
