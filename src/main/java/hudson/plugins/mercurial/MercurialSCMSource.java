@@ -230,12 +230,19 @@ public final class MercurialSCMSource extends SCMSource {
         }
 
         public ListBoxModel doFillCredentialsIdItems(@AncestorInPath SCMSourceOwner owner, @QueryParameter String source) {
-            if (owner == null || !owner.hasPermission(Item.EXTENDED_READ)) {
+            if (!hasAccessToCredentialsMetadata(owner)) {
                 return new ListBoxModel();
             }
             return new StandardUsernameListBoxModel()
                     .withEmptySelection()
                     .withAll(availableCredentials(owner, source));
+        }
+
+        private boolean hasAccessToCredentialsMetadata(SCMSourceOwner owner){
+            if (owner == null){
+                return Jenkins.getActiveInstance().hasPermission(Jenkins.ADMINISTER);
+            }
+            return owner.hasPermission(Item.EXTENDED_READ);
         }
 
         public FormValidation doCheckBranchPattern(@QueryParameter String value) {
