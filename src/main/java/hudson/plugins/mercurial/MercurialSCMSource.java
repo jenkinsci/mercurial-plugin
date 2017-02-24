@@ -106,85 +106,111 @@ public final class MercurialSCMSource extends SCMSource {
     }
 
     @Override
-    protected void retrieve(@edu.umd.cs.findbugs.annotations.CheckForNull SCMSourceCriteria criteria,
-                            @NonNull SCMHeadObserver observer,
-                            @edu.umd.cs.findbugs.annotations.CheckForNull SCMHeadEvent<?> event,
+    protected void retrieve(@edu.umd.cs.findbugs.annotations.CheckForNull final SCMSourceCriteria criteria,
+                            @NonNull final SCMHeadObserver observer,
+                            @edu.umd.cs.findbugs.annotations.CheckForNull final SCMHeadEvent<?> event,
                             @NonNull final TaskListener listener) throws IOException, InterruptedException {
+        runWithMercurial(new MercurialBlock<Void>() {
+            @Override
+            public Void invoke(final HgExe hg, final FilePath cache) throws IOException, InterruptedException {
+                String heads = hg.popen(cache, listener, true, new ArgumentListBuilder("heads", "--template", "{node} {branch}\\n"));
+                Pattern p = Pattern.compile(Util.fixNull(branchPattern).length() == 0 ? ".+" : branchPattern);
+                for (String line : heads.split("\r?\n")) {
+                    final String[] nodeBranch = line.split(" ", 2);
+                    final String name = nodeBranch[1];
+                    if (p.matcher(name).matches()) {
+                        listener.getLogger().println("Found branch " + name);
+                        SCMHead branch = new SCMHead(name);
+                        if (criteria != null) {
+                            SCMProbe probe = new SCMProbe() {
+                                @NonNull
+                                @Override
+                                public SCMProbeStat stat(@NonNull String path) throws IOException {
+                                    try {
+                                        String files = hg.popen(cache, listener, true,
+                                                new ArgumentListBuilder("locate", "-r", nodeBranch[0], "-I", "path:" + path));
+                                        if (StringUtils.isBlank(files)) {
+                                            return SCMProbeStat.fromType(SCMFile.Type.NONEXISTENT);
+                                        }
+                                        return SCMProbeStat.fromType(SCMFile.Type.REGULAR_FILE);
+                                    } catch (InterruptedException e) {
+                                        throw new IOException(e);
+                                    }
+                                }
+
+                                @Override
+                                public void close() throws IOException {
+
+                                }
+
+                                @Override
+                                public String name() {
+                                    return name;
+                                }
+
+                                @Override
+                                public long lastModified() {
+                                    return 0;
+                                }
+                            };
+                            if (criteria.isHead(probe, listener)) {
+                                listener.getLogger().println("Met criteria");
+                            } else {
+                                listener.getLogger().println("Does not meet criteria");
+                                continue;
+                            }
+                        }
+                        observer.observe(branch, new MercurialRevision(branch, nodeBranch[0]));
+                    } else {
+                        listener.getLogger().println("Ignoring branch " + name);
+                    }
+                }
+                return null;
+            }
+        }, listener);
+
+    }
+
+    @Override
+    @CheckForNull
+    protected SCMRevision retrieve(@NonNull final String thingName, @NonNull final TaskListener listener) throws IOException, InterruptedException {
+        return runWithMercurial(new MercurialBlock<SCMRevision>(){
+            @Override
+            public SCMRevision invoke(HgExe hg, FilePath cache) throws IOException, InterruptedException {
+                String revision = hg.popen(cache, listener, true, new ArgumentListBuilder("id", "-r", thingName, "--id", "--branch"));
+                String hash = revision.substring(0, revision.indexOf(' '));
+                String branch = revision.substring(revision.indexOf(' ')+1);
+                return new MercurialRevision(new SCMHead(branch), hash);
+            }
+        }, listener);
+    }
+
+    @CheckForNull
+    private <T> T runWithMercurial(@NonNull MercurialBlock<T> function, @NonNull TaskListener listener) throws IOException, InterruptedException {
         MercurialInstallation inst = MercurialSCM.findInstallation(installation);
         if (inst == null) {
             listener.error("No configured Mercurial installation");
-            return;
+            return null;
         }
         if (!inst.isUseCaches()) {
             listener.error("Mercurial installation " + installation + " does not support caches");
-            return;
+            return null;
         }
         final Node node = Jenkins.getInstance();
         if (node == null) { // Should not happen BTW
             listener.error("Cannot retrieve the Jenkins master node");
-            return;
+            return null;
         }
         Launcher launcher = node.createLauncher(listener);
         StandardUsernameCredentials credentials = getCredentials();
         final FilePath cache = Cache.fromURL(source, credentials, inst.getMasterCacheRoot()).repositoryCache(inst, node, launcher, listener, true);
         if (cache == null) {
             listener.error("Could not use caches, not fetching branch heads");
-            return;
+            return null;
         }
         final HgExe hg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars());
         try {
-            String heads = hg.popen(cache, listener, true, new ArgumentListBuilder("heads", "--template", "{node} {branch}\\n"));
-            Pattern p = Pattern.compile(Util.fixNull(branchPattern).length() == 0 ? ".+" : branchPattern);
-            for (String line : heads.split("\r?\n")) {
-                final String[] nodeBranch = line.split(" ", 2);
-                final String name = nodeBranch[1];
-                if (p.matcher(name).matches()) {
-                    listener.getLogger().println("Found branch " + name);
-                    SCMHead branch = new SCMHead(name);
-                    if (criteria != null) {
-                        SCMProbe probe = new SCMProbe() {
-                            @NonNull
-                            @Override
-                            public SCMProbeStat stat(@NonNull String path) throws IOException {
-                                try {
-                                    String files = hg.popen(cache, listener, true,
-                                            new ArgumentListBuilder("locate", "-r", nodeBranch[0], "-I", "path:" + path));
-                                    if (StringUtils.isBlank(files)) {
-                                        return SCMProbeStat.fromType(SCMFile.Type.NONEXISTENT);
-                                    }
-                                    return SCMProbeStat.fromType(SCMFile.Type.REGULAR_FILE);
-                                } catch (InterruptedException e) {
-                                    throw new IOException(e);
-                                }
-                            }
-
-                            @Override
-                            public void close() throws IOException {
-
-                            }
-
-                            @Override
-                            public String name() {
-                                return name;
-                            }
-
-                            @Override
-                            public long lastModified() {
-                                return 0;
-                            }
-                        };
-                        if (criteria.isHead(probe, listener)) {
-                            listener.getLogger().println("Met criteria");
-                        } else {
-                            listener.getLogger().println("Does not meet criteria");
-                            continue;
-                        }
-                    }
-                    observer.observe(branch, new MercurialRevision(branch, nodeBranch[0]));
-                } else {
-                    listener.getLogger().println("Ignoring branch " + name);
-                }
-            }
+            return function.invoke(hg, cache);
         } finally {
             hg.close();
         }
