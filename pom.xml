@@ -16,7 +16,7 @@
     <properties>
       <jenkins.version>1.642.3</jenkins.version>
       <no-test-jar>false</no-test-jar>  
-      <scm-api.version>2.0.3</scm-api.version>
+      <scm-api-plugin.version>2.0.8</scm-api-plugin.version>
     </properties>
     
     <developers>
@@ -87,7 +87,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>scm-api</artifactId>
-            <version>${scm-api.version}</version>
+            <version>${scm-api-plugin.version}</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -124,7 +124,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>scm-api</artifactId>
-            <version>${scm-api.version}</version>
+            <version>${scm-api-plugin.version}</version>
             <classifier>tests</classifier>
             <scope>test</scope>
         </dependency>
@@ -156,13 +156,6 @@
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-basic-steps</artifactId>
             <version>2.0</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.jenkins-ci.plugins.workflow</groupId>
-            <artifactId>workflow-scm-step</artifactId>
-            <version>2.1</version>
-            <classifier>tests</classifier>
             <scope>test</scope>
         </dependency>
         <dependency>
