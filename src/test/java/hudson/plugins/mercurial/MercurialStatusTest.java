@@ -35,18 +35,18 @@ import static org.junit.Assert.*;
 public class MercurialStatusTest {
   
   @Test public void testLooselyMatches() throws URISyntaxException {
-      assertTrue( MercurialStatus.looselyMatches(new URI("ssh://somehost/"), "ssh://somehost/"));
-      assertTrue( MercurialStatus.looselyMatches(new URI("http://somehost/"), "http://somehost/"));
+      assertTrue( MercurialStatus.looselyMatches(new URI("ssh://somehost/"), "ssh://somehost"));
+      assertTrue( MercurialStatus.looselyMatches(new URI("http://somehost"), "http://somehost/"));
       assertTrue( MercurialStatus.looselyMatches(new URI("http://somehost:80/"), "http://somehost/"));
-      assertTrue( MercurialStatus.looselyMatches(new URI("http://somehost/"), "http://somehost:80/"));
-      assertTrue( MercurialStatus.looselyMatches(new URI("https://somehost:443/"), "https://somehost/"));
+      assertTrue( MercurialStatus.looselyMatches(new URI("http://somehost"), "http://somehost:80/"));
+      assertTrue( MercurialStatus.looselyMatches(new URI("https://somehost:443"), "https://somehost/"));
       assertTrue( MercurialStatus.looselyMatches(new URI("https://somehost/"), "https://somehost:443/"));
       assertTrue( MercurialStatus.looselyMatches(new URI("https://somehost:443/"), "https://somehost:443/"));
       assertTrue( MercurialStatus.looselyMatches(new URI("http://somehost/jenkins"), "http://somehost/jenkins"));
       assertTrue( MercurialStatus.looselyMatches(new URI("http://somehost:80/jenkins"), "http://somehost:80/jenkins"));
       assertTrue( MercurialStatus.looselyMatches(new URI("https://somehost/jenkins"), "https://somehost/jenkins"));
       assertTrue( MercurialStatus.looselyMatches(new URI("https://somehost/jenkins?query=true"), "https://somehost/jenkins?query=true"));
-      assertTrue( MercurialStatus.looselyMatches(new URI("https://somehost/jenkins?query=some%20path"), "https://somehost/jenkins?query=some%20path"));
+      assertTrue( MercurialStatus.looselyMatches(new URI("https://somehost/jenkins/?query=some%20path"), "https://somehost/jenkins?query=some%20path"));
       assertTrue( MercurialStatus.looselyMatches(new URI("https://somehost/jenkins"), "https://user@somehost/jenkins"));
       assertTrue( MercurialStatus.looselyMatches(new URI("https://somehost/jenkins"), "https://user:password@somehost/jenkins"));
       assertTrue( MercurialStatus.looselyMatches(new URI("ssh://somehost/path"), "ssh://user:password@somehost:22/path"));
