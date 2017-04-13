@@ -72,7 +72,7 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
             if (!isUnexpandedEnvVar(repository)) {
                 URI repositoryUri = new URI(repository);
                 result = Objects.equal(notifyUri.getHost(), repositoryUri.getHost())
-                    && Objects.equal(notifyUri.getPath(), repositoryUri.getPath())
+                    && Objects.equal(StringUtils.stripEnd(notifyUri.getPath(), "/"), StringUtils.stripEnd(repositoryUri.getPath(), "/"))
                     && Objects.equal(notifyUri.getQuery(), repositoryUri.getQuery());
             }
         } catch ( URISyntaxException ex ) {
