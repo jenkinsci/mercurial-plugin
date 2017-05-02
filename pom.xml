@@ -3,7 +3,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>2.27-20170501.155323-2</version> <!-- TODO: Switch to 2.27 once https://github.com/jenkinsci/plugin-pom/pull/59 is released -->
+        <version>2.27</version>
         <relativePath />
     </parent>
     <artifactId>mercurial</artifactId>
@@ -14,8 +14,8 @@
     <url>http://wiki.jenkins-ci.org/display/JENKINS/Mercurial+Plugin</url>
     
     <properties>
-        <jenkins-core.version>2.58-20170501.171905-3</jenkins-core.version> <!-- TODO: Switch to release once https://github.com/jenkinsci/jenkins/pull/2730 is merged and released -->
-        <jenkins-war.version>2.58-20170501.171927-3</jenkins-war.version> <!-- TODO: Switch to release once https://github.com/jenkinsci/jenkins/pull/2730 is merged and released -->
+        <jenkins-core.version>2.58-20170502.192524-8</jenkins-core.version> <!-- TODO: Switch to release once https://github.com/jenkinsci/jenkins/pull/2730 is merged and released -->
+        <jenkins-war.version>2.58-20170502.192544-8</jenkins-war.version> <!-- TODO: Switch to release once https://github.com/jenkinsci/jenkins/pull/2730 is merged and released -->
       <no-test-jar>false</no-test-jar>  
       <scm-api-plugin.version>2.1.0</scm-api-plugin.version>
     </properties>
