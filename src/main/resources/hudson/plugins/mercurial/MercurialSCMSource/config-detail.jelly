@@ -1,37 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?jelly escape-by-default='true'?>
-<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form" xmlns:t="/lib/hudson" xmlns:c="/lib/credentials">
-    <j:invokeStatic var="installations" className="hudson.plugins.mercurial.MercurialInstallation" method="allInstallations"/>
-    <f:entry title="Mercurial Version (caching required)">
-        <select class="setting-input" name="installation">
-            <j:forEach var="inst" items="${installations}">
-                <j:if test="${inst.useCaches}">
-                    <f:option selected="${inst.name==instance.installation}" value="${inst.name}">${inst.name}</f:option>
-                </j:if>
-            </j:forEach>
-        </select>
-    </f:entry>
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form" xmlns:t="/lib/hudson" xmlns:c="/lib/credentials"
+         xmlns:scm="/jenkins/scm/api/form">
     <f:entry title="${%Project Repository}" field="source">
         <f:textbox/>
     </f:entry>
     <f:entry title="${%Credentials}" field="credentialsId">
         <c:select/>
     </f:entry>
-    <f:advanced>
-        <f:entry title="${%Branch inclusion pattern}" field="branchPattern">
-            <f:textbox/>
-        </f:entry>
-        <f:entry field="modules" title="${%Modules}">
-            <f:textbox/>
-        </f:entry>
-        <f:entry field="clean" title="${%Clean Build}">
-            <f:checkbox/>
-        </f:entry>
-        <f:entry field="subdir" title="${%Subdirectory}">
-            <f:textbox/>
-        </f:entry>
-    </f:advanced>
-    <j:set var="scm" value="${instance}"/>
-    <j:set var="scmd" value="${descriptor}"/>
-    <t:listScmBrowsers name="mercurial.browser"/>
+    <f:entry title="${%Behaviours}">
+        <scm:traits field="traits"/>
+    </f:entry>
 </j:jelly>
