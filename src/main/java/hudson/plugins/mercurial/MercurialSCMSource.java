@@ -208,13 +208,13 @@ public final class MercurialSCMSource extends SCMSource {
         }
         final HgExe hg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars());
         try {
-            String revision = hg.popen(cache, listener, true, new ArgumentListBuilder("log", "-r", thingName, "--template", "{node} {branch}"));
+            String revision = hg.popen(cache, listener, true, new ArgumentListBuilder("log", "-r", "present("+thingName+")", "--template", "{node} {branch}"));
+            if (revision.isEmpty()){
+                return null;
+            }
             String hash = revision.substring(0, revision.indexOf(' '));
             String branch = revision.substring(revision.indexOf(' ')+1, revision.length());
             return new MercurialRevision(new SCMHead(branch), hash);
-        } catch (AbortException e) {
-            // thingName is most likely malformed or not found
-            return null;
         } finally {
             hg.close();
         }
