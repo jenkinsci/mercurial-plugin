@@ -6,6 +6,7 @@ import hudson.util.LogTaskListener;
 import hudson.util.StreamTaskListener;
 import jenkins.scm.api.SCMRevision;
 import org.junit.*;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import java.util.Collections;
@@ -15,6 +16,7 @@ import java.util.logging.Logger;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+@Issue("JENKINS-41657")
 public class MercurialSCMSourceTest {
 
     @ClassRule public static JenkinsRule r = new JenkinsRule();
@@ -46,12 +48,7 @@ public class MercurialSCMSourceTest {
     }
 
     @Test public void testRetrieveUnknownRevision() throws Exception {
-        try {
-            mercurialSCMSource.retrieve("does_not_exist", listener);
-        } catch (AbortException e) {
-            return; // expected
-        }
-        fail("Expected AbortException was not thrown");
+        Assert.assertNull(mercurialSCMSource.retrieve("does_not_exist", listener));
     }
 
     @Test public void testRetrieveTag() throws Exception {

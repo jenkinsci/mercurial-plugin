@@ -198,11 +198,7 @@ public final class MercurialSCMSource extends SCMSource {
             listener.error("Mercurial installation " + installation + " does not support caches");
             return null;
         }
-        final Node node = Jenkins.getInstance();
-        if (node == null) { // Should not happen BTW
-            listener.error("Cannot retrieve the Jenkins master node");
-            return null;
-        }
+        final Node node = Jenkins.getActiveInstance();
         Launcher launcher = node.createLauncher(listener);
         StandardUsernameCredentials credentials = getCredentials();
         final FilePath cache = Cache.fromURL(source, credentials, inst.getMasterCacheRoot()).repositoryCache(inst, node, launcher, listener, true);
@@ -212,10 +208,13 @@ public final class MercurialSCMSource extends SCMSource {
         }
         final HgExe hg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars());
         try {
-            String revision = hg.popen(cache, listener, true, new ArgumentListBuilder("id", "-r", thingName, "--id", "--branch"));
+            String revision = hg.popen(cache, listener, true, new ArgumentListBuilder("log", "-r", thingName, "--template", "{node} {branch}"));
             String hash = revision.substring(0, revision.indexOf(' '));
-            String branch = revision.substring(revision.indexOf(' ')+1, revision.length()-1); // removes trailing line feed
+            String branch = revision.substring(revision.indexOf(' ')+1, revision.length());
             return new MercurialRevision(new SCMHead(branch), hash);
+        } catch (AbortException e) {
+            // thingName is most likely malformed or not found
+            return null;
         } finally {
             hg.close();
         }
