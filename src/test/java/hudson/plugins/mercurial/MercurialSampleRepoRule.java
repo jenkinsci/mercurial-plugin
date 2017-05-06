@@ -25,10 +25,8 @@
 package hudson.plugins.mercurial;
 
 import java.io.File;
-import jenkins.model.Jenkins;
+import jenkins.scm.impl.mock.AbstractSampleDVCSRepoRule;
 import org.apache.commons.io.FileUtils;
-import org.jenkinsci.plugins.workflow.steps.scm.AbstractSampleDVCSRepoRule;
-import static org.jenkinsci.plugins.workflow.steps.scm.AbstractSampleRepoRule.run;
 import org.jvnet.hudson.test.JenkinsRule;
 
 public final class MercurialSampleRepoRule extends AbstractSampleDVCSRepoRule {
