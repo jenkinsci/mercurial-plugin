@@ -14,8 +14,7 @@
     <url>http://wiki.jenkins-ci.org/display/JENKINS/Mercurial+Plugin</url>
     
     <properties>
-        <jenkins-core.version>2.58-20170502.192524-8</jenkins-core.version> <!-- TODO: Switch to release once https://github.com/jenkinsci/jenkins/pull/2730 is merged and released -->
-        <jenkins-war.version>2.58-20170502.192544-8</jenkins-war.version> <!-- TODO: Switch to release once https://github.com/jenkinsci/jenkins/pull/2730 is merged and released -->
+      <jenkins.version>2.60</jenkins.version>
       <no-test-jar>false</no-test-jar>  
       <scm-api-plugin.version>2.1.0</scm-api-plugin.version>
     </properties>
