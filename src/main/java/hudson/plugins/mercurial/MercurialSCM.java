@@ -881,6 +881,10 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     @Override
+    public void buildEnvVars(AbstractBuild<?,?> build, Map<String,String> env) {
+        buildEnvironment(build, env);
+    }
+
     public void buildEnvironment(Run<?,?> build, Map<String, String> env) {
         buildEnvVarsFromActionable(build, env);
     }
