@@ -27,9 +27,7 @@ package hudson.plugins.mercurial;
 import hudson.FilePath;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
-import hudson.tools.ToolProperty;
 import java.io.File;
-import java.util.Collections;
 import static org.junit.Assert.*;
 import org.junit.Rule;
 import org.junit.Test;
@@ -46,9 +44,10 @@ public class CustomConfigTest {
     @Bug(5723)
     @Test public void customConfiguration() throws Exception {
         File repo = tmp.getRoot();
+        // TODO switch to MercurialContainer
         m.hg(repo, "init");
         m.touchAndCommit(repo, "f");
-        r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(new MercurialInstallation("test", "", "hg", false, false, false, "[format]\nusestore = false", Collections.<ToolProperty<?>>emptyList()));
+        r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(new MercurialInstallation("test", "", "hg", false, false, false, "[format]\nusestore = false", null));
         FreeStyleProject p = r.createFreeStyleProject();
         MercurialSCM scm = new MercurialSCM(repo.getPath());
         scm.setInstallation("test");

@@ -33,18 +33,14 @@ import hudson.model.TaskListener;
 import hudson.tools.ToolProperty;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.StreamTaskListener;
-import hudson.util.VersionNumber;
 import java.io.File;
 import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.io.FileUtils;
-import static org.junit.Assert.assertEquals;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -118,18 +114,9 @@ public class HgExeFunctionalTest {
 
     @Bug(5723)
     @Test public void customConfiguration() throws Exception {
-        HgExe hgexe = new HgExe(new MercurialInstallation(INSTALLATION, "", "hg", false, false, false, "[defaults]\nclone = --uncompressed\n", Collections.<ToolProperty<?>>emptyList()), null, this.launcher, j.jenkins, this.listener, this.vars);
+        HgExe hgexe = new HgExe(new MercurialInstallation(INSTALLATION, "", "hg", false, false, false, "[defaults]\nclone = --uncompressed\n", null), null, this.launcher, j.jenkins, this.listener, this.vars);
         ArgumentListBuilder b = hgexe.seed(false).add("clone", "http://some.thing/");
         assertEquals("hg --config defaults.clone=--uncompressed clone http://some.thing/", b.toString());
     }
 
-    @Test public void checkVersion() throws Exception {
-        HgExe hgexe = new HgExe(
-                this.mercurialInstallation, null,
-                this.launcher, j.jenkins,
-                this.listener, this.vars);
-        String version = hgexe.version();
-        assertNotNull(version);
-        assertTrue(new VersionNumber(version).compareTo(new VersionNumber("1.0")) >= 0);
-    }
 }
