@@ -44,10 +44,28 @@ import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import static org.junit.Assert.*;
+import org.junit.Assume;
+import org.junit.AssumptionViolatedException;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.jvnet.hudson.test.BuildWatcher;
 
 public abstract class SCMTestBase {
+
+    /** {@link MercurialRule#hg(String...)} would skip these anyway, but it would take a lot longer. */
+    @BeforeClass public static void requiresLocalHg() throws Exception {
+        try {
+            if (new ProcessBuilder("hg", "--version").start().waitFor() != 0) {
+                throw new AssumptionViolatedException("hg --version signaled an error");
+            }
+        } catch (IOException ioe) {
+            String message = ioe.getMessage();
+            if (message.startsWith("Cannot run program \"hg\"") && message.endsWith("No such file or directory")) {
+                throw new AssumptionViolatedException("hg is not available; please check that your PATH environment variable is properly configured");
+            }
+            Assume.assumeNoException(ioe); // failed to check availability of hg
+        }
+    }
 
     @Rule public JenkinsRule j = new JenkinsRule();
     @Rule public MercurialRule m = new MercurialRule(j);
