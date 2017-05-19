@@ -9,6 +9,7 @@ import hudson.model.FreeStyleProject;
 import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.scm.PollingResult;
+import hudson.triggers.SCMTrigger;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.StreamTaskListener;
 import hudson.util.VersionNumber;
@@ -88,6 +89,7 @@ public final class MercurialRule extends ExternalResource {
         assertEquals(0, hg.launch(nobody(hg.seed(false)).add(args)).join());
     }
 
+    @Deprecated
     public void hg(File repo, String... args) throws Exception {
         hg(new FilePath(repo), args);
     }
@@ -97,6 +99,7 @@ public final class MercurialRule extends ExternalResource {
         assertEquals(0, hg.launch(nobody(hg.seed(false)).add(args)).pwd(repo).join());
     }
 
+    @Deprecated
     public void hg(File repo, EnvVars env, String... args) throws Exception {
         hg(new FilePath(repo), env, args);
     }
@@ -110,6 +113,7 @@ public final class MercurialRule extends ExternalResource {
         return args.add("--config").add("ui.username=nobody@nowhere.net");
     }
 
+    @Deprecated
     public void touchAndCommit(File repo, String... names) throws Exception {
         touchAndCommit(new FilePath(repo), names);
     }
@@ -152,6 +156,7 @@ public final class MercurialRule extends ExternalResource {
                 .defaultCharset()));
     }
 
+    @Deprecated
     public String getLastChangesetId(File repo) throws Exception {
         return getLastChangesetId(new FilePath(repo));
     }
@@ -160,6 +165,7 @@ public final class MercurialRule extends ExternalResource {
         return hgExe().popen(repo, listener, false, new ArgumentListBuilder("log", "-l1", "--template", "{node}"));
     }
 
+    @Deprecated
     public long getLastChangesetUnixTimestamp(File repo) throws Exception {
         return getLastChangesetUnixTimestamp(new FilePath(repo));
     }
@@ -168,6 +174,37 @@ public final class MercurialRule extends ExternalResource {
         //hgdate returns the date as a pair of numbers: "1157407993 25200" (Unix timestamp, timezone offset).
         String date = hgExe().popen(repo, listener, false, new ArgumentListBuilder("log", "-l1", "--template", "{date|hgdate}"));
         return Long.valueOf(date.split(" ")[0]);
+    }
+
+    // Borrowed from AbstractSampleDVCSRepoRule:
+
+    public void notifyCommit(FilePath repo) throws Exception {
+        j.jenkins.getDescriptorByType(SCMTrigger.DescriptorImpl.class).synchronousPolling = true;
+        System.out.println(j.createWebClient().goTo("mercurial/notifyCommit?url=" + repo.toURI().toString(), "text/plain").getWebResponse().getContentAsString());
+        j.waitUntilNoActivity();
+    }
+
+    public void registerHook(FilePath repo) throws Exception {
+        assert !repo.isRemote() : "TODO not currently supported for remote repositories since the callback URL would not be accessible from the Docker container unless we do some more exotic network configuration";
+        FilePath hgDir = repo.child(".hg");
+        FilePath hook = hgDir.child("hook.py");
+        hook.write(
+            "import urllib\n" +
+            "import urllib2\n" +
+            "\n" +
+            "def commit(ui, repo, node, **kwargs):\n" +
+            "    data = {\n" +
+            "        'url': '" + repo.toURI().toString() + "',\n" +
+            "        'branch': repo[node].branch(),\n" +
+            "        'changesetId': node,\n" +
+            "    }\n" +
+            "    req = urllib2.Request('" + j.getURL() + "mercurial/notifyCommit')\n" +
+            "    rsp = urllib2.urlopen(req, urllib.urlencode(data))\n" +
+            "    ui.warn('Notify Commit hook response: %s\\n' % rsp.read())\n" +
+            "    pass\n", null);
+        hgDir.child("hgrc").write(
+            "[hooks]\n" +
+            "commit.jenkins = python:" + hook.getRemote() + ":commit", null);
     }
 
 }
