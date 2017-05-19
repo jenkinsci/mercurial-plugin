@@ -64,21 +64,34 @@ public class MercurialInstallation extends ToolInstallation implements
     private String executable;
     private boolean debug;
     private boolean useCaches;
+    private final String masterCacheRoot;
     private boolean useSharing;
     private final String config;
 
+    /** for backwards compatibility */
     @Deprecated
     public MercurialInstallation(String name, String home, String executable,
             boolean debug, boolean useCaches,
-            boolean useSharing, List<? extends ToolProperty<?>> properties) {
-        this(name, home, executable, debug, useCaches, useSharing, null, properties);
+            boolean useSharing, @CheckForNull List<? extends ToolProperty<?>> properties) {
+        this(name, home, executable, debug, useCaches, null, useSharing, null, properties);
     }
 
-    @DataBoundConstructor public MercurialInstallation(String name, String home, String executable, boolean debug, boolean useCaches, boolean useSharing, String config, @CheckForNull List<? extends ToolProperty<?>> properties) {
+    /** for backwards compatibility */
+    @Deprecated
+    public MercurialInstallation(String name, String home, String executable,
+            boolean debug, boolean useCaches,
+            boolean useSharing, String config, @CheckForNull List<? extends ToolProperty<?>> properties) {
+        this(name, home, executable, debug, useCaches, null, useSharing, config, properties);
+    }
+
+    @DataBoundConstructor public MercurialInstallation(String name, String home, String executable,
+            boolean debug, boolean useCaches, String masterCacheRoot,
+            boolean useSharing, String config, @CheckForNull List<? extends ToolProperty<?>> properties) {
         super(name, home, properties);
         this.executable = Util.fixEmpty(executable);
         this.debug = debug;
         this.useCaches = useCaches || useSharing;
+        this.masterCacheRoot = Util.fixEmptyAndTrim(masterCacheRoot);
         this.config = Util.fixEmptyAndTrim(config);
         this.useSharing = useSharing;
     }
@@ -102,6 +115,10 @@ public class MercurialInstallation extends ToolInstallation implements
 
     public boolean isUseCaches() {
         return useCaches;
+    }
+
+    public String getMasterCacheRoot() {
+        return masterCacheRoot;
     }
 
     public boolean isUseSharing() {

@@ -4,12 +4,14 @@ import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardUsernameCredentials;
 import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.SuppressWarnings;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Util;
+import hudson.model.Action;
 import hudson.model.Descriptor;
 import hudson.model.Item;
 import hudson.model.Node;
@@ -21,18 +23,27 @@ import hudson.scm.SCM;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+import hudson.util.VersionNumber;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import javax.annotation.CheckForNull;
 import jenkins.model.Jenkins;
+import jenkins.scm.api.SCMFile;
 import jenkins.scm.api.SCMHead;
+import jenkins.scm.api.SCMHeadEvent;
 import jenkins.scm.api.SCMHeadObserver;
+import jenkins.scm.api.SCMProbe;
+import jenkins.scm.api.SCMProbeStat;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMSource;
+import jenkins.scm.api.SCMSourceCriteria;
 import jenkins.scm.api.SCMSourceDescriptor;
 import jenkins.scm.api.SCMSourceOwner;
+import jenkins.scm.api.metadata.PrimaryInstanceMetadataAction;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -95,7 +106,10 @@ public final class MercurialSCMSource extends SCMSource {
     }
 
     @Override
-    protected void retrieve(SCMHeadObserver observer, TaskListener listener) throws IOException, InterruptedException {
+    protected void retrieve(@edu.umd.cs.findbugs.annotations.CheckForNull SCMSourceCriteria criteria,
+                            @NonNull SCMHeadObserver observer,
+                            @edu.umd.cs.findbugs.annotations.CheckForNull SCMHeadEvent<?> event,
+                            @NonNull final TaskListener listener) throws IOException, InterruptedException {
         MercurialInstallation inst = MercurialSCM.findInstallation(installation);
         if (inst == null) {
             listener.error("No configured Mercurial installation");
@@ -112,27 +126,65 @@ public final class MercurialSCMSource extends SCMSource {
         }
         Launcher launcher = node.createLauncher(listener);
         StandardUsernameCredentials credentials = getCredentials();
-        FilePath cache = Cache.fromURL(source, credentials).repositoryCache(inst, node, launcher, listener, true);
+        final FilePath cache = Cache.fromURL(source, credentials, inst.getMasterCacheRoot()).repositoryCache(inst, node, launcher, listener, true);
         if (cache == null) {
             listener.error("Could not use caches, not fetching branch heads");
             return;
         }
-        HgExe hg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars());
+        final HgExe hg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars());
         try {
-        String heads = hg.popen(cache, listener, true, new ArgumentListBuilder("heads", "--template", "{node} {branch}\\n"));
-        // TODO need to consider getCriteria() here as well
-        Pattern p = Pattern.compile(Util.fixNull(branchPattern).length() == 0 ? ".+" : branchPattern);
-        for (String line : heads.split("\r?\n")) {
-            String[] nodeBranch = line.split(" ", 2);
-            String name = nodeBranch[1];
-            if (p.matcher(name).matches()) {
-                listener.getLogger().println("Found branch " + name);
-                SCMHead branch = new SCMHead(name);
-                observer.observe(branch, new MercurialRevision(branch, nodeBranch[0]));
-            } else {
-                listener.getLogger().println("Ignoring branch " + name);
+            String heads = hg.popen(cache, listener, true, new ArgumentListBuilder("heads", "--template", "{node} {branch}\\n"));
+            Pattern p = Pattern.compile(Util.fixNull(branchPattern).length() == 0 ? ".+" : branchPattern);
+            for (String line : heads.split("\r?\n")) {
+                final String[] nodeBranch = line.split(" ", 2);
+                final String name = nodeBranch[1];
+                if (p.matcher(name).matches()) {
+                    listener.getLogger().println("Found branch " + name);
+                    SCMHead branch = new SCMHead(name);
+                    if (criteria != null) {
+                        SCMProbe probe = new SCMProbe() {
+                            @NonNull
+                            @Override
+                            public SCMProbeStat stat(@NonNull String path) throws IOException {
+                                try {
+                                    String files = hg.popen(cache, listener, true,
+                                            new ArgumentListBuilder("locate", "-r", nodeBranch[0], "-I", "path:" + path));
+                                    if (StringUtils.isBlank(files)) {
+                                        return SCMProbeStat.fromType(SCMFile.Type.NONEXISTENT);
+                                    }
+                                    return SCMProbeStat.fromType(SCMFile.Type.REGULAR_FILE);
+                                } catch (InterruptedException e) {
+                                    throw new IOException(e);
+                                }
+                            }
+
+                            @Override
+                            public void close() throws IOException {
+
+                            }
+
+                            @Override
+                            public String name() {
+                                return name;
+                            }
+
+                            @Override
+                            public long lastModified() {
+                                return 0;
+                            }
+                        };
+                        if (criteria.isHead(probe, listener)) {
+                            listener.getLogger().println("Met criteria");
+                        } else {
+                            listener.getLogger().println("Does not meet criteria");
+                            continue;
+                        }
+                    }
+                    observer.observe(branch, new MercurialRevision(branch, nodeBranch[0]));
+                } else {
+                    listener.getLogger().println("Ignoring branch " + name);
+                }
             }
-        }
         } finally {
             hg.close();
         }
@@ -153,6 +205,18 @@ public final class MercurialSCMSource extends SCMSource {
             }
         }
         return null;
+    }
+
+    @NonNull
+    @Override
+    protected List<Action> retrieveActions(@NonNull SCMHead head,
+                                           @edu.umd.cs.findbugs.annotations.CheckForNull SCMHeadEvent event,
+                                           @NonNull TaskListener listener) throws IOException, InterruptedException {
+        // TODO for Mercurial 2.4+ check for the bookmark called @ and resolve that to determine the primary
+        if ("default".equals(head.getName())) {
+            return Collections.<Action>singletonList(new PrimaryInstanceMetadataAction());
+        }
+        return Collections.emptyList();
     }
 
     private static List<? extends StandardUsernameCredentials> availableCredentials(@CheckForNull SCMSourceOwner owner, @CheckForNull String source) {
@@ -189,7 +253,7 @@ public final class MercurialSCMSource extends SCMSource {
 
     }
 
-    private static final class MercurialRevision extends SCMRevision {
+    /*package*/ static final class MercurialRevision extends SCMRevision {
         private final String hash;
         MercurialRevision(SCMHead branch, String hash) {
             super(branch);

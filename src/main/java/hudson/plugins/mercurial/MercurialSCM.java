@@ -880,8 +880,14 @@ public class MercurialSCM extends SCM implements Serializable {
         }
     }
 
+    // TODO: 2.60+ Delete this override.
     @Override
-    public void buildEnvVars(AbstractBuild<?,?> build, Map<String, String> env) {
+    public void buildEnvVars(AbstractBuild<?,?> build, Map<String,String> env) {
+        buildEnvironment(build, env);
+    }
+
+    // TODO: 2.60+ - add @Override.
+    public void buildEnvironment(Run<?,?> build, Map<String, String> env) {
         buildEnvVarsFromActionable(build, env);
     }
 
@@ -960,7 +966,7 @@ public class MercurialSCM extends SCM implements Serializable {
             return null;
         }
         try {
-            FilePath cache = Cache.fromURL(getSource(env), credentials).repositoryCache(inst, node, launcher, listener, useTimeout);
+            FilePath cache = Cache.fromURL(getSource(env), credentials, inst.getMasterCacheRoot()).repositoryCache(inst, node, launcher, listener, useTimeout);
             if (cache != null) {
                 return new CachedRepo(cache.getRemote(), inst.isUseSharing());
             } else {
