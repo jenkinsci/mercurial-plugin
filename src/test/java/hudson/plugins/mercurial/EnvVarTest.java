@@ -52,6 +52,7 @@ public class EnvVarTest {
         EnvVars env = new EnvVars( key, val );
         
         // 'repo' and 'repoExpanded' should be the same; 'repo' will contain a non expanded environment variable.
+        // TODO switch to MercurialContainer
         File repo, repoExpanded;
         repo = new File( tmp.getRoot() + "/$" + key );
         repoExpanded = new File( tmp.getRoot() + "/" + val );

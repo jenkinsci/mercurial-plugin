@@ -44,6 +44,7 @@ public class CustomConfigTest {
     @Bug(5723)
     @Test public void customConfiguration() throws Exception {
         File repo = tmp.getRoot();
+        // TODO switch to MercurialContainer
         m.hg(repo, "init");
         m.touchAndCommit(repo, "f");
         r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(new MercurialInstallation("test", "", "hg", false, false, false, "[format]\nusestore = false", null));
