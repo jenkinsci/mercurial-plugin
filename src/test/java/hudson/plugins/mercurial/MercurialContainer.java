@@ -87,7 +87,7 @@ public class MercurialContainer extends JavaContainer {
         MercurialInstallation.DescriptorImpl desc = r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class);
         ToolLocationNodeProperty.ToolLocation location = new ToolLocationNodeProperty.ToolLocation(desc, v.name(), "/opt/mercurial-" + v.exactVersion);
         MercurialInstallation inst = new MercurialInstallation(v.name(), "", "INSTALLATION/hg", debug, useCaches, useSharing, config, null);
-        desc.setInstallations((MercurialInstallation[]) ArrayUtils.add(desc.getInstallations(), inst));
+        desc.setInstallations((MercurialInstallation[]) ArrayUtils.add(desc.getInstallations(), inst)); // TODO stop calling this here, should be responsibility of caller
         for (Slave slave : slaves) {
             DescribableList<NodeProperty<?>, NodePropertyDescriptor> props = slave.getNodeProperties();
             ToolLocationNodeProperty prop = props.get(ToolLocationNodeProperty.class);

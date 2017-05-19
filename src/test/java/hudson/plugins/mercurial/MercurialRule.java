@@ -11,20 +11,17 @@ import hudson.model.TaskListener;
 import hudson.scm.PollingResult;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.StreamTaskListener;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.TreeSet;
-
+import static org.junit.Assert.*;
 import org.junit.Assume;
-import org.junit.internal.AssumptionViolatedException;
+import org.junit.AssumptionViolatedException;
 import org.junit.rules.ExternalResource;
 import org.jvnet.hudson.test.JenkinsRule;
-
-import static org.junit.Assert.*;
 
 public final class MercurialRule extends ExternalResource {
 
@@ -40,6 +37,7 @@ public final class MercurialRule extends ExternalResource {
 
     @Override protected void before() throws Exception {
         listener = new StreamTaskListener(System.out, Charset.defaultCharset());
+        // TODO use LocalLauncher for better Windows support
         try {
             if (new ProcessBuilder("hg", "--version").start().waitFor() != 0) {
                 throw new AssumptionViolatedException("hg --version signaled an error");

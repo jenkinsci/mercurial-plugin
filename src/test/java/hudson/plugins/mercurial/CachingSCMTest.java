@@ -1,6 +1,5 @@
 package hudson.plugins.mercurial;
 
-import hudson.model.Slave;
 import hudson.tools.ToolProperty;
 
 import java.util.Collections;
@@ -20,10 +19,7 @@ public class CachingSCMTest extends SCMTestBase {
                                         .<ToolProperty<?>> emptyList()));
     }
 
-    @Override protected String hgInstallation(Slave slave) throws Exception {
-        if (slave != null) {
-            return container.get().createInstallation(j, MercurialContainer.Version.HG4, false, true, false, "", slave).getName();
-        }
+    @Override protected String hgInstallation() {
         return CACHING_INSTALLATION;
     }
 
