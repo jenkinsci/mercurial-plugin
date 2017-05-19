@@ -11,6 +11,7 @@ import hudson.model.TaskListener;
 import hudson.scm.PollingResult;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.StreamTaskListener;
+import hudson.util.VersionNumber;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -69,6 +70,7 @@ public final class MercurialRule extends ExternalResource {
                 String version = hg.version();
                 Assume.assumeNotNull(version);
                 System.out.println("Mercurial version detected: " + version);
+                Assume.assumeFalse(version + " is too old to even test", new VersionNumber(version).isOlderThan(new VersionNumber(MercurialContainer.Version.HG1.exactVersion)));
             } catch (IOException ioe) {
                 String message = ioe.getMessage();
                 if (message.startsWith("Cannot run program \"hg\"") && message.endsWith("No such file or directory")) {
