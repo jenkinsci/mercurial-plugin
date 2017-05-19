@@ -146,12 +146,11 @@ public class FunctionalTest {
     private MercurialInstallation inst;
 
     @Before public void setUp() throws Exception {
-        File _repo = tmp.getRoot();
         slave = useSlave ? container.get().createSlave(j) : null;
         inst = mercurialInstallationFactory.create(j, container, slave, mercurialVersion);
         if (inst != null && inst.isUseCaches() || slave == null) {
             // Set up test repository on master, if we have hg installed locally.
-            repo = new FilePath(_repo);
+            repo = new FilePath(tmp.getRoot());
         } else {
             // Set up test repository on agent.
             repo = slave.getRootPath().child("repo");
