@@ -26,6 +26,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 public final class MercurialRule extends ExternalResource {
 
     private TaskListener listener;
+    private boolean validated;
 
     private final JenkinsRule j;
     private Node node;
@@ -37,18 +38,6 @@ public final class MercurialRule extends ExternalResource {
 
     @Override protected void before() throws Exception {
         listener = new StreamTaskListener(System.out, Charset.defaultCharset());
-        // TODO use LocalLauncher for better Windows support
-        try {
-            if (new ProcessBuilder("hg", "--version").start().waitFor() != 0) {
-                throw new AssumptionViolatedException("hg --version signaled an error");
-            }
-        } catch(IOException ioe) {
-            String message = ioe.getMessage();
-            if(message.startsWith("Cannot run program \"hg\"") && message.endsWith("No such file or directory")) {
-                throw new AssumptionViolatedException("hg is not available; please check that your PATH environment variable is properly configured");
-            }
-            Assume.assumeNoException(ioe); // failed to check availability of hg
-        }
     }
 
     public MercurialRule withNode(Node node) {
@@ -70,11 +59,26 @@ public final class MercurialRule extends ExternalResource {
     }
 
     private HgExe hgExe() throws Exception {
-        return new HgExe(inst, null, launcher(), node(), listener, new EnvVars());
+        return hgExe(new EnvVars());
     }
 
     private HgExe hgExe(EnvVars env) throws Exception {
-        return new HgExe(inst, null, launcher(), node(), listener, env);
+        HgExe hg = new HgExe(inst, null, launcher(), node(), listener, env);
+        if (!validated) {
+            try {
+                String version = hg.version();
+                Assume.assumeNotNull(version);
+                System.out.println("Mercurial version detected: " + version);
+            } catch (IOException ioe) {
+                String message = ioe.getMessage();
+                if (message.startsWith("Cannot run program \"hg\"") && message.endsWith("No such file or directory")) {
+                    throw new AssumptionViolatedException("hg is not available; please check that your PATH environment variable is properly configured");
+                }
+                Assume.assumeNoException(ioe); // failed to check availability of hg
+            }
+            validated = true;
+        }
+        return hg;
     }
 
     public void hg(String... args) throws Exception {
@@ -129,7 +133,7 @@ public final class MercurialRule extends ExternalResource {
         // System.err.println(">> " + line);
         // }
         if (!b.getWorkspace().child(name).exists()) {
-            Set<String> children = new TreeSet<String>();
+            Set<String> children = new TreeSet<>();
             for (FilePath child : b.getWorkspace().list()) {
                 children.add(child.getName());
             }
