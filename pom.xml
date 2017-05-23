@@ -3,7 +3,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>2.19</version>
+        <version>2.29</version>
         <relativePath />
     </parent>
     <artifactId>mercurial</artifactId>
@@ -15,8 +15,7 @@
     
     <properties>
       <jenkins.version>1.642.3</jenkins.version>
-      <no-test-jar>false</no-test-jar>  
-      <scm-api-plugin.version>2.0.8</scm-api-plugin.version>
+      <scm-api-plugin.version>2.1.0</scm-api-plugin.version>
     </properties>
     
     <developers>
@@ -58,14 +57,6 @@
         <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
       <tag>HEAD</tag>
   </scm>
-    <issueManagement>
-        <system>JIRA</system>
-        <url>http://issues.jenkins-ci.org/secure/IssueNavigator.jspa?reset=true&amp;jqlQuery=project+%3D+Jenkins+AND+component+%3D+mercurial+AND+resolution+%3D+Unresolved</url>
-    </issueManagement>
-    <ciManagement>
-        <system>jenkins</system>
-        <url>https://buildhive.cloudbees.com/job/jenkinsci/job/mercurial-plugin/</url>
-    </ciManagement>
     <repositories>
         <repository>
             <id>repo.jenkins-ci.org</id>
@@ -169,6 +160,18 @@
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>script-security</artifactId>
             <version>1.22</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.test</groupId>
+            <artifactId>docker-fixtures</artifactId>
+            <version>1.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>ssh-slaves</artifactId>
+            <version>1.12</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

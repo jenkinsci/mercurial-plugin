@@ -26,15 +26,15 @@ package hudson.plugins.mercurial;
 
 import com.cloudbees.hudson.plugins.folder.computed.FolderComputation;
 import hudson.EnvVars;
+import hudson.FilePath;
 import hudson.console.AnnotatedLargeText;
+import hudson.model.Slave;
 import hudson.scm.ChangeLogSet;
 import hudson.scm.SCM;
-import hudson.tools.ToolProperty;
 import hudson.triggers.SCMTrigger;
 import hudson.util.LogTaskListener;
 import hudson.util.StreamTaskListener;
 import hudson.util.VersionNumber;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
@@ -43,24 +43,24 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import jenkins.branch.BranchSource;
-import jenkins.scm.api.SCMEvent;
 import jenkins.scm.api.SCMEvents;
 import jenkins.util.VirtualFile;
 import org.apache.commons.io.FileUtils;
+import static org.hamcrest.Matchers.is;
 import org.jenkinsci.plugins.scriptsecurity.scripts.ScriptApproval;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
-import org.junit.Test;
-
-import static org.hamcrest.Matchers.is;
+import org.jenkinsci.test.acceptance.docker.DockerRule;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeThat;
-
+import org.junit.AssumptionViolatedException;
 import org.junit.ClassRule;
 import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.JenkinsRule;
 
@@ -68,50 +68,52 @@ public class PipelineTest {
 
     @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
     @Rule public JenkinsRule r = new JenkinsRule();
-    @Rule public MercurialSampleRepoRule sampleRepo = new MercurialSampleRepoRule();
-    @Rule public MercurialSampleRepoRule otherRepo = new MercurialSampleRepoRule();
+    @Rule public MercurialRule m = new MercurialRule(r);
+    @Rule public DockerRule<MercurialContainer> container = new DockerRule<MercurialContainer>(MercurialContainer.class);
+    @Rule public TemporaryFolder tmp = new TemporaryFolder();
 
     @Test public void multipleSCMs() throws Exception {
-        sampleRepo.init();
-        otherRepo.hg("init");
-        otherRepo.write("otherfile", "");
-        otherRepo.hg("add", "otherfile");
-        otherRepo.hg("commit", "--message=init");
+        Slave slave = container.get().createSlave(r);
+        m.withNode(slave);
+        MercurialInstallation inst = container.get().createInstallation(r, MercurialContainer.Version.HG4, false, false, false, "", slave);
+        assertNotNull(inst);
+        m.withInstallation(inst);
+        FilePath sampleRepo = slave.getRootPath().child("sampleRepo");
+        sampleRepo.mkdirs();
+        m.hg(sampleRepo, "init");
+        m.touchAndCommit(sampleRepo, "file");
+        FilePath otherRepo = slave.getRootPath().child("otherRepo");
+        otherRepo.mkdirs();
+        m.hg(otherRepo, "init");
+        m.touchAndCommit(otherRepo, "otherfile");
         WorkflowJob p = r.jenkins.createProject(WorkflowJob.class, "demo");
         p.addTrigger(new SCMTrigger(""));
         p.setQuietPeriod(3); // so it only does one build
         p.setDefinition(new CpsFlowDefinition(
-            "node {\n" +
-            "    ws {\n" +
-            "        dir('main') {\n" +
-            "            checkout([$class: 'MercurialSCM', source: $/" + sampleRepo.fileUrl() + "/$])\n" +
-            "        }\n" +
-            "        dir('other') {\n" +
-            "            checkout([$class: 'MercurialSCM', source: $/" + otherRepo.fileUrl() + "/$, clean: true])\n" +
-            "            try {\n" + // TODO or use fileExists
-            "                readFile 'unversioned'\n" +
-            "                error 'unversioned did exist'\n" +
-            "            } catch (FileNotFoundException x) {\n" +
-            "                echo 'unversioned did not exist'\n" +
-            "            }\n" +
-            "            writeFile text: '', file: 'unversioned'\n" +
-            "        }\n" +
-            "        archive '**'\n" +
+            "node('" + slave.getNodeName() + "') {\n" +
+            "    dir('main') {\n" +
+            "        checkout([$class: 'MercurialSCM', source: $/" + sampleRepo.toURI() + "/$, installation: '" + inst.getName() + "'])\n" +
             "    }\n" +
+            "    dir('other') {\n" +
+            "        checkout([$class: 'MercurialSCM', source: $/" + otherRepo.toURI() + "/$, installation: '" + inst.getName() + "', clean: true])\n" +
+            "        if (fileExists('unversioned')) {\n" +
+            "            error 'unversioned did exist'\n" +
+            "        } else {\n" +
+            "            echo 'unversioned did not exist'\n" +
+            "        }\n" +
+            "        writeFile text: '', file: 'unversioned'\n" +
+            "    }\n" +
+            "    archive '**'\n" +
             "}"));
         WorkflowRun b = r.assertBuildStatusSuccess(p.scheduleBuild2(0));
         VirtualFile artifacts = b.getArtifactManager().root();
         assertTrue(artifacts.child("main/file").isFile());
         assertTrue(artifacts.child("other/otherfile").isFile());
         r.assertLogContains("unversioned did not exist", b);
-        sampleRepo.write("file2", "");
-        sampleRepo.hg("add", "file2");
-        sampleRepo.hg("commit", "--message=file2");
-        otherRepo.write("otherfile2", "");
-        otherRepo.hg("add", "otherfile2");
-        otherRepo.hg("commit", "--message=otherfile2");
-        sampleRepo.notifyCommit(r);
-        otherRepo.notifyCommit(r);
+        m.touchAndCommit(sampleRepo, "file2");
+        m.touchAndCommit(otherRepo, "otherfile2");
+        m.notifyCommit(sampleRepo);
+        m.notifyCommit(otherRepo);
         FileUtils.copyFile(p.getSCMTrigger().getLogFile(), System.out);
         b = r.assertBuildStatusSuccess(p.getLastBuild());
         assertEquals(2, b.number);
@@ -121,9 +123,9 @@ public class PipelineTest {
         r.assertLogContains("unversioned did not exist", b);
         Iterator<? extends SCM> scms = p.getSCMs().iterator();
         assertTrue(scms.hasNext());
-        assertEquals(sampleRepo.fileUrl(), ((MercurialSCM) scms.next()).getSource());
+        assertEquals(sampleRepo.toURI().toString(), ((MercurialSCM) scms.next()).getSource());
         assertTrue(scms.hasNext());
-        assertEquals(otherRepo.fileUrl(), ((MercurialSCM) scms.next()).getSource());
+        assertEquals(otherRepo.toURI().toString(), ((MercurialSCM) scms.next()).getSource());
         assertFalse(scms.hasNext());
         List<ChangeLogSet<? extends ChangeLogSet.Entry>> changeSets = b.getChangeSets();
         assertEquals(2, changeSets.size());
@@ -144,28 +146,30 @@ public class PipelineTest {
     }
 
     @Test public void exactRevisionMercurial() throws Exception {
-        sampleRepo.init();
+        // TODO mostly pointless to use MercurialContainer here since multibranch requires a caching installation and thus for hg to be installed on master
+        FilePath sampleRepo = new FilePath(tmp.getRoot());
+        m.hg(sampleRepo, "init");
         ScriptApproval sa = ScriptApproval.get();
         sa.approveSignature("staticField hudson.model.Items XSTREAM2");
         sa.approveSignature("method com.thoughtworks.xstream.XStream toXML java.lang.Object");
-        sampleRepo.write("Jenkinsfile", "echo hudson.model.Items.XSTREAM2.toXML(scm); semaphore 'wait'; node {checkout scm; echo readFile('file')}");
-        sampleRepo.write("file", "initial content");
-        sampleRepo.hg("commit", "--addremove", "--message=flow");
+        sampleRepo.child("Jenkinsfile").write("echo hudson.model.Items.XSTREAM2.toXML(scm); semaphore 'wait'; node {checkout scm; echo readFile('file')}", null);
+        sampleRepo.child("file").write("initial content", null);
+        m.hg(sampleRepo, "commit", "--addremove", "--message=flow");
         WorkflowMultiBranchProject mp = r.jenkins.createProject(WorkflowMultiBranchProject.class, "p");
         String instName = "caching";
         r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(
-                new MercurialInstallation(instName, "", "hg", false, true, false, null, Collections.<ToolProperty<?>> emptyList()));
-        mp.getSourcesList().add(new BranchSource(new MercurialSCMSource(null, instName, sampleRepo.fileUrl(), null, null, null, null, null, true)));
+                new MercurialInstallation(instName, "", "hg", false, true, false, null, null));
+        mp.getSourcesList().add(new BranchSource(new MercurialSCMSource(null, instName, sampleRepo.toURI().toString(), null, null, null, null, null, true)));
         WorkflowJob p = scheduleAndFindBranchProject(mp, "default");
         SemaphoreStep.waitForStart("wait/1", null);
         WorkflowRun b1 = p.getLastBuild();
         assertNotNull(b1);
         assertEquals(1, b1.getNumber());
-        sampleRepo.write("Jenkinsfile", "node {checkout scm; echo readFile('file').toUpperCase()}");
-        sampleRepo.write("file", "subsequent content");
-        sampleRepo.hg("commit", "--message=tweaked");
+        sampleRepo.child("Jenkinsfile").write("node {checkout scm; echo readFile('file').toUpperCase()}", null);
+        sampleRepo.child("file").write("subsequent content", null);
+        m.hg(sampleRepo, "commit", "--message=tweaked");
         SemaphoreStep.success("wait/1", null);
-        sampleRepo.notifyCommit(r);
+        m.notifyCommit(sampleRepo);
         showIndexing(mp);
         WorkflowRun b2 = p.getLastBuild();
         assertEquals(2, b2.getNumber());
@@ -187,26 +191,32 @@ public class PipelineTest {
     }
 
     @Test public void modernHook() throws Exception {
+        // Cannot use MercurialContainer here because of registerHook limitation, q.v.
         String instName = "caching";
-        MercurialInstallation installation = new MercurialInstallation(instName, "", "hg", false, true, false, null,
-                Collections.<ToolProperty<?>>emptyList());
+        MercurialInstallation installation = new MercurialInstallation(instName, "", "hg", false, true, false, null, null);
         LogTaskListener listener = new LogTaskListener(Logger.getLogger(getClass().getName()), Level.INFO);
         final HgExe hg = new HgExe(installation, null, r.jenkins.createLauncher(
                 listener), r.jenkins, listener, new EnvVars());
-        String version = hg.version();
+        String version;
+        try {
+            version = hg.version();
+        } catch (Exception x) {
+            throw new AssumptionViolatedException("cannot run hg version; perhaps not installed locally", x);
+        }
         // I could not find the exact version when the new hooks were added, but not found on any 2.x
         // and found in all the 3.x versions I could get my hands on
         assumeThat("Need mercurial 3.0ish to have in-process hooks, have " + version,
                 new VersionNumber(version).isNewerThan(new VersionNumber("3.0")),is(true));
 
-        sampleRepo.init();
-        sampleRepo.write("Jenkinsfile", "node {checkout scm; echo readFile('file')}");
-        sampleRepo.write("file", "initial content");
-        sampleRepo.hg("commit", "--addremove", "--message=flow");
+        FilePath sampleRepo = new FilePath(tmp.getRoot());
+        m.hg(sampleRepo, "init");
+        sampleRepo.child("Jenkinsfile").write("node {checkout scm; echo readFile('file')}", null);
+        sampleRepo.child("file").write("initial content", null);
+        m.hg(sampleRepo, "commit", "--addremove", "--message=flow");
         WorkflowMultiBranchProject mp = r.jenkins.createProject(WorkflowMultiBranchProject.class, "p");
         r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(installation);
         installation.forNode(r.jenkins, StreamTaskListener.fromStdout());
-        mp.getSourcesList().add(new BranchSource(new MercurialSCMSource(null, instName, sampleRepo.fileUrl(), null, null, null, null, null, true)));
+        mp.getSourcesList().add(new BranchSource(new MercurialSCMSource(null, instName, sampleRepo.toURI().toString(), null, null, null, null, null, true)));
         WorkflowJob p = scheduleAndFindBranchProject(mp, "default");
         r.waitUntilNoActivity();
         WorkflowRun b1 = p.getLastBuild();
@@ -216,10 +226,10 @@ public class PipelineTest {
         // capture the watermark before the event triggered
         long watermark = SCMEvents.getWatermark();
 
-        sampleRepo.registerHook(r);
-        sampleRepo.write("Jenkinsfile", "node {checkout scm; echo readFile('file').toUpperCase()}");
-        sampleRepo.write("file", "subsequent content");
-        sampleRepo.hg("commit", "--message=tweaked");
+        m.registerHook(sampleRepo);
+        sampleRepo.child("Jenkinsfile").write("node {checkout scm; echo readFile('file').toUpperCase()}", null);
+        sampleRepo.child("file").write("subsequent content", null);
+        m.hg(sampleRepo, "commit", "--message=tweaked");
 
         // wait for the event to have completed processing
         SCMEvents.awaitAll(watermark, 5, TimeUnit.SECONDS);

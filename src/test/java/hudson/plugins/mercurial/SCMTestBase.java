@@ -30,8 +30,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import javax.annotation.CheckForNull;
 
 import org.jenkinsci.plugins.multiplescms.MultiSCM;
+import org.jenkinsci.test.acceptance.docker.DockerRule;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -42,14 +44,33 @@ import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import static org.junit.Assert.*;
+import org.junit.Assume;
+import org.junit.AssumptionViolatedException;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.jvnet.hudson.test.BuildWatcher;
 
 public abstract class SCMTestBase {
 
+    /** {@link MercurialRule#hg(String...)} would skip these anyway, but it would take a lot longer. */
+    @BeforeClass public static void requiresLocalHg() throws Exception {
+        try {
+            if (new ProcessBuilder("hg", "--version").start().waitFor() != 0) {
+                throw new AssumptionViolatedException("hg --version signaled an error");
+            }
+        } catch (IOException ioe) {
+            String message = ioe.getMessage();
+            if (message.startsWith("Cannot run program \"hg\"") && message.endsWith("No such file or directory")) {
+                throw new AssumptionViolatedException("hg is not available; please check that your PATH environment variable is properly configured");
+            }
+            Assume.assumeNoException(ioe); // failed to check availability of hg
+        }
+    }
+
     @Rule public JenkinsRule j = new JenkinsRule();
     @Rule public MercurialRule m = new MercurialRule(j);
     @Rule public TemporaryFolder tmp = new TemporaryFolder();
+    @Rule public DockerRule<MercurialContainer> container = new DockerRule<MercurialContainer>(MercurialContainer.class);
     @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
     private File repo;
 
@@ -57,7 +78,7 @@ public abstract class SCMTestBase {
         repo = tmp.getRoot();
     }
 
-    protected abstract String hgInstallation();
+    protected abstract @CheckForNull String hgInstallation() throws Exception;
 
     protected void assertClone(String log, boolean cloneExpected) {
         if (cloneExpected) {
@@ -68,71 +89,7 @@ public abstract class SCMTestBase {
         }
     }
 
-    @Bug(13329)
-    @Test public void basicOps() throws Exception {
-        FreeStyleProject p = j.createFreeStyleProject();
-        p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, null,
-                null, null, false));
-
-        m.hg(repo, "init");
-        m.touchAndCommit(repo, "a");
-        String log = m.buildAndCheck(p, "a");
-        assertClone(log, true);
-        m.touchAndCommit(repo, "b");
-        log = m.buildAndCheck(p, "b");
-        assertClone(log, false);
-    }
-
-    @Bug(15829)
-    @Test public void basicOpsSlave() throws Exception {
-        FreeStyleProject p = j.createFreeStyleProject();
-        p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, null,
-                null, null, false));
-        p.setAssignedNode(j.createOnlineSlave());
-        m.hg(repo, "init");
-        m.touchAndCommit(repo, "a");
-        String log = m.buildAndCheck(p, "a");
-        assertClone(log, true);
-        m.touchAndCommit(repo, "b");
-        log = m.buildAndCheck(p, "b");
-        assertClone(log, false);
-    }
-
-    @Bug(4281)
-    @Test public void branches() throws Exception {
-        m.hg(repo, "init");
-        m.touchAndCommit(repo, "init");
-        m.hg(repo, "tag", "init");
-        m.touchAndCommit(repo, "default-1");
-        m.hg(repo, "update", "--clean", "init");
-        m.hg(repo, "branch", "b");
-        m.touchAndCommit(repo, "b-1");
-        FreeStyleProject p = j.createFreeStyleProject();
-        // Clone off b.
-        p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), "b", null,
-                null, null, false));
-        m.buildAndCheck(p, "b-1");
-        m.hg(repo, "update", "--clean", "default");
-        m.touchAndCommit(repo, "default-2");
-        // Changes in default should be ignored.
-        assertFalse(m.pollSCMChanges(p).hasChanges());
-        m.hg(repo, "update", "--clean", "b");
-        m.touchAndCommit(repo, "b-2");
-        // But changes in b should be pulled.
-        assertTrue(m.pollSCMChanges(p).hasChanges());
-        m.buildAndCheck(p, "b-2");
-        // Switch to default branch with an existing workspace.
-        p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, null,
-                null, null, false));
-        // Should now consider preexisting changesets in default to be poll
-        // triggers.
-        assertTrue(m.pollSCMChanges(p).hasChanges());
-        // Should switch working copy to default branch.
-        m.buildAndCheck(p, "default-2");
-        m.touchAndCommit(repo, "b-3");
-        // Changes in other branch should be ignored.
-        assertFalse(m.pollSCMChanges(p).hasChanges());
-    }
+    // TODO migrate test cases to FunctionalTest, eventually delete this and subclasses
 
     @Bug(1099)
     @Test public void pollingLimitedToModules() throws Exception {

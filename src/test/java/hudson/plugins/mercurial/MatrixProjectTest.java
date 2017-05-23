@@ -43,6 +43,7 @@ public class MatrixProjectTest {
         matrixProject.setScm(new MercurialSCM(null, repo.getPath(), null, null, null, null, false));
         matrixProject.setAxes(new AxisList(new LabelAxis("label", Arrays.asList("slave_one", "slave_two"))));
 
+        // TODO switch to MercurialContainer
         m.hg(repo, "init");
         m.touchAndCommit(repo, "a");
     }
