@@ -1,11 +1,12 @@
 package hudson.plugins.mercurial;
 
-import hudson.AbortException;
+import hudson.FilePath;
 import hudson.tools.ToolProperty;
 import hudson.util.LogTaskListener;
 import hudson.util.StreamTaskListener;
 import jenkins.scm.api.SCMRevision;
 import org.junit.*;
+import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
@@ -14,13 +15,13 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 @Issue("JENKINS-41657")
 public class MercurialSCMSourceTest {
 
-    @ClassRule public static JenkinsRule r = new JenkinsRule();
-    @ClassRule public static MercurialSampleRepoRule sampleRepo = new MercurialSampleRepoRule();
+    @ClassRule public static JenkinsRule j = new JenkinsRule();
+    @ClassRule public static MercurialRule m = new MercurialRule(j);
+    @ClassRule public static TemporaryFolder tmp = new TemporaryFolder();
 
     private static LogTaskListener listener;
     private static MercurialSCMSource mercurialSCMSource;
@@ -28,23 +29,24 @@ public class MercurialSCMSourceTest {
     @BeforeClass
     public static void prepareEnvironment() throws Exception {
         String instName = "caching";
-        MercurialInstallation installation = new MercurialInstallation(instName, "", "hg", false, true, false, null,
+        MercurialInstallation installation = new MercurialInstallation(instName, "", "hg", false, true, null, false, null,
                 Collections.<ToolProperty<?>>emptyList());
         listener = new LogTaskListener(Logger.getLogger(MercurialSCMSourceTest.class.getName()), Level.INFO);
-        r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(installation);
-        installation.forNode(r.jenkins, StreamTaskListener.fromStdout());
-        sampleRepo.init();
-        sampleRepo.write("file", "initial content");
-        sampleRepo.hg("commit", "--addremove", "--message=initial");
-        sampleRepo.hg("tag", "version-1.0");
-        sampleRepo.hg("branch", "my-branch");
-        sampleRepo.write("file2", "content in branch");
-        sampleRepo.hg("commit", "--addremove", "--message=branch");
-        sampleRepo.hg("tag", "version-1.1");
+        j.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(installation);
+        FilePath repo = new FilePath(tmp.getRoot());
+        installation.forNode(j.jenkins, StreamTaskListener.fromStdout());
+        m.hg(repo, "init");
+        repo.child("file").write("initial content", "UTF-8");
+        m.hg(repo, "commit", "--addremove", "--message=initial");
+        m.hg(repo, "tag", "version-1.0");
+        m.hg(repo, "branch", "my-branch");
+        repo.child("file2").write("content in branch", "UTF-8");
+        m.hg(repo, "commit", "--addremove", "--message=branch");
+        m.hg(repo, "tag", "version-1.1");
 
 
-        installation.forNode(r.jenkins, StreamTaskListener.fromStdout());
-        mercurialSCMSource = new MercurialSCMSource(null, instName, sampleRepo.fileUrl(), null, null, null, null, null, true);
+        installation.forNode(j.jenkins, StreamTaskListener.fromStdout());
+        mercurialSCMSource = new MercurialSCMSource(null, instName, tmp.getRoot().toURI().toURL().toString(), null, null, null, null, null, true);
     }
 
     @Test public void testRetrieveUnknownRevision() throws Exception {
