@@ -6,6 +6,7 @@ import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
@@ -65,7 +66,8 @@ import org.kohsuke.stapler.QueryParameter;
 public final class MercurialSCMSource extends SCMSource {
 
     private final @Nonnull String source;
-    private final @CheckForNull String credentialsId;
+    private @CheckForNull
+    String credentialsId;
     private @Nonnull List<SCMSourceTrait> traits;
     @Deprecated @Restricted(NoExternalUse.class) @RestrictedSince("2.0") private transient String installation;
     @Deprecated @Restricted(NoExternalUse.class) @RestrictedSince("2.0") private transient String branchPattern;
@@ -75,10 +77,9 @@ public final class MercurialSCMSource extends SCMSource {
     @Deprecated @Restricted(NoExternalUse.class) @RestrictedSince("2.0") private transient boolean clean;
 
     @DataBoundConstructor
-    public MercurialSCMSource(String id, String source, String credentialsId) {
+    public MercurialSCMSource(String id, String source) {
         super(id);
         this.source = source;
-        this.credentialsId = credentialsId;
         this.traits = new ArrayList<>();
     }
 
@@ -103,6 +104,7 @@ public final class MercurialSCMSource extends SCMSource {
         }
     }
 
+    @SuppressFBWarnings("RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
     @SuppressWarnings({"deprecation", "ConstantConditions"}) private Object readResolve() throws ObjectStreamException {
         if (traits == null) {
             traits = new ArrayList<>();
@@ -135,6 +137,11 @@ public final class MercurialSCMSource extends SCMSource {
 
     public @CheckForNull String getCredentialsId() {
         return credentialsId;
+    }
+
+    @DataBoundSetter
+    public void setCredentialsId(@CheckForNull String credentialsId) {
+        this.credentialsId = credentialsId;
     }
 
     @DataBoundSetter public void setTraits(@CheckForNull List<SCMSourceTrait> traits) {
@@ -234,40 +241,7 @@ public final class MercurialSCMSource extends SCMSource {
                                 public @Nonnull
                                 SCMSourceCriteria.Probe create(@Nonnull SCMHead branch, @Nullable final
                                 MercurialRevision revision) {
-                                    return new SCMProbe() {
-                                        @Override
-                                        public @Nonnull
-                                        SCMProbeStat stat(@Nonnull String path) throws IOException {
-                                            try {
-                                                String files = hg.popen(cache, listener, true,
-                                                        new ArgumentListBuilder("locate",
-                                                                "-r",
-                                                                revision.getHash(),
-                                                                "-I",
-                                                                "path:" + path));
-                                                if (StringUtils.isBlank(files)) {
-                                                    return SCMProbeStat.fromType(SCMFile.Type.NONEXISTENT);
-                                                }
-                                                return SCMProbeStat.fromType(SCMFile.Type.REGULAR_FILE);
-                                            } catch (InterruptedException e) {
-                                                throw new IOException(e);
-                                            }
-                                        }
-
-                                        @Override
-                                        public void close() throws IOException {
-                                        }
-
-                                        @Override
-                                        public String name() {
-                                            return name;
-                                        }
-
-                                        @Override
-                                        public long lastModified() {
-                                            return 0;
-                                        }
-                                    };
+                                    return new SCMProbeImpl(hg, cache, listener, revision, name);
                                 }
                             }, new SCMSourceRequest.Witness() {
                                 @Override
@@ -375,9 +349,10 @@ public final class MercurialSCMSource extends SCMSource {
 
     }
 
-    /*package*/ static final class MercurialRevision extends SCMRevision {
+    public static final class MercurialRevision extends SCMRevision {
         @Nonnull private final String hash;
-        MercurialRevision(@Nonnull SCMHead branch, @Nonnull String hash) {
+
+        public MercurialRevision(@Nonnull SCMHead branch, @Nonnull String hash) {
             super(branch);
             this.hash = hash;
         }
@@ -395,4 +370,54 @@ public final class MercurialSCMSource extends SCMSource {
         }
     }
 
+    private static class SCMProbeImpl extends SCMProbe {
+        private static final long serialVersionUID = 1L;
+        private final transient HgExe hg;
+        private final FilePath cache;
+        private final TaskListener listener;
+        private final MercurialRevision revision;
+        private final String name;
+
+        public SCMProbeImpl(HgExe hg, FilePath cache, TaskListener listener, MercurialRevision revision,
+                            String name) {
+            this.hg = hg;
+            this.cache = cache;
+            this.listener = listener;
+            this.revision = revision;
+            this.name = name;
+        }
+
+        @Override
+        public @Nonnull
+        SCMProbeStat stat(@Nonnull String path) throws IOException {
+            try {
+                String files = hg.popen(cache, listener, true,
+                        new ArgumentListBuilder("locate",
+                                "-r",
+                                revision.getHash(),
+                                "-I",
+                                "path:" + path));
+                if (StringUtils.isBlank(files)) {
+                    return SCMProbeStat.fromType(SCMFile.Type.NONEXISTENT);
+                }
+                return SCMProbeStat.fromType(SCMFile.Type.REGULAR_FILE);
+            } catch (InterruptedException e) {
+                throw new IOException(e);
+            }
+        }
+
+        @Override
+        public void close() throws IOException {
+        }
+
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public long lastModified() {
+            return 0;
+        }
+    }
 }

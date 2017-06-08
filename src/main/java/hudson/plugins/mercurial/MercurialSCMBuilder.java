@@ -29,7 +29,8 @@ public class MercurialSCMBuilder<B extends MercurialSCMBuilder<B>> extends SCMBu
     /**
      * The repository to track. This can be URL or a local file path.
      */
-    private final @Nonnull String source;
+    private @Nonnull
+    String source;
 
     public MercurialSCMBuilder(@Nonnull SCMHead head, @CheckForNull SCMRevision revision, String source,
                                String credentialsId) {
@@ -78,14 +79,19 @@ public class MercurialSCMBuilder<B extends MercurialSCMBuilder<B>> extends SCMBu
         return (B) this;
     }
 
+    @SuppressWarnings("unchecked")
+    public @Nonnull
+    B withSource(String source) {
+        this.source = source;
+        return (B) this;
+    }
+
     @Override public @Nonnull MercurialSCM build() {
-        String rev = revision() instanceof MercurialSCMSource.MercurialRevision
-                ? ((MercurialSCMSource.MercurialRevision) revision()).getHash()
-                : head().getName();
+        SCMRevision revision = revision();
         MercurialSCM result = new MercurialSCM(source());
-        if (revision() instanceof MercurialSCMSource.MercurialRevision) {
+        if (revision instanceof MercurialSCMSource.MercurialRevision) {
             result.setRevisionType(MercurialSCM.RevisionType.CHANGESET);
-            result.setRevision(((MercurialSCMSource.MercurialRevision) revision()).getHash());
+            result.setRevision(((MercurialSCMSource.MercurialRevision) revision).getHash());
         } else {
             result.setRevisionType(MercurialSCM.RevisionType.BRANCH);
             result.setRevision(head().getName());
