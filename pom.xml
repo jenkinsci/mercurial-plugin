@@ -16,7 +16,7 @@
     <properties>
       <jenkins.version>1.642.3</jenkins.version>
       <no-test-jar>false</no-test-jar>  
-      <scm-api-plugin.version>2.2.0-20170504.132618-8</scm-api-plugin.version>
+      <scm-api-plugin.version>2.2.0-20170612.200107-11</scm-api-plugin.version>
     </properties>
     
     <developers>
@@ -70,7 +70,16 @@
             <url>https://repo.jenkins-ci.org/public/</url>
         </pluginRepository>
     </pluginRepositories>
+  <dependencyManagement>
     <dependencies>
+      <dependency>
+        <groupId>org.jenkins-ci.plugins</groupId>
+        <artifactId>scm-api</artifactId>
+        <version>${scm-api-plugin.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+  <dependencies>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>credentials</artifactId>

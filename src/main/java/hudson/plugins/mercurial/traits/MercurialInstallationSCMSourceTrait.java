@@ -49,7 +49,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 /**
  * Exposes {@link MercurialInstallation} configuration of a {@link MercurialSCMSource} as a {@link SCMSourceTrait}.
  *
- * @since 3.4.0
+ * @since 2.0
  */
 public class MercurialInstallationSCMSourceTrait extends SCMSourceTrait {
     /**
@@ -78,14 +78,14 @@ public class MercurialInstallationSCMSourceTrait extends SCMSourceTrait {
     /**
      * {@inheritDoc}
      */
-    @Override protected <B extends SCMSourceContext<B, R>, R extends SCMSourceRequest> void decorateContext(B context) {
+    @Override protected void decorateContext(SCMSourceContext<?, ?> context) {
         ((MercurialSCMSourceContext<?>)context).withInstallation(installation);
     }
 
     /**
      * {@inheritDoc}
      */
-    @Override protected <B extends SCMBuilder<B, S>, S extends SCM> void decorateBuilder(B builder) {
+    @Override protected void decorateBuilder(SCMBuilder<?, ?> builder) {
         ((MercurialSCMBuilder<?>) builder).withInstallation(installation);
     }
 
@@ -104,8 +104,29 @@ public class MercurialInstallationSCMSourceTrait extends SCMSourceTrait {
         /**
          * {@inheritDoc}
          */
+        @Override public Class<? extends SCMBuilder> getBuilderClass() {
+            return MercurialSCMBuilder.class;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override public Class<? extends SCMSourceContext> getContextClass() {
+            return MercurialSCMSourceContext.class;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override public Class<? extends SCM> getScmClass() {
+            return MercurialSCM.class;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
         @Override public boolean isApplicableToBuilder(@Nonnull Class<? extends SCMBuilder> builderClass) {
-            if (super.isApplicableToBuilder(builderClass) && MercurialSCMBuilder.class.isAssignableFrom(builderClass)) {
+            if (super.isApplicableToBuilder(builderClass)) {
                 for (MercurialInstallation i : MercurialInstallation.allInstallations()) {
                     if (i.isUseCaches()) {
                         return true;
@@ -119,22 +140,28 @@ public class MercurialInstallationSCMSourceTrait extends SCMSourceTrait {
          * {@inheritDoc}
          */
         @Override public boolean isApplicableToContext(@Nonnull Class<? extends SCMSourceContext> contextClass) {
-            return super.isApplicableToContext(contextClass) && MercurialSCMSourceContext.class
-                    .isAssignableFrom(contextClass);
+            if (super.isApplicableToContext(contextClass)) {
+                for (MercurialInstallation i : MercurialInstallation.allInstallations()) {
+                    if (i.isUseCaches()) {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         /**
          * {@inheritDoc}
          */
         @Override public boolean isApplicableToSCM(@Nonnull Class<? extends SCM> scmClass) {
-            return super.isApplicableToSCM(scmClass) && MercurialSCM.class.isAssignableFrom(scmClass);
-        }
-
-        /**
-         * {@inheritDoc}
-         */
-        @Override public boolean isApplicableTo(@Nonnull SCMSource source) {
-            return super.isApplicableTo(source) && source instanceof MercurialSCMSource;
+            if (super.isApplicableToSCM(scmClass)) {
+                for (MercurialInstallation i : MercurialInstallation.allInstallations()) {
+                    if (i.isUseCaches()) {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         /**

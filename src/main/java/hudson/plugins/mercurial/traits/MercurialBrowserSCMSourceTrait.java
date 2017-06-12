@@ -29,6 +29,7 @@ import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.Descriptor;
+import hudson.plugins.mercurial.MercurialSCM;
 import hudson.plugins.mercurial.MercurialSCMBuilder;
 import hudson.plugins.mercurial.MercurialSCMSource;
 import hudson.plugins.mercurial.browser.HgBrowser;
@@ -47,7 +48,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 /**
  * Exposes {@link HgBrowser} configuration of a {@link MercurialSCMSource} as a {@link SCMSourceTrait}.
  *
- * @since 3.4.0
+ * @since 2.0
  */
 public class MercurialBrowserSCMSourceTrait extends SCMSourceTrait {
 
@@ -80,22 +81,19 @@ public class MercurialBrowserSCMSourceTrait extends SCMSourceTrait {
     /**
      * {@inheritDoc}
      */
-    @Override
-    protected <B extends SCMBuilder<B, S>, S extends SCM> void decorateBuilder(B builder) {
+    @Override protected void decorateBuilder(SCMBuilder<?, ?> builder) {
         ((MercurialSCMBuilder<?>) builder).withBrowser(browser);
     }
 
     /**
      * Our {@link Descriptor}
      */
-    @Extension
-    public static class DescriptorImpl extends SCMSourceTraitDescriptor {
+    @Extension public static class DescriptorImpl extends SCMSourceTraitDescriptor {
 
         /**
          * {@inheritDoc}
          */
-        @Override
-        public @Nonnull String getDisplayName() {
+        @Override public @Nonnull String getDisplayName() {
             return "Configure Repository Browser";
         }
 
@@ -112,10 +110,15 @@ public class MercurialBrowserSCMSourceTrait extends SCMSourceTrait {
         /**
          * {@inheritDoc}
          */
-        @Override
-        public boolean isApplicableToBuilder(@NonNull Class<? extends SCMBuilder> builderClass) {
-            return super.isApplicableToBuilder(builderClass)
-                    && MercurialSCMBuilder.class.isAssignableFrom(builderClass);
+        @Override public Class<? extends SCMBuilder> getBuilderClass() {
+            return MercurialSCMBuilder.class;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override public Class<? extends SCM> getScmClass() {
+            return MercurialSCM.class;
         }
     }
 }
