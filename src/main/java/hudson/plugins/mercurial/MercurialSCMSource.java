@@ -77,10 +77,15 @@ public final class MercurialSCMSource extends SCMSource {
     @Deprecated @Restricted(NoExternalUse.class) @RestrictedSince("2.0") private transient boolean clean;
 
     @DataBoundConstructor
-    public MercurialSCMSource(String id, String source) {
-        super(id);
+    public MercurialSCMSource(String source) {
         this.source = source;
         this.traits = new ArrayList<>();
+    }
+
+    @Deprecated
+    public MercurialSCMSource(String id, String source) {
+        this(source);
+        setId(id);
     }
 
     @Deprecated @Restricted(NoExternalUse.class) @RestrictedSince("2.0") public MercurialSCMSource(
