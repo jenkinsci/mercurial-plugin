@@ -49,6 +49,7 @@ import static org.junit.Assert.*;
 import org.junit.Rule;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.MockAuthorizationStrategy;
 
 public class ConfigurationTest {
 
@@ -89,6 +90,21 @@ public class ConfigurationTest {
         assertEquals("caching", scm.getInstallation());
         // Did not explicitly set this one:
         assertFalse(scm.isDisableChangeLog());
+    }
+
+    @Test public void doFillCredentialsIdItemsWithoutJobWhenAdmin() throws Exception {
+        r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
+        ProjectMatrixAuthorizationStrategy as = new ProjectMatrixAuthorizationStrategy();
+        as.add(Jenkins.ADMINISTER, "alice");
+        r.jenkins.setAuthorizationStrategy(as);
+        final UsernamePasswordCredentialsImpl c = new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL, null, "test", "bob", "s3cr3t");
+        CredentialsProvider.lookupStores(r.jenkins).iterator().next().addCredentials(Domain.global(), c);
+        ACL.impersonate(User.get("alice").impersonate(), new Runnable() {
+            @Override public void run() {
+                ListBoxModel options = r.jenkins.getDescriptorByType(MercurialSCM.DescriptorImpl.class).doFillCredentialsIdItems(null, "http://nowhere.net/");
+                assertEquals(CredentialsNameProvider.name(c), options.get(1).name);
+            }
+        });
     }
 
     @Issue("SECURITY-158")

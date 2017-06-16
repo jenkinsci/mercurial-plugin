@@ -6,11 +6,7 @@ import com.cloudbees.plugins.credentials.common.StandardUsernameListBoxModel;
 import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.SuppressWarnings;
-import hudson.EnvVars;
-import hudson.Extension;
-import hudson.FilePath;
-import hudson.Launcher;
-import hudson.Util;
+import hudson.*;
 import hudson.model.Action;
 import hudson.model.Descriptor;
 import hudson.model.Item;
@@ -71,7 +67,7 @@ public final class MercurialSCMSource extends SCMSource {
         this.browser = browser;
         this.clean = clean;
     }
-    
+
     public String getInstallation() {
         return installation;
     }
@@ -190,6 +186,41 @@ public final class MercurialSCMSource extends SCMSource {
         }
     }
 
+    @Override
+    @CheckForNull
+    protected SCMRevision retrieve(@NonNull String thingName, @NonNull TaskListener listener) throws IOException, InterruptedException {
+        MercurialInstallation inst = MercurialSCM.findInstallation(installation);
+        if (inst == null) {
+            listener.error("No configured Mercurial installation");
+            return null;
+        }
+        if (!inst.isUseCaches()) {
+            listener.error("Mercurial installation " + installation + " does not support caches");
+            return null;
+        }
+        final Node node = Jenkins.getActiveInstance();
+        Launcher launcher = node.createLauncher(listener);
+        StandardUsernameCredentials credentials = getCredentials();
+        final FilePath cache = Cache.fromURL(source, credentials, inst.getMasterCacheRoot()).repositoryCache(inst, node, launcher, listener, true);
+        if (cache == null) {
+            listener.error("Could not use caches, not fetching branch heads");
+            return null;
+        }
+        final HgExe hg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars());
+        try {
+            String revision = hg.popen(cache, listener, true, new ArgumentListBuilder("log", "-r", "present("+thingName+")", "--template", "{node} {branch}"));
+            if (revision.isEmpty()){
+                return null;
+            }
+            String hash = revision.substring(0, revision.indexOf(' '));
+            String branch = revision.substring(revision.indexOf(' ')+1, revision.length());
+            return new MercurialRevision(new SCMHead(branch), hash);
+        } finally {
+            hg.close();
+        }
+
+    }
+
     @SuppressWarnings("DB_DUPLICATE_BRANCHES")
     @Override public SCM build(SCMHead head, SCMRevision revision) {
         String rev = revision == null ? head.getName() : ((MercurialRevision) revision).hash;
@@ -230,12 +261,19 @@ public final class MercurialSCMSource extends SCMSource {
         }
 
         public ListBoxModel doFillCredentialsIdItems(@AncestorInPath SCMSourceOwner owner, @QueryParameter String source) {
-            if (owner == null || !owner.hasPermission(Item.EXTENDED_READ)) {
+            if (!hasAccessToCredentialsMetadata(owner)) {
                 return new ListBoxModel();
             }
             return new StandardUsernameListBoxModel()
                     .withEmptySelection()
                     .withAll(availableCredentials(owner, source));
+        }
+
+        private boolean hasAccessToCredentialsMetadata(SCMSourceOwner owner){
+            if (owner == null){
+                return Jenkins.getActiveInstance().hasPermission(Jenkins.ADMINISTER);
+            }
+            return owner.hasPermission(Item.EXTENDED_READ);
         }
 
         public FormValidation doCheckBranchPattern(@QueryParameter String value) {
