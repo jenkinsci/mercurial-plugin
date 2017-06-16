@@ -7,7 +7,7 @@
         <relativePath />
     </parent>
     <artifactId>mercurial</artifactId>
-    <version>1.61-SNAPSHOT</version>
+    <version>1.61</version>
     <packaging>hpi</packaging>
     <name>Jenkins Mercurial plugin</name>
     <description>Allows Jenkins to check out projects from the Mercurial SCM.</description>
@@ -55,7 +55,7 @@
         <connection>scm:git:git://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
         <developerConnection>scm:git:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>
         <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
-      <tag>HEAD</tag>
+      <tag>mercurial-1.61</tag>
   </scm>
     <repositories>
         <repository>
