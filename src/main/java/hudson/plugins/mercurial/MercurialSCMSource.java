@@ -278,22 +278,22 @@ public final class MercurialSCMSource extends SCMSource {
     @CheckForNull
     protected SCMRevision retrieve(@NonNull String thingName, @NonNull TaskListener listener)
             throws IOException, InterruptedException {
-        try (MercurialSCMSourceRequest request = new MercurialSCMSourceContext<>(criteria, observer)
+        try (MercurialSCMSourceRequest request = new MercurialSCMSourceContext<>(null, SCMHeadObserver.none())
                 .withTraits(traits)
                 .newRequest(this, listener)) {
             MercurialInstallation inst = MercurialSCM.findInstallation(request.installation());
             if (inst == null) {
                 listener.error("No configured Mercurial installation");
-                return;
+                return null;
             }
             if (!inst.isUseCaches()) {
                 listener.error("Mercurial installation " + request.installation() + " does not support caches");
-                return;
+                return null;
             }
             final Node node = Jenkins.getInstance();
             if (node == null) { // Should not happen BTW
                 listener.error("Cannot retrieve the Jenkins master node");
-                return;
+                return null;
             }
             Launcher launcher = node.createLauncher(listener);
             StandardUsernameCredentials credentials = getCredentials(request.credentialsId());
