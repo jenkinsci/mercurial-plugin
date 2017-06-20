@@ -237,8 +237,7 @@ public final class MercurialSCMSource extends SCMSource {
                             }, new SCMSourceRequest.ProbeLambda<SCMHead, MercurialRevision>() {
                                 @Override
                                 public @Nonnull
-                                SCMSourceCriteria.Probe create(@Nonnull SCMHead branch, @Nullable final
-                                MercurialRevision revision) {
+                                SCMSourceCriteria.Probe create(@Nonnull SCMHead branch, @Nullable final MercurialRevision revision) {
                                     return new SCMProbeImpl(hg, cache, listener, revision, name);
                                 }
                             }, new SCMSourceRequest.Witness() {
@@ -366,8 +365,8 @@ public final class MercurialSCMSource extends SCMSource {
                     .withAll(availableCredentials(owner, source));
         }
 
-        private boolean hasAccessToCredentialsMetadata(SCMSourceOwner owner) {
-            if (owner == null) {
+        private boolean hasAccessToCredentialsMetadata(SCMSourceOwner owner){
+            if (owner == null){
                 return Jenkins.getActiveInstance().hasPermission(Jenkins.ADMINISTER);
             }
             return owner.hasPermission(Item.EXTENDED_READ);
