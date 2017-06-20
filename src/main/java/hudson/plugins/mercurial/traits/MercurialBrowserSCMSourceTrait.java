@@ -94,7 +94,7 @@ public class MercurialBrowserSCMSourceTrait extends SCMSourceTrait {
          * {@inheritDoc}
          */
         @Override public @Nonnull String getDisplayName() {
-            return "Configure Repository Browser";
+            return Messages.MercurialBrowserSCMSourceTrait_displayName();
         }
 
         /**

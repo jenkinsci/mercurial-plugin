@@ -98,7 +98,7 @@ public class MercurialInstallationSCMSourceTrait extends SCMSourceTrait {
          * {@inheritDoc}
          */
         @Override public @Nonnull String getDisplayName() {
-            return "Select Mercurial installation";
+            return Messages.MercurialInstallationSCMSourceTrait_displayName();
         }
 
         /**
