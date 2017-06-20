@@ -54,6 +54,7 @@ import jenkins.scm.api.trait.SCMSourceRequest;
 import jenkins.scm.api.trait.SCMSourceTrait;
 import jenkins.scm.api.trait.SCMSourceTraitDescriptor;
 import jenkins.scm.impl.trait.RegexSCMHeadFilterTrait;
+import jenkins.scm.impl.trait.RegexSCMSourceFilterTrait;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
@@ -154,21 +155,13 @@ public final class MercurialSCMSource extends SCMSource {
     }
 
     @Deprecated @Restricted(DoNotUse.class) @RestrictedSince("2.0") public String getInstallation() {
-        for (SCMSourceTrait t: traits) {
-            if (t instanceof MercurialInstallationSCMSourceTrait) {
-                return ((MercurialInstallationSCMSourceTrait) t).getInstallation();
-            }
-        }
-        return null;
+        MercurialInstallationSCMSourceTrait t = getTrait(MercurialInstallationSCMSourceTrait.class);
+        return t != null ? t.getInstallation() : null;
     }
 
     @Deprecated @Restricted(DoNotUse.class) @RestrictedSince("2.0") public String getBranchPattern() {
-        for (SCMSourceTrait t: traits) {
-            if (t instanceof RegexSCMHeadFilterTrait) {
-                return ((RegexSCMHeadFilterTrait) t).getRegex();
-            }
-        }
-        return "";
+        RegexSCMHeadFilterTrait t = getTrait(RegexSCMHeadFilterTrait.class);
+        return t != null ? t.getRegex() : "";
     }
 
     @Deprecated @Restricted(DoNotUse.class) @RestrictedSince("2.0") public String getModules() {
@@ -180,21 +173,21 @@ public final class MercurialSCMSource extends SCMSource {
     }
 
     @Deprecated @Restricted(DoNotUse.class) @RestrictedSince("2.0") public HgBrowser getBrowser() {
-        for (SCMSourceTrait t: traits) {
-            if (t instanceof MercurialBrowserSCMSourceTrait) {
-                return ((MercurialBrowserSCMSourceTrait) t).getBrowser();
-            }
-        }
-        return null;
+        MercurialBrowserSCMSourceTrait t = getTrait(MercurialBrowserSCMSourceTrait.class);
+        return t != null ? t.getBrowser() : null;
     }
 
     @Deprecated @Restricted(DoNotUse.class) @RestrictedSince("2.0") public boolean isClean() {
+        return getTrait(CleanMercurialSCMSourceTrait.class) != null;
+    }
+
+    private @CheckForNull <T extends SCMSourceTrait> T getTrait(@Nonnull Class<T> traitClass) {
         for (SCMSourceTrait t: traits) {
-            if (t instanceof CleanMercurialSCMSourceTrait) {
-                return true;
+            if (traitClass.isInstance(t)) {
+                return traitClass.cast(t);
             }
         }
-        return false;
+        return null;
     }
 
     @Override protected void retrieve(@CheckForNull SCMSourceCriteria criteria, @Nonnull SCMHeadObserver observer,

@@ -29,11 +29,10 @@ public class MercurialSCMBuilder<B extends MercurialSCMBuilder<B>> extends SCMBu
     /**
      * The repository to track. This can be URL or a local file path.
      */
-    private @Nonnull
-    String source;
+    private @Nonnull String source;
 
-    public MercurialSCMBuilder(@Nonnull SCMHead head, @CheckForNull SCMRevision revision, String source,
-                               String credentialsId) {
+    public MercurialSCMBuilder(@Nonnull SCMHead head, @CheckForNull SCMRevision revision, @Nonnull String source,
+                               @CheckForNull String credentialsId) {
         super(MercurialSCM.class, head, revision);
         this.source = source;
         this.credentialsId = credentialsId;
