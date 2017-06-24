@@ -53,8 +53,12 @@ import jenkins.scm.api.metadata.PrimaryInstanceMetadataAction;
 import jenkins.scm.api.trait.SCMSourceRequest;
 import jenkins.scm.api.trait.SCMSourceTrait;
 import jenkins.scm.api.trait.SCMSourceTraitDescriptor;
+import jenkins.scm.api.trait.SCMTraitDescriptor;
+import jenkins.scm.impl.form.NamedArrayList;
+import jenkins.scm.impl.trait.Discovery;
 import jenkins.scm.impl.trait.RegexSCMHeadFilterTrait;
 import jenkins.scm.impl.trait.RegexSCMSourceFilterTrait;
+import jenkins.scm.impl.trait.Selection;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
@@ -389,11 +393,20 @@ public final class MercurialSCMSource extends SCMSource {
             return RepositoryBrowsers.filter(HgBrowser.class);
         }
 
-        public List<SCMSourceTraitDescriptor> getTraitDescriptors() {
-            return SCMSourceTrait._for(this, MercurialSCMSourceContext.class, MercurialSCMBuilder.class);
+        public List<NamedArrayList<? extends SCMTraitDescriptor<?>>> getTraitsDescriptorLists() {
+            List<SCMSourceTraitDescriptor> all =
+                    SCMSourceTrait._for(this, MercurialSCMSourceContext.class, MercurialSCMBuilder.class);
+            List<NamedArrayList<? extends SCMTraitDescriptor<?>>> result = new ArrayList<>();
+            NamedArrayList.select(all, "Within repository",
+                    NamedArrayList.anyOf(
+                            NamedArrayList.withAnnotation(Discovery.class),
+                                    NamedArrayList.withAnnotation(Selection.class)
+                    ),true, result);
+            NamedArrayList.select(all, "Additional", null, true, result);
+            return result;
         }
 
-        public List<SCMSourceTrait> getTraitDefaults() {
+        public List<SCMSourceTrait> getTraitsDefaults() {
             return Collections.emptyList();
         }
 
