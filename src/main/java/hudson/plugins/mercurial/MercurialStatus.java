@@ -9,8 +9,23 @@ import hudson.model.UnprotectedRootAction;
 import hudson.scm.SCM;
 import hudson.security.ACL;
 import hudson.triggers.SCMTrigger;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.servlet.ServletException;
+import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMEvent;
 import jenkins.scm.api.SCMHeadEvent;
+import jenkins.scm.api.SCMSource;
+import jenkins.scm.api.SCMSourceOwner;
+import jenkins.scm.api.SCMSourceOwners;
+import jenkins.triggers.SCMTriggerItem;
+import org.acegisecurity.context.SecurityContext;
+import org.acegisecurity.context.SecurityContextHolder;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -21,23 +36,9 @@ import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
-import javax.servlet.ServletException;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import static javax.servlet.http.HttpServletResponse.*;
-import jenkins.model.Jenkins;
-import jenkins.scm.api.SCMSource;
-import jenkins.scm.api.SCMSourceOwner;
-import jenkins.scm.api.SCMSourceOwners;
-import jenkins.triggers.SCMTriggerItem;
-import org.acegisecurity.context.SecurityContext;
-import org.acegisecurity.context.SecurityContextHolder;
+import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
+import static javax.servlet.http.HttpServletResponse.SC_OK;
+import static javax.servlet.http.HttpServletResponse.SC_SERVICE_UNAVAILABLE;
 /**
  * Information screen for the use of Mercurial in Jenkins.
  */
@@ -206,7 +207,7 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
                 scmFound = true;
                 MercurialSCMSource hgSource = (MercurialSCMSource) source;
                 String repository = hgSource.getSource();
-                if (repository == null) {
+                if (StringUtils.isBlank(repository)) {
                     LOGGER.log(Level.WARNING, "project {0} is using source control but does not identify a repository", project.getFullName());
                     continue;
                 }
