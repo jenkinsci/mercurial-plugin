@@ -111,7 +111,7 @@ public final class MercurialSCMSource extends SCMSource {
         if (browser != null) {
             traits.add(new MercurialBrowserSCMSourceTrait(browser));
         }
-        setTraits(traits);
+        this.traits = SCMTrait.asSetList(traits);
     }
 
     @SuppressFBWarnings("RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
