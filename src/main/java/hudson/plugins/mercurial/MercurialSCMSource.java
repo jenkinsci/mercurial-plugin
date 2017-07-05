@@ -12,7 +12,6 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.RestrictedSince;
-import hudson.Util;
 import hudson.model.Action;
 import hudson.model.Descriptor;
 import hudson.model.Item;
@@ -53,11 +52,11 @@ import jenkins.scm.api.metadata.PrimaryInstanceMetadataAction;
 import jenkins.scm.api.trait.SCMSourceRequest;
 import jenkins.scm.api.trait.SCMSourceTrait;
 import jenkins.scm.api.trait.SCMSourceTraitDescriptor;
+import jenkins.scm.api.trait.SCMTrait;
 import jenkins.scm.api.trait.SCMTraitDescriptor;
 import jenkins.scm.impl.form.NamedArrayList;
 import jenkins.scm.impl.trait.Discovery;
 import jenkins.scm.impl.trait.RegexSCMHeadFilterTrait;
-import jenkins.scm.impl.trait.RegexSCMSourceFilterTrait;
 import jenkins.scm.impl.trait.Selection;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.accmod.Restricted;
@@ -99,7 +98,7 @@ public final class MercurialSCMSource extends SCMSource {
         super(id);
         this.source = source;
         this.credentialsId = credentialsId;
-        this.traits = new ArrayList<>();
+        List<SCMSourceTrait> traits = new ArrayList<>();
         if (StringUtils.isNotBlank(branchPattern) && !".*".equals(branchPattern) && !".+".equals(branchPattern)) {
             traits.add(new RegexSCMHeadFilterTrait(branchPattern));
         }
@@ -112,12 +111,13 @@ public final class MercurialSCMSource extends SCMSource {
         if (browser != null) {
             traits.add(new MercurialBrowserSCMSourceTrait(browser));
         }
+        setTraits(traits);
     }
 
     @SuppressFBWarnings("RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
     @SuppressWarnings({"deprecation", "ConstantConditions"}) private Object readResolve() throws ObjectStreamException {
         if (traits == null) {
-            traits = new ArrayList<>();
+            List<SCMSourceTrait> traits = new ArrayList<>();
             if (branchPattern != null) {
                 if (StringUtils.isNotBlank(branchPattern) && !".*".equals(branchPattern) && !".+"
                         .equals(branchPattern)) {
@@ -133,6 +133,7 @@ public final class MercurialSCMSource extends SCMSource {
             if (browser != null) {
                 traits.add(new MercurialBrowserSCMSourceTrait(browser));
             }
+            setTraits(traits);
         }
         return this;
     }
@@ -155,16 +156,16 @@ public final class MercurialSCMSource extends SCMSource {
     }
 
     @DataBoundSetter public void setTraits(@CheckForNull List<SCMSourceTrait> traits) {
-        this.traits = new ArrayList<>(Util.fixNull(traits));
+        this.traits = SCMTrait.asSetList(traits);
     }
 
     @Deprecated @Restricted(DoNotUse.class) @RestrictedSince("2.0") public String getInstallation() {
-        MercurialInstallationSCMSourceTrait t = getTrait(MercurialInstallationSCMSourceTrait.class);
+        MercurialInstallationSCMSourceTrait t = SCMTrait.find(traits, MercurialInstallationSCMSourceTrait.class);
         return t != null ? t.getInstallation() : null;
     }
 
     @Deprecated @Restricted(DoNotUse.class) @RestrictedSince("2.0") public String getBranchPattern() {
-        RegexSCMHeadFilterTrait t = getTrait(RegexSCMHeadFilterTrait.class);
+        RegexSCMHeadFilterTrait t = SCMTrait.find(traits, RegexSCMHeadFilterTrait.class);
         return t != null ? t.getRegex() : "";
     }
 
@@ -177,21 +178,12 @@ public final class MercurialSCMSource extends SCMSource {
     }
 
     @Deprecated @Restricted(DoNotUse.class) @RestrictedSince("2.0") public HgBrowser getBrowser() {
-        MercurialBrowserSCMSourceTrait t = getTrait(MercurialBrowserSCMSourceTrait.class);
+        MercurialBrowserSCMSourceTrait t = SCMTrait.find(traits, MercurialBrowserSCMSourceTrait.class);
         return t != null ? t.getBrowser() : null;
     }
 
     @Deprecated @Restricted(DoNotUse.class) @RestrictedSince("2.0") public boolean isClean() {
-        return getTrait(CleanMercurialSCMSourceTrait.class) != null;
-    }
-
-    private @CheckForNull <T extends SCMSourceTrait> T getTrait(@Nonnull Class<T> traitClass) {
-        for (SCMSourceTrait t: traits) {
-            if (traitClass.isInstance(t)) {
-                return traitClass.cast(t);
-            }
-        }
-        return null;
+        return SCMTrait.find(traits, CleanMercurialSCMSourceTrait.class) != null;
     }
 
     @Override protected void retrieve(@CheckForNull SCMSourceCriteria criteria, @Nonnull SCMHeadObserver observer,
