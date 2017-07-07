@@ -7,6 +7,7 @@ import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
@@ -456,6 +457,10 @@ public final class MercurialSCMSource extends SCMSource {
                     return SCMProbeStat.fromType(SCMFile.Type.NONEXISTENT);
                 }
                 return SCMProbeStat.fromType(SCMFile.Type.REGULAR_FILE);
+            } catch (AbortException e) {
+                // As mercurial return an exit code equals to 1 when the file is not found
+                // catch AbortException that is thrown by hg.popen when exit code is equals to 1 and return SCMFile.Type.NONEXISTENT status
+                return SCMProbeStat.fromType(SCMFile.Type.NONEXISTENT);
             } catch (InterruptedException e) {
                 throw new IOException(e);
             }
