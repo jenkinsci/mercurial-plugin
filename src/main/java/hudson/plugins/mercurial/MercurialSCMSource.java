@@ -446,16 +446,8 @@ public final class MercurialSCMSource extends SCMSource {
         public @Nonnull
         SCMProbeStat stat(@Nonnull String path) throws IOException {
             try {
-                String files = hg.popen(cache, listener, true,
-                        new ArgumentListBuilder("locate",
-                                "-r",
-                                revision.getHash(),
-                                "-I",
-                                "path:" + path));
-                if (StringUtils.isBlank(files)) {
-                    return SCMProbeStat.fromType(SCMFile.Type.NONEXISTENT);
-                }
-                return SCMProbeStat.fromType(SCMFile.Type.REGULAR_FILE);
+                return SCMProbeStat.fromType(hg.run("locate", "-r", revision.getHash(), "-I", "path:" + path).
+                    pwd(cache).join() == 0 ? SCMFile.Type.REGULAR_FILE : SCMFile.Type.NONEXISTENT);
             } catch (InterruptedException e) {
                 throw new IOException(e);
             }
