@@ -199,6 +199,7 @@ public final class MercurialSCMSource extends SCMSource {
                 return;
             }
             if (!inst.isUseCaches()) {
+                // TODO https://stackoverflow.com/a/11900786/12916 suggests that it may be possible to use a noncaching installation
                 listener.error("Mercurial installation " + request.installation() + " does not support caches");
                 return;
             }
