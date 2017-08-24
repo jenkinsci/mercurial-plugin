@@ -151,10 +151,20 @@ public class HgExe {
             } finally {
                 os.close();
             }
-            for (ArgumentListBuilder b : new ArgumentListBuilder[] {base, baseNoDebug}) {
-                b.add("--config");
+            ARGB: for (ArgumentListBuilder b : new ArgumentListBuilder[] {base, baseNoDebug}) {
                 // TODO do we really want to pass -l username? Usually the username is ‘hg’ and encoded in the URL. But seems harmless at least on bitbucket.
-                b.addMasked(String.format("ui.ssh=ssh -i %s -l %s", sshPrivateKey.getRemote(), cc.getUsername()));
+                String sshAuthOpts = String.format(" -i %s -l %s", sshPrivateKey.getRemote(), cc.getUsername());
+                // First check to see if the config already specified `ui.ssh=ssh …`; if so, just append to it.
+                List<String> args = b.toList();
+                for (int i = 0; i < args.size() - 1; i++) {
+                    if (args.get(i).equals("--config") && args.get(i + 1).startsWith("ui.ssh=")) {
+                        b.add("--config");
+                        b.addMasked(args.get(i + 1) + sshAuthOpts); // second --config should override the first
+                        continue ARGB;
+                    }
+                }
+                b.add("--config");
+                b.addMasked("ui.ssh=ssh" + sshAuthOpts);
             }
         } else {
             sshPrivateKey = null;

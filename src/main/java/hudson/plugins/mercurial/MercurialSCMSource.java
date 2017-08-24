@@ -155,7 +155,7 @@ public final class MercurialSCMSource extends SCMSource {
         this.credentialsId = credentialsId;
     }
 
-    @DataBoundSetter public void setTraits(@CheckForNull List<SCMSourceTrait> traits) {
+    @DataBoundSetter public void setTraits(@CheckForNull List<? extends SCMSourceTrait> traits) {
         this.traits = SCMTrait.asSetList(traits);
     }
 
@@ -190,6 +190,7 @@ public final class MercurialSCMSource extends SCMSource {
                             @CheckForNull SCMHeadEvent<?> event, @Nonnull final TaskListener listener)
             throws IOException, InterruptedException {
         try (MercurialSCMSourceRequest request= new MercurialSCMSourceContext<>(criteria, observer)
+                .withCredentialsId(credentialsId)
                 .withTraits(traits)
                 .newRequest(this, listener) ) {
             MercurialInstallation inst = MercurialSCM.findInstallation(request.installation());
@@ -198,6 +199,7 @@ public final class MercurialSCMSource extends SCMSource {
                 return;
             }
             if (!inst.isUseCaches()) {
+                // TODO https://stackoverflow.com/a/11900786/12916 suggests that it may be possible to use a noncaching installation
                 listener.error("Mercurial installation " + request.installation() + " does not support caches");
                 return;
             }
