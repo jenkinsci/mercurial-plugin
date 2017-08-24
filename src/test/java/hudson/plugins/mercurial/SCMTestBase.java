@@ -33,7 +33,6 @@ import java.util.TreeSet;
 import javax.annotation.CheckForNull;
 
 import org.jenkinsci.plugins.multiplescms.MultiSCM;
-import org.jenkinsci.test.acceptance.docker.DockerRule;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -70,7 +69,6 @@ public abstract class SCMTestBase {
     @Rule public JenkinsRule j = new JenkinsRule();
     @Rule public MercurialRule m = new MercurialRule(j);
     @Rule public TemporaryFolder tmp = new TemporaryFolder();
-    @Rule public DockerRule<MercurialContainer> container = new DockerRule<MercurialContainer>(MercurialContainer.class);
     @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
     private File repo;
 

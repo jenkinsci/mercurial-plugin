@@ -62,6 +62,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.BuildWatcher;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
 public class PipelineTest {
@@ -145,6 +146,7 @@ public class PipelineTest {
         assertFalse(iterator.hasNext());
     }
 
+    @Issue("JENKINS-42278")
     @Test public void exactRevisionMercurial() throws Exception {
         // TODO mostly pointless to use MercurialContainer here since multibranch requires a caching installation and thus for hg to be installed on master
         FilePath sampleRepo = new FilePath(tmp.getRoot());
@@ -155,12 +157,18 @@ public class PipelineTest {
         sampleRepo.child("Jenkinsfile").write("echo hudson.model.Items.XSTREAM2.toXML(scm); semaphore 'wait'; node {checkout scm; echo readFile('file')}", null);
         sampleRepo.child("file").write("initial content", null);
         m.hg(sampleRepo, "commit", "--addremove", "--message=flow");
+        m.hg(sampleRepo, "update", "null");
+        m.hg(sampleRepo, "branch", "docs");
+        sampleRepo.child("README").write("Just docs here!", null);
+        m.hg(sampleRepo, "commit", "--message=unrelated branch, not buildable");
+        m.hg(sampleRepo, "update", "default");
         WorkflowMultiBranchProject mp = r.jenkins.createProject(WorkflowMultiBranchProject.class, "p");
         String instName = "caching";
         r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(
                 new MercurialInstallation(instName, "", "hg", false, true, false, null, null));
         mp.getSourcesList().add(new BranchSource(new MercurialSCMSource(null, instName, sampleRepo.toURI().toString(), null, null, null, null, null, true)));
         WorkflowJob p = scheduleAndFindBranchProject(mp, "default");
+        assertEquals(1, mp.getItems().size());
         SemaphoreStep.waitForStart("wait/1", null);
         WorkflowRun b1 = p.getLastBuild();
         assertNotNull(b1);
