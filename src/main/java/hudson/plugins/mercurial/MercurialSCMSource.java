@@ -155,7 +155,7 @@ public final class MercurialSCMSource extends SCMSource {
         this.credentialsId = credentialsId;
     }
 
-    @DataBoundSetter public void setTraits(@CheckForNull List<SCMSourceTrait> traits) {
+    @DataBoundSetter public void setTraits(@CheckForNull List<? extends SCMSourceTrait> traits) {
         this.traits = SCMTrait.asSetList(traits);
     }
 
