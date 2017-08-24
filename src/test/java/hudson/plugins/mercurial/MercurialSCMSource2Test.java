@@ -68,6 +68,8 @@ public class MercurialSCMSource2Test {
         FilePath sampleRepo = slave.getRootPath().child("sampleRepo");
         sampleRepo.mkdirs();
         m.hg(sampleRepo, "init");
+        // Tricky because the SSH URL will not work on that agent; it is actually only valid on the master.
+        // So we need to check out on the master, which is where branch indexing happens as well.
         sampleRepo.child("Jenkinsfile").write("node('master') {checkout scm}", null);
         m.hg(sampleRepo, "commit", "--addremove", "--message=flow");
         MercurialSCMSource s = new MercurialSCMSource("ssh://test@" + container.ipBound(22) + ":" + container.port(22) + "/" + sampleRepo);
@@ -78,7 +80,9 @@ public class MercurialSCMSource2Test {
         assertNotNull(toolHome);
         String remoteHgLoc = inst.executableWithSubstitution(toolHome);
         r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(
-                new MercurialInstallation("default", "", "hg", false, true, null, false, "[ui]\nssh = ssh -o UserKnownHostsFile=" + tmp.newFile("known_hosts") + "\nremotecmd = " + remoteHgLoc, null));
+                new MercurialInstallation("default", "", "hg", false, true, null, false,
+                    "[ui]\nssh = ssh -o UserKnownHostsFile=" + tmp.newFile("known_hosts") + " -o StrictHostKeyChecking=no\n" +
+                    "remotecmd = " + remoteHgLoc, null));
         s.setTraits(Collections.singletonList(new MercurialInstallationSCMSourceTrait("default")));
         WorkflowMultiBranchProject mp = r.jenkins.createProject(WorkflowMultiBranchProject.class, "p");
         mp.getSourcesList().add(new BranchSource(s));
