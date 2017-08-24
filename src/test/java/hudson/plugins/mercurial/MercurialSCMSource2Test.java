@@ -41,7 +41,6 @@ import org.jenkinsci.test.acceptance.docker.DockerRule;
 import org.junit.ClassRule;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.BuildWatcher;
@@ -56,7 +55,6 @@ public class MercurialSCMSource2Test {
     @Rule public DockerRule<MercurialContainer> containerRule = new DockerRule<MercurialContainer>(MercurialContainer.class);
     @Rule public TemporaryFolder tmp = new TemporaryFolder();
 
-    @Ignore("TODO")
     @Issue("JENKINS-42278")
     @Test public void withCredentialsId() throws Exception {
         MercurialContainer container = containerRule.get();

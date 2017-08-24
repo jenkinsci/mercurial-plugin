@@ -190,6 +190,7 @@ public final class MercurialSCMSource extends SCMSource {
                             @CheckForNull SCMHeadEvent<?> event, @Nonnull final TaskListener listener)
             throws IOException, InterruptedException {
         try (MercurialSCMSourceRequest request= new MercurialSCMSourceContext<>(criteria, observer)
+                .withCredentialsId(credentialsId)
                 .withTraits(traits)
                 .newRequest(this, listener) ) {
             MercurialInstallation inst = MercurialSCM.findInstallation(request.installation());
