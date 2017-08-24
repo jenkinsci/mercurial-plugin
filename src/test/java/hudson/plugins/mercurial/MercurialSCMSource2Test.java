@@ -57,6 +57,7 @@ public class MercurialSCMSource2Test {
 
     @Issue("JENKINS-42278")
     @Test public void withCredentialsId() throws Exception {
+        m.hg("version"); // test environment needs to be able to run Mercurial
         MercurialContainer container = containerRule.get();
         Slave slave = container.createSlave(r);
         m.withNode(slave);
