@@ -3,7 +3,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>2.29</version>
+        <version>2.36</version>
         <relativePath />
     </parent>
     <artifactId>mercurial</artifactId>
@@ -11,7 +11,7 @@
     <packaging>hpi</packaging>
     <name>Jenkins Mercurial plugin</name>
     <description>Allows Jenkins to check out projects from the Mercurial SCM.</description>
-    <url>http://wiki.jenkins-ci.org/display/JENKINS/Mercurial+Plugin</url>
+    <url>https://wiki.jenkins.io/display/JENKINS/Mercurial+Plugin</url>
     
     <properties>
       <jenkins.version>1.642.3</jenkins.version>
@@ -49,7 +49,7 @@
     <licenses>
         <license>
             <name>MIT</name>
-            <url>http://opensource.org/licenses/MIT</url>
+            <url>https://opensource.org/licenses/MIT</url>
         </license>
     </licenses>
     <scm>
@@ -89,12 +89,12 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>ssh-credentials</artifactId>
-            <version>1.6</version>
+            <version>1.12</version>
         </dependency>
         <dependency>
-            <groupId>com.jcraft</groupId>
+            <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>jsch</artifactId>
-            <version>0.1.50</version>
+            <version>0.1.54.1</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -157,6 +157,12 @@
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
+            <artifactId>workflow-step-api</artifactId>
+            <version>2.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-support</artifactId>
             <version>2.1</version>
             <classifier>tests</classifier>
@@ -171,7 +177,7 @@
         <dependency>
             <groupId>org.jenkins-ci.test</groupId>
             <artifactId>docker-fixtures</artifactId>
-            <version>1.0</version>
+            <version>1.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
