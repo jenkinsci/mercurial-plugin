@@ -397,9 +397,10 @@ public class HgExe {
             listener.error(Messages.HgExe_expected_to_get_hg_version_name_but_got_nothing());
             return null;
         }
-        Matcher m = Pattern.compile("^Mercurial Distributed SCM \\(version ([0-9][^)]*)\\)").matcher(version);
-        if (!m.lookingAt() || m.groupCount() < 1)
+        Matcher m = Pattern.compile("^Mercurial Distributed SCM [(]version ([0-9][^)]*)[)]$", Pattern.MULTILINE).matcher(version);
+        if (!m.find() || m.groupCount() < 1)
         {
+            listener.getLogger().print(version);
             listener.error(Messages.HgExe_cannot_extract_hg_version());
             return null;
         }
