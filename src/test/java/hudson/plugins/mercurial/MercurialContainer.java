@@ -76,7 +76,7 @@ public class MercurialContainer extends JavaContainer {
         HG1("1.9.3"),
         HG2("2.9.2"),
         HG3("3.9.2"),
-        HG4("4.0.2");
+        HG4("4.4.1");
         public final String exactVersion;
         Version(String exactVersion) {
             this.exactVersion = exactVersion;
