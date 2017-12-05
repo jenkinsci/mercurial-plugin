@@ -37,7 +37,7 @@ import jenkins.branch.BranchSource;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject;
-import org.jenkinsci.test.acceptance.docker.DockerRule;
+import org.jenkinsci.test.acceptance.docker.DockerClassRule;
 import org.junit.ClassRule;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -52,13 +52,13 @@ public class MercurialSCMSource2Test {
     @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
     @Rule public JenkinsRule r = new JenkinsRule();
     @Rule public MercurialRule m = new MercurialRule(r);
-    @Rule public DockerRule<MercurialContainer> containerRule = new DockerRule<MercurialContainer>(MercurialContainer.class);
+    @ClassRule public static DockerClassRule<MercurialContainer> docker = new DockerClassRule<>(MercurialContainer.class);
     @Rule public TemporaryFolder tmp = new TemporaryFolder();
 
     @Issue("JENKINS-42278")
     @Test public void withCredentialsId() throws Exception {
         m.hg("version"); // test environment needs to be able to run Mercurial
-        MercurialContainer container = containerRule.get();
+        MercurialContainer container = docker.create();
         Slave slave = container.createSlave(r);
         m.withNode(slave);
         MercurialInstallation inst = container.createInstallation(r, MercurialContainer.Version.HG4, false, false, false, "", slave);

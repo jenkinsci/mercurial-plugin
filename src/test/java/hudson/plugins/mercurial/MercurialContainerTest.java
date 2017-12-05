@@ -30,22 +30,24 @@ import hudson.model.TaskListener;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.StreamTaskListener;
 import static org.hamcrest.Matchers.*;
-import org.jenkinsci.test.acceptance.docker.DockerRule;
+import org.jenkinsci.test.acceptance.docker.DockerClassRule;
 import org.junit.Test;
 import static org.junit.Assert.*;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.jvnet.hudson.test.JenkinsRule;
 
 public class MercurialContainerTest {
 
     @Rule public JenkinsRule r = new JenkinsRule();
-    @Rule public DockerRule<MercurialContainer> container = new DockerRule<MercurialContainer>(MercurialContainer.class);
+    @ClassRule public static DockerClassRule<MercurialContainer> docker = new DockerClassRule<MercurialContainer>(MercurialContainer.class);
 
     @Test public void smokes() throws Exception {
-        Slave slave = container.get().createSlave(r);
+        MercurialContainer container = docker.create();
+        Slave slave = container.createSlave(r);
         TaskListener listener = StreamTaskListener.fromStdout();
         for (MercurialContainer.Version v : MercurialContainer.Version.values()) {
-            HgExe hgExe = new HgExe(container.get().createInstallation(r, v, false, false, false, "", slave), null, slave.createLauncher(listener), slave, listener, new EnvVars());
+            HgExe hgExe = new HgExe(container.createInstallation(r, v, false, false, false, "", slave), null, slave.createLauncher(listener), slave, listener, new EnvVars());
             assertThat(hgExe.popen(slave.getRootPath(), listener, true, new ArgumentListBuilder("version")), containsString("Mercurial Distributed SCM (version " + v.exactVersion + ")"));
         }
     }
