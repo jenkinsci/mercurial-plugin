@@ -3,7 +3,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>3.0</version>
+        <version>3.2</version>
         <relativePath />
     </parent>
     <artifactId>mercurial</artifactId>
@@ -14,7 +14,7 @@
     <url>https://wiki.jenkins.io/display/JENKINS/Mercurial+Plugin</url>
     
     <properties>
-      <jenkins.version>1.642.3</jenkins.version>
+      <jenkins.version>2.7.3</jenkins.version>
       <java.level>7</java.level>
       <no-test-jar>false</no-test-jar>
       <scm-api-plugin.version>2.2.0</scm-api-plugin.version>
