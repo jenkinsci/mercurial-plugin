@@ -38,7 +38,6 @@ import org.kohsuke.stapler.StaplerResponse;
 
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
-import static javax.servlet.http.HttpServletResponse.SC_SERVICE_UNAVAILABLE;
 /**
  * Information screen for the use of Mercurial in Jenkins.
  */
@@ -157,12 +156,8 @@ public class MercurialStatus extends AbstractModelObject implements UnprotectedR
         final List<Item> projects = Lists.newArrayList();
         boolean scmFound = false,
                 urlFound = false;
-        final Jenkins jenkins = Jenkins.getInstance();
-        if (jenkins == null) {
-            return HttpResponses.error(SC_SERVICE_UNAVAILABLE, "Jenkins instance is not ready");
-        }
 
-        for (Item project : jenkins.getAllItems()) {
+        for (Item project : Jenkins.getInstance().getAllItems()) {
             SCMTriggerItem scmTriggerItem = SCMTriggerItem.SCMTriggerItems.asSCMTriggerItem(project);
             if (scmTriggerItem == null) {
                 continue;

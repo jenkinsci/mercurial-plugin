@@ -204,10 +204,6 @@ public final class MercurialSCMSource extends SCMSource {
                 return;
             }
             final Node node = Jenkins.getInstance();
-            if (node == null) { // Should not happen BTW
-                listener.error("Cannot retrieve the Jenkins master node");
-                return;
-            }
             Launcher launcher = node.createLauncher(listener);
             StandardUsernameCredentials credentials = getCredentials(request.credentialsId());
             final FilePath cache = Cache.fromURL(request.source(), credentials, inst.getMasterCacheRoot())
@@ -281,10 +277,6 @@ public final class MercurialSCMSource extends SCMSource {
                 return null;
             }
             final Node node = Jenkins.getInstance();
-            if (node == null) { // Should not happen BTW
-                listener.error("Cannot retrieve the Jenkins master node");
-                return null;
-            }
             Launcher launcher = node.createLauncher(listener);
             StandardUsernameCredentials credentials = getCredentials(request.credentialsId());
             final FilePath cache = Cache.fromURL(source, credentials, inst.getMasterCacheRoot())
