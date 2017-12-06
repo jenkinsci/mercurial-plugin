@@ -131,12 +131,7 @@ public class MercurialInstallation extends ToolInstallation implements
 
     @NonNull
     public static MercurialInstallation[] allInstallations() {
-        final Jenkins jenkins = Jenkins.getInstance();
-        if (jenkins == null) {
-            return new MercurialInstallation[0];
-        }
-        return jenkins.getDescriptorByType(DescriptorImpl.class)
-                .getInstallations();
+        return Jenkins.getInstance().getDescriptorByType(DescriptorImpl.class).getInstallations();
     }
 
     public MercurialInstallation forNode(Node node, TaskListener log)
