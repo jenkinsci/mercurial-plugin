@@ -53,7 +53,7 @@ import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
-import org.jenkinsci.test.acceptance.docker.DockerRule;
+import org.jenkinsci.test.acceptance.docker.DockerClassRule;
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeThat;
 import org.junit.AssumptionViolatedException;
@@ -70,13 +70,14 @@ public class PipelineTest {
     @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
     @Rule public JenkinsRule r = new JenkinsRule();
     @Rule public MercurialRule m = new MercurialRule(r);
-    @Rule public DockerRule<MercurialContainer> container = new DockerRule<MercurialContainer>(MercurialContainer.class);
+    @ClassRule public static DockerClassRule<MercurialContainer> docker = new DockerClassRule<>(MercurialContainer.class);
     @Rule public TemporaryFolder tmp = new TemporaryFolder();
 
     @Test public void multipleSCMs() throws Exception {
-        Slave slave = container.get().createSlave(r);
+        MercurialContainer container = docker.create();
+        Slave slave = container.createSlave(r);
         m.withNode(slave);
-        MercurialInstallation inst = container.get().createInstallation(r, MercurialContainer.Version.HG4, false, false, false, "", slave);
+        MercurialInstallation inst = container.createInstallation(r, MercurialContainer.Version.HG4, false, false, false, "", slave);
         assertNotNull(inst);
         m.withInstallation(inst);
         FilePath sampleRepo = slave.getRootPath().child("sampleRepo");
