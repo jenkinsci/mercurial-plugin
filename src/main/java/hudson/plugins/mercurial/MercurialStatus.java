@@ -3,7 +3,6 @@ package hudson.plugins.mercurial;
 import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 import hudson.Extension;
-import hudson.model.AbstractModelObject;
 import hudson.model.Item;
 import hudson.model.UnprotectedRootAction;
 import hudson.scm.SCM;
@@ -42,16 +41,12 @@ import static javax.servlet.http.HttpServletResponse.SC_OK;
  * Information screen for the use of Mercurial in Jenkins.
  */
 @Extension
-public class MercurialStatus extends AbstractModelObject implements UnprotectedRootAction {
+public class MercurialStatus implements UnprotectedRootAction {
 
     public static final String URL_NAME = "mercurial";
 
     public String getDisplayName() {
         return Messages.MercurialStatus_mercurial();
-    }
-
-    public String getSearchUrl() {
-        return getUrlName();
     }
 
     public String getIconFileName() {
