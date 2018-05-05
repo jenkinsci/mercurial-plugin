@@ -64,6 +64,8 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+
+import jenkins.MasterToSlaveFileCallable;
 import jenkins.model.Jenkins;
 import org.ini4j.Ini;
 
@@ -149,10 +151,20 @@ public class HgExe {
             } finally {
                 os.close();
             }
-            for (ArgumentListBuilder b : new ArgumentListBuilder[] {base, baseNoDebug}) {
-                b.add("--config");
+            ARGB: for (ArgumentListBuilder b : new ArgumentListBuilder[] {base, baseNoDebug}) {
                 // TODO do we really want to pass -l username? Usually the username is ‘hg’ and encoded in the URL. But seems harmless at least on bitbucket.
-                b.addMasked(String.format("ui.ssh=ssh -i %s -l %s", sshPrivateKey.getRemote(), cc.getUsername()));
+                String sshAuthOpts = String.format(" -i %s -l %s", sshPrivateKey.getRemote(), cc.getUsername());
+                // First check to see if the config already specified `ui.ssh=ssh …`; if so, just append to it.
+                List<String> args = b.toList();
+                for (int i = 0; i < args.size() - 1; i++) {
+                    if (args.get(i).equals("--config") && args.get(i + 1).startsWith("ui.ssh=")) {
+                        b.add("--config");
+                        b.addMasked(args.get(i + 1) + sshAuthOpts); // second --config should override the first
+                        continue ARGB;
+                    }
+                }
+                b.add("--config");
+                b.addMasked("ui.ssh=ssh" + sshAuthOpts);
             }
         } else {
             sshPrivateKey = null;
@@ -164,7 +176,7 @@ public class HgExe {
         this.listener = listener;
         this.capability = Capability.get(this);
     }
-    private static final class DeleteOnExit implements FilePath.FileCallable<Void> {
+    private static final class DeleteOnExit extends MasterToSlaveFileCallable<Void> {
         private static final long serialVersionUID = 1;
         @Override public Void invoke(File f, VirtualChannel channel) throws IOException, InterruptedException {
             f.deleteOnExit();
@@ -385,9 +397,10 @@ public class HgExe {
             listener.error(Messages.HgExe_expected_to_get_hg_version_name_but_got_nothing());
             return null;
         }
-        Matcher m = Pattern.compile("^Mercurial Distributed SCM \\(version ([0-9][^)]*)\\)").matcher(version);
-        if (!m.lookingAt() || m.groupCount() < 1)
+        Matcher m = Pattern.compile("^Mercurial Distributed SCM [(]version ([0-9][^)]*)[)]$", Pattern.MULTILINE).matcher(version);
+        if (!m.find() || m.groupCount() < 1)
         {
+            listener.getLogger().print(version);
             listener.error(Messages.HgExe_cannot_extract_hg_version());
             return null;
         }

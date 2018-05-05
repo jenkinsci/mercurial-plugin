@@ -17,7 +17,6 @@ public class CachingSCMTest extends SCMTestBase {
                         new MercurialInstallation(CACHING_INSTALLATION, "",
                                 "hg", false, true, false, Collections
                                         .<ToolProperty<?>> emptyList()));
-        MercurialSCM.CACHE_LOCAL_REPOS = true;
     }
 
     @Override protected String hgInstallation() {

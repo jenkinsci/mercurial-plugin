@@ -2,8 +2,8 @@ package hudson.plugins.mercurial;
 
 import hudson.model.User;
 import hudson.scm.ChangeLogSet;
-import hudson.scm.EditType;
 import hudson.scm.ChangeLogSet.AffectedFile;
+import hudson.scm.EditType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -83,15 +83,28 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
     }
 
     /**
-     * Gets the globally unique changeset ID.  For general purpose use, use {@link #getNode()}.  This method is intended
-     * for use via reflection by the email-ext plugin.
+     * Gets the globally unique changeset ID.  For general purpose use, use {@link #getNode()}.  This method was intended
+     * for use via reflection by the email-ext plugin, but versions 1.40 and later no longer need it.
      */
+    @Deprecated
     public String getRevision() {
         return node;
     }
 
+    @Override
+    public String getCommitId() {
+        return node;
+    }
+
+    @Override
+    public long getTimestamp() {
+        //By default, the String 'date' is in the format '[TIMESTAMP].0[TIMEZONE_OFFSET]' where TIMESTAMP is the number
+        //of seconds (not milliseconds) since the epoch.
+        return Long.parseLong(date.split("\\.")[0]) * 1000;
+    }
+
     /**
-     * Returns the date of the changeset.  Also used via reflection by the email-ext plugin.
+     * Returns the timestamp of the changeset as a string.
      */
     @Exported
     public String getDate() {

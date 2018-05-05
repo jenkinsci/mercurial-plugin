@@ -18,7 +18,6 @@ public class SharingSCMTest extends SCMTestBase {
                         new MercurialInstallation(SHARING_INSTALLATION, "",
                                 "hg", false, true, true, Collections
                                         .<ToolProperty<?>> emptyList()));
-        MercurialSCM.CACHE_LOCAL_REPOS = true;
     }
 
     @Override protected String hgInstallation() {

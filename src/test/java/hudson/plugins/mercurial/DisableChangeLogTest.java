@@ -24,6 +24,7 @@ public class DisableChangeLogTest {
 
     @Before public void setUp() throws Exception {
         repo = tmp.getRoot();
+        // TODO switch to MercurialContainer
         j.jenkins
                 .getDescriptorByType(MercurialInstallation.DescriptorImpl.class)
                 .setInstallations(

@@ -1,6 +1,6 @@
 <?jelly escape-by-default='true'?>
 <div>
-  This plugin integrates <a href="http://www.selenic.com/mercurial/">Mercurial SCM</a> with Hudson.
+  This plugin integrates <a href="http://www.selenic.com/mercurial/">Mercurial SCM</a> with Jenkins.
   It includes repository browsing support for <code>hg serve</code>/<code>hgweb</code>,
   Google Code, Bitbucket, FishEye, KilnHG and RhodeCode. Features include guaranteed clean builds, named branch
   support, module lists, Mercurial tool installation, and

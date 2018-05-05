@@ -13,7 +13,6 @@ import hudson.model.AbstractProject;
 import hudson.model.Job;
 import hudson.model.Node;
 import hudson.scm.PollingResult;
-import jenkins.model.Jenkins;
 
 /**
  * An extension point that allows plugins to override the built in compare 
@@ -24,13 +23,7 @@ import jenkins.model.Jenkins;
 public abstract class ChangeComparator implements ExtensionPoint {
 	
     public static ExtensionList<ChangeComparator> all() {
-        // TODO: replace by ExtensionList.lookup() when it becomes available (1.580+)
-        final Jenkins jenkins = Jenkins.getInstance();
-        if (jenkins != null) {
-            return jenkins.getExtensionList(ChangeComparator.class);
-        } else {
-            return ExtensionList.create((Jenkins)null, ChangeComparator.class);
-        }
+        return ExtensionList.lookup(ChangeComparator.class);
     }
 
 	/**

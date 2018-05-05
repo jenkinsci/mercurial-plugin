@@ -44,6 +44,7 @@ public class ChangeComparatorTest {
 		
 		FreeStyleProject project = j.createFreeStyleProject();
 		
+        // TODO switch to MercurialContainer
         MercurialSCM scm = new MercurialSCM(null, tmp.getRoot().getPath(), null, null, null, null, false, null);
 		project.setScm(scm);
 		File repo = tmp.getRoot();

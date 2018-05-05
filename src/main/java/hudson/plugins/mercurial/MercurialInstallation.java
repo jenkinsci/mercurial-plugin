@@ -64,21 +64,34 @@ public class MercurialInstallation extends ToolInstallation implements
     private String executable;
     private boolean debug;
     private boolean useCaches;
+    private final String masterCacheRoot;
     private boolean useSharing;
     private final String config;
 
+    /** for backwards compatibility */
     @Deprecated
     public MercurialInstallation(String name, String home, String executable,
             boolean debug, boolean useCaches,
-            boolean useSharing, List<? extends ToolProperty<?>> properties) {
-        this(name, home, executable, debug, useCaches, useSharing, null, properties);
+            boolean useSharing, @CheckForNull List<? extends ToolProperty<?>> properties) {
+        this(name, home, executable, debug, useCaches, null, useSharing, null, properties);
     }
 
-    @DataBoundConstructor public MercurialInstallation(String name, String home, String executable, boolean debug, boolean useCaches, boolean useSharing, String config, List<? extends ToolProperty<?>> properties) {
+    /** for backwards compatibility */
+    @Deprecated
+    public MercurialInstallation(String name, String home, String executable,
+            boolean debug, boolean useCaches,
+            boolean useSharing, String config, @CheckForNull List<? extends ToolProperty<?>> properties) {
+        this(name, home, executable, debug, useCaches, null, useSharing, config, properties);
+    }
+
+    @DataBoundConstructor public MercurialInstallation(String name, String home, String executable,
+            boolean debug, boolean useCaches, String masterCacheRoot,
+            boolean useSharing, String config, @CheckForNull List<? extends ToolProperty<?>> properties) {
         super(name, home, properties);
         this.executable = Util.fixEmpty(executable);
         this.debug = debug;
         this.useCaches = useCaches || useSharing;
+        this.masterCacheRoot = Util.fixEmptyAndTrim(masterCacheRoot);
         this.config = Util.fixEmptyAndTrim(config);
         this.useSharing = useSharing;
     }
@@ -88,7 +101,12 @@ public class MercurialInstallation extends ToolInstallation implements
     }
 
     String executableWithSubstitution(String home) {
-        return getExecutable().replace("INSTALLATION", home);
+        String _executable = getExecutable();
+        if (home.isEmpty() && _executable.contains("INSTALLATION")) {
+            // No home location defined on this node, so fall back to looking for Mercurial in the path.
+            return "hg";
+        }
+        return _executable.replace("INSTALLATION", home);
     }
 
     public boolean getDebug() {
@@ -97,6 +115,10 @@ public class MercurialInstallation extends ToolInstallation implements
 
     public boolean isUseCaches() {
         return useCaches;
+    }
+
+    public String getMasterCacheRoot() {
+        return masterCacheRoot;
     }
 
     public boolean isUseSharing() {
@@ -109,12 +131,7 @@ public class MercurialInstallation extends ToolInstallation implements
 
     @NonNull
     public static MercurialInstallation[] allInstallations() {
-        final Jenkins jenkins = Jenkins.getInstance();
-        if (jenkins == null) {
-            return new MercurialInstallation[0];
-        }
-        return jenkins.getDescriptorByType(DescriptorImpl.class)
-                .getInstallations();
+        return Jenkins.getInstance().getDescriptorByType(DescriptorImpl.class).getInstallations();
     }
 
     public MercurialInstallation forNode(Node node, TaskListener log)

@@ -113,6 +113,16 @@ public class MercurialSCM extends SCM implements Serializable {
             @Override public String getDisplayName() {
                 return "Tag";
             }
+        },
+        CHANGESET() {
+            @Override public String getDisplayName() {
+                return "Changeset";
+            }
+        },
+        REVSET() {
+            @Override public String getDisplayName() {
+                return "Revset";
+            }
         };
         public abstract String getDisplayName();
     }
@@ -225,7 +235,12 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     @Override public String getKey() {
-        return "hg " + getSource(new EnvVars()) + " " + revision;
+        String base = "hg " + getSource(new EnvVars());
+        if (revisionType == RevisionType.CHANGESET) {
+            return base;
+        } else {
+            return base + " " + revision;
+        }
     }
 
     public String getCredentialsId() {
@@ -478,7 +493,7 @@ public class MercurialSCM extends SCM implements Serializable {
         try {
         ArgumentListBuilder cmd = hg.seed(true);
         cmd.add("pull");
-        if (revisionType == RevisionType.BRANCH) {
+        if (revisionType == RevisionType.BRANCH || revisionType == RevisionType.CHANGESET) { // does not work for tags
             cmd.add("--rev", revision);
         }
         CachedRepo cachedSource = cachedSource(node, env, launcher, listener, true, credentials);
@@ -639,7 +654,7 @@ public class MercurialSCM extends SCM implements Serializable {
         HgExe hg = new HgExe(inst, credentials, launcher, node, listener, env);
         try {
 
-        ArgumentListBuilder logCommand = hg.seed(true).add("log", "--rev", prevTag.getId());
+        ArgumentListBuilder logCommand = hg.seed(true).add("log", "--rev", prevTag.getId(), "--template", "exists\\n");
         int exitCode = hg.launch(logCommand).pwd(repository).join();
         if(exitCode != 0) {
             listener.error("Previously built revision " + prevTag.getId() + " is not known in this clone; unable to determine change log");
@@ -656,9 +671,12 @@ public class MercurialSCM extends SCM implements Serializable {
                 ArgumentListBuilder args = hg.seed(false);
                 args.add("log");
                 args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
-                args.add("--rev", revToBuild + ":0");
-                args.add("--follow");
-                args.add("--prune", prevTag.getId());
+                if(revisionType == RevisionType.REVSET) {
+                    args.add("--rev", "ancestors(" + revToBuild + ") and not ancestors(" + prevTag.getId() + ")");
+                }
+                else {
+                    args.add("--rev", "ancestors('" + revToBuild.replace("'", "\\'") + "') and not ancestors(" + prevTag.getId() + ")");
+                }
                 args.add("--encoding", "UTF-8");
                 args.add("--encodingmode", "replace");
 
@@ -804,13 +822,14 @@ public class MercurialSCM extends SCM implements Serializable {
             }
         } else {
             args.add("clone");
-            if (revisionType == RevisionType.BRANCH) {
+            if (revisionType == RevisionType.BRANCH || revisionType == RevisionType.CHANGESET) {
                 args.add("--rev", toRevision);
             }
             args.add("--noupdate");
             args.add(getSource(env));
         }
         args.add(repository.getRemote());
+        repository.mkdirs();
         int cloneExitCode;
         try {
             cloneExitCode = hg.launch(args).join();
@@ -861,8 +880,14 @@ public class MercurialSCM extends SCM implements Serializable {
         }
     }
 
+    // TODO: 2.60+ Delete this override.
     @Override
-    public void buildEnvVars(AbstractBuild<?,?> build, Map<String, String> env) {
+    public void buildEnvVars(AbstractBuild<?,?> build, Map<String,String> env) {
+        buildEnvironment(build, env);
+    }
+
+    // TODO: 2.60+ - add @Override.
+    public void buildEnvironment(Run<?,?> build, Map<String, String> env) {
         buildEnvVarsFromActionable(build, env);
     }
 
@@ -936,18 +961,14 @@ public class MercurialSCM extends SCM implements Serializable {
         return message != null && message.startsWith("Cannot run program") && message.endsWith("No such file or directory");
     }
 
-    static boolean CACHE_LOCAL_REPOS = false;
     private @CheckForNull CachedRepo cachedSource(Node node, EnvVars env, Launcher launcher, TaskListener listener, boolean useTimeout, StandardUsernameCredentials credentials) 
             throws InterruptedException {
-        if (!CACHE_LOCAL_REPOS && getSource(env).matches("(file:|[/\\\\]).+")) {
-            return null;
-        }
         MercurialInstallation inst = findInstallation(installation);
         if (inst == null || !inst.isUseCaches()) {
             return null;
         }
         try {
-            FilePath cache = Cache.fromURL(getSource(env), credentials).repositoryCache(inst, node, launcher, listener, useTimeout);
+            FilePath cache = Cache.fromURL(getSource(env), credentials, inst.getMasterCacheRoot()).repositoryCache(inst, node, launcher, listener, useTimeout);
             if (cache != null) {
                 return new CachedRepo(cache.getRemote(), inst.isUseSharing());
             } else {
@@ -1043,7 +1064,7 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         public ListBoxModel doFillCredentialsIdItems(@AncestorInPath Job<?,?> owner, @QueryParameter String source) {
-            if (owner == null || !owner.hasPermission(Item.CONFIGURE)) {
+            if (!hasAccessToCredentialsMetadata(owner)) {
                 return new ListBoxModel();
             }
             return new StandardUsernameListBoxModel()
@@ -1051,6 +1072,12 @@ public class MercurialSCM extends SCM implements Serializable {
                     .withAll(availableCredentials(owner, new EnvVars( ).expand( source )));
         }
 
+        private boolean hasAccessToCredentialsMetadata(Job<?,?> owner) {
+            if (owner == null){
+                return Jenkins.getActiveInstance().hasPermission(Jenkins.ADMINISTER);
+            }
+            return owner.hasPermission(Item.EXTENDED_READ);
+        }
     }
 
     private static final long serialVersionUID = 1L;
