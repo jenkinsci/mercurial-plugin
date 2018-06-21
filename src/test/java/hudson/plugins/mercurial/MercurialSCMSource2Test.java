@@ -34,6 +34,7 @@ import hudson.plugins.mercurial.traits.MercurialInstallationSCMSourceTrait;
 import hudson.util.StreamTaskListener;
 import java.util.Collections;
 import jenkins.branch.BranchSource;
+import jenkins.scm.api.trait.SCMSourceTrait;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject;
@@ -82,7 +83,7 @@ public class MercurialSCMSource2Test {
                 new MercurialInstallation("default", "", "hg", false, true, null, false,
                     "[ui]\nssh = ssh -o UserKnownHostsFile=" + tmp.newFile("known_hosts") + " -o StrictHostKeyChecking=no\n" +
                     "remotecmd = " + remoteHgLoc, null));
-        s.setTraits(Collections.singletonList(new MercurialInstallationSCMSourceTrait("default")));
+        s.setTraits(Collections.<SCMSourceTrait>singletonList(new MercurialInstallationSCMSourceTrait("default")));
         WorkflowMultiBranchProject mp = r.jenkins.createProject(WorkflowMultiBranchProject.class, "p");
         mp.getSourcesList().add(new BranchSource(s));
         WorkflowJob p = PipelineTest.scheduleAndFindBranchProject(mp, "default");
