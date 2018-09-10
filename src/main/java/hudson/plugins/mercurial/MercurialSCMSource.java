@@ -265,6 +265,7 @@ public final class MercurialSCMSource extends SCMSource {
     protected SCMRevision retrieve(@NonNull String thingName, @NonNull TaskListener listener)
             throws IOException, InterruptedException {
         try (MercurialSCMSourceRequest request = new MercurialSCMSourceContext<>(null, SCMHeadObserver.none())
+                .withCredentialsId(credentialsId)
                 .withTraits(traits)
                 .newRequest(this, listener)) {
             MercurialInstallation inst = MercurialSCM.findInstallation(request.installation());
