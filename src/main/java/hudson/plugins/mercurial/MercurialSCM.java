@@ -59,6 +59,7 @@ import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
+import org.ini4j.Ini;
 import org.jenkinsci.plugins.multiplescms.MultiSCMRevisionState;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -850,12 +851,10 @@ public class MercurialSCM extends SCM implements Serializable {
         if (cachedSource != null && !cachedSource.isUseSharing()) {
             FilePath hgrc = repository.child(".hg/hgrc");
             if (hgrc.exists()) {
-                String hgrcText = hgrc.readToString();
-                if (!hgrcText.contains(cachedSource.getRepoLocation())) {
-                    listener.error(".hg/hgrc did not contain " + cachedSource.getRepoLocation() + " as expected:\n" + hgrcText);
-                    throw new AbortException(".hg/hgrc did not contain " + cachedSource.getRepoLocation() + " as expected:\n" + hgrcText);
-                }
-                hgrc.write(hgrcText.replace(cachedSource.getRepoLocation(), getSource(env)), null);
+                Ini hgrcIni = new Ini(hgrc.read());
+                hgrcIni.remove("paths", "default");
+                hgrcIni.put("paths", "default", getSource(env));
+                hgrcIni.store(hgrc.write());
             }
             // Passing --rev disables hardlinks, so we need to recreate them:
             hg.run("--config", "extensions.relink=", "relink", cachedSource.getRepoLocation())
