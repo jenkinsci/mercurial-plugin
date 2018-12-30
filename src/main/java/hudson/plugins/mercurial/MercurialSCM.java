@@ -662,6 +662,15 @@ public class MercurialSCM extends SCM implements Serializable {
             return;
         }
         
+        try {
+        // Set up a changelog style file to allow for better logging
+        File style = File.createTempFile("style", ".tmp");
+        style.setWritable(true);
+        style.deleteOnExit();
+        FileOutputStream styleStream = new FileOutputStream(style);
+        styleStream.write(MercurialChangeSet.CHANGELOG_TEMPLATE.getBytes("UTF-8"));
+        styleStream.close();
+        
         // calc changelog
         final FileOutputStream os = new FileOutputStream(changelogFile);
         try {
@@ -670,7 +679,7 @@ public class MercurialSCM extends SCM implements Serializable {
                 os.write("<changesets>\n".getBytes("UTF-8"));
                 ArgumentListBuilder args = hg.seed(false);
                 args.add("log");
-                args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
+                args.add("--style", style.getAbsolutePath());
                 if(revisionType == RevisionType.REVSET) {
                     args.add("--rev", "ancestors(" + revToBuild + ") and not ancestors(" + prevTag.getId() + ")");
                 }
@@ -693,6 +702,7 @@ public class MercurialSCM extends SCM implements Serializable {
         } finally {
             os.close();
         }
+        } finally {}
         } finally {
             hg.close();
         }
