@@ -662,7 +662,6 @@ public class MercurialSCM extends SCM implements Serializable {
             return;
         }
         
-        
         // calc changelog
         final FileOutputStream os = new FileOutputStream(changelogFile);
         try {
