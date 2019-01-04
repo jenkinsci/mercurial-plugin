@@ -234,32 +234,32 @@ public abstract class SCMTestBase {
                 entry.getAffectedPaths()));
         assertFalse(it.hasNext());
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null,
-                "dir1 extra", null, null, false));
+                "dir\\ 1 extra", null, null, false));
         // dir2/f2 change should be ignored.
-        m.touchAndCommit(repo, "dir1/f2");
+        m.touchAndCommit(repo, "dir 1/f2");
         m.touchAndCommit(repo, "dir2/f2");
         it = p.scheduleBuild2(0).get().getChangeSet().iterator();
         assertTrue(it.hasNext());
         entry = it.next();
-        assertEquals(Collections.singleton("dir1/f2"), new HashSet<String>(
+        assertEquals(Collections.singleton("dir 1/f2"), new HashSet<String>(
                 entry.getAffectedPaths()));
         assertFalse(it.hasNext());
         // First commit should match (because at least one file does) but not
         // second.
-        m.touchAndCommit(repo, "dir2/f3", "dir1/f3");
+        m.touchAndCommit(repo, "dir2/f3", "dir 1/f3");
         m.touchAndCommit(repo, "dir2/f4", "dir2/f5");
         it = p.scheduleBuild2(0).get().getChangeSet().iterator();
         assertTrue(it.hasNext());
         entry = it.next();
-        assertEquals(new HashSet<String>(Arrays.asList("dir1/f3", "dir2/f3")),
+        assertEquals(new HashSet<String>(Arrays.asList("dir 1/f3", "dir2/f3")),
                 new HashSet<String>(entry.getAffectedPaths()));
         assertFalse(it.hasNext());
         // Any module in the list can trigger an inclusion.
-        m.touchAndCommit(repo, "extra/f1");
+        m.touchAndCommit(repo, "extra/subdir 1/file 1.txt");
         it = p.scheduleBuild2(0).get().getChangeSet().iterator();
         assertTrue(it.hasNext());
         entry = it.next();
-        assertEquals(Collections.singleton("extra/f1"), new HashSet<String>(
+        assertEquals(Collections.singleton("extra/subdir 1/file 1.txt"), new HashSet<String>(
                 entry.getAffectedPaths()));
         assertFalse(it.hasNext());
     }
