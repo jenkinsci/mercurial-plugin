@@ -851,10 +851,13 @@ public class MercurialSCM extends SCM implements Serializable {
         if (cachedSource != null && !cachedSource.isUseSharing()) {
             FilePath hgrc = repository.child(".hg/hgrc");
             if (hgrc.exists()) {
-                Ini hgrcIni = new Ini(hgrc.read());
-                hgrcIni.remove("paths", "default");
-                hgrcIni.put("paths", "default", getSource(env));
-                hgrcIni.store(hgrc.write());
+                try (InputStream is = hgrc.read()) {
+                    Ini hgrcIni = new Ini(is);
+                    hgrcIni.put("paths", "default", getSource(env));
+                    try (OutputStream os = hgrc.write()) {
+                        hgrcIni.store(os);
+                    }
+                }
             }
             // Passing --rev disables hardlinks, so we need to recreate them:
             hg.run("--config", "extensions.relink=", "relink", cachedSource.getRepoLocation())
