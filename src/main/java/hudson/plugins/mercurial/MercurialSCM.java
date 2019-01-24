@@ -44,6 +44,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.net.MalformedURLException;
@@ -59,6 +61,7 @@ import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
+import org.ini4j.Ini;
 import org.jenkinsci.plugins.multiplescms.MultiSCMRevisionState;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -850,12 +853,13 @@ public class MercurialSCM extends SCM implements Serializable {
         if (cachedSource != null && !cachedSource.isUseSharing()) {
             FilePath hgrc = repository.child(".hg/hgrc");
             if (hgrc.exists()) {
-                String hgrcText = hgrc.readToString();
-                if (!hgrcText.contains(cachedSource.getRepoLocation())) {
-                    listener.error(".hg/hgrc did not contain " + cachedSource.getRepoLocation() + " as expected:\n" + hgrcText);
-                    throw new AbortException(".hg/hgrc did not contain " + cachedSource.getRepoLocation() + " as expected:\n" + hgrcText);
+                try (InputStream is = hgrc.read()) {
+                    Ini hgrcIni = new Ini(is);
+                    hgrcIni.put("paths", "default", getSource(env));
+                    try (OutputStream os = hgrc.write()) {
+                        hgrcIni.store(os);
+                    }
                 }
-                hgrc.write(hgrcText.replace(cachedSource.getRepoLocation(), getSource(env)), null);
             }
             // Passing --rev disables hardlinks, so we need to recreate them:
             hg.run("--config", "extensions.relink=", "relink", cachedSource.getRepoLocation())
