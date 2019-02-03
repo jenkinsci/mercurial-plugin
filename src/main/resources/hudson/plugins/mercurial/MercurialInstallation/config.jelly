@@ -9,17 +9,17 @@
   <f:entry title="${%Executable}" field="executable">
     <f:textbox default="INSTALLATION/bin/hg"/>
   </f:entry>
-  <f:entry field="useCaches" title="${%Use Repository Caches}">
-    <f:checkbox/>
+  <f:entry field="useCaches">
+    <f:checkbox title="${%Use Repository Caches}" />
   </f:entry>
   <f:entry field="masterCacheRoot" title="${%Master cache directory}">
     <f:textbox/>
   </f:entry>
-  <f:entry field="useSharing" title="${%Use Repository Sharing}">
-    <f:checkbox/>
+  <f:entry field="useSharing>
+    <f:checkbox title="${%Use Repository Sharing}" />
   </f:entry>
-  <f:entry field="debug" title="${%Debug Flag}">
-    <f:checkbox/>
+  <f:entry field="debug">
+    <f:checkbox title="${%Debug Flag}" />
   </f:entry>
   <f:entry field="config" title="${%Custom Configuration}">
     <f:textarea/>

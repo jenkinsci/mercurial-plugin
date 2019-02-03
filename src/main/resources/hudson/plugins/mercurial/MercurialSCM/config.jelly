@@ -29,14 +29,14 @@
     <f:entry field="modules" title="${%Modules}">
       <f:textbox/>
     </f:entry>
-    <f:entry field="clean" title="${%Clean Build}">
-      <f:checkbox/>
+    <f:entry field="clean">
+      <f:checkbox title="${%Clean Build}" />
     </f:entry>
     <f:entry field="subdir" title="${%Subdirectory}">
       <f:textbox/>
     </f:entry>
-    <f:entry field="disableChangeLog" title="${%Disable Changelog}">
-      <f:checkbox/>
+    <f:entry field="disableChangeLog">
+      <f:checkbox title="${%Disable Changelog}" />
     </f:entry>
   </f:advanced>
 
