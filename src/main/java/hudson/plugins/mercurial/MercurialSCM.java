@@ -80,6 +80,8 @@ public class MercurialSCM extends SCM implements Serializable {
     private static final String ENV_MERCURIAL_REVISION_NUMBER = "MERCURIAL_REVISION_NUMBER";
     private static final String ENV_MERCURIAL_REVISION_BRANCH = "MERCURIAL_REVISION_BRANCH";
     private static final String ENV_MERCURIAL_REPOSITORY_URL = "MERCURIAL_REPOSITORY_URL";
+    private static final String ENV_MERCURIAL_PREVIOUS_REVISION = "MERCURIAL_PREVIOUS_REVISION";
+    private static final String ENV_MERCURIAL_PREVIOUS_SUCCESSFUL_REVISION = "MERCURIAL_PREVIOUS_SUCCESSFUL_REVISION";
 
     // old fields are left so that old config data can be read in, but
     // they are deprecated. transient so that they won't show up in XML
@@ -893,6 +895,15 @@ public class MercurialSCM extends SCM implements Serializable {
     // TODO: 2.60+ - add @Override.
     public void buildEnvironment(Run<?,?> build, Map<String, String> env) {
         buildEnvVarsFromActionable(build, env);
+        EnvVars envVars = new EnvVars(env);
+        MercurialTagAction previousTag = findTag(build.getPreviousBuiltBuild(), envVars);
+        if( previousTag != null ){
+            env.put(ENV_MERCURIAL_PREVIOUS_REVISION, previousTag.id);
+        }
+        MercurialTagAction previousSuccessfulTag = findTag(build.getPreviousSuccessfulBuild(), envVars);
+        if( previousSuccessfulTag != null ){
+            env.put(ENV_MERCURIAL_PREVIOUS_SUCCESSFUL_REVISION, previousSuccessfulTag.id);
+        }
     }
 
     void buildEnvVarsFromActionable(Actionable build, Map<String, String> env) {
@@ -908,14 +919,16 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     private MercurialTagAction findTag(Actionable build, EnvVars env) {
-        for (Action action : build.getActions()) {
-            if (action instanceof MercurialTagAction) {
-                MercurialTagAction tag = (MercurialTagAction) action;
-                // JENKINS-12162: differentiate plugins in different subdirs
-                String ourSubDir = getSubdir( env );
-                String tagSubDir = tag.getSubdir( );
-                if ((ourSubDir == null && tagSubDir == null) || (ourSubDir != null && ourSubDir.equals(tagSubDir))) {
-                    return tag;
+        if(build != null) {
+            for (Action action : build.getActions()) {
+                if (action instanceof MercurialTagAction) {
+                    MercurialTagAction tag = (MercurialTagAction) action;
+                    // JENKINS-12162: differentiate plugins in different subdirs
+                    String ourSubDir = getSubdir( env );
+                    String tagSubDir = tag.getSubdir( );
+                    if ((ourSubDir == null && tagSubDir == null) || (ourSubDir != null && ourSubDir.equals(tagSubDir))) {
+                        return tag;
+                    }
                 }
             }
         }
