@@ -280,7 +280,7 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
     private List<String> toList(String list) {
         list = list.trim();
         if(list.length()==0) return Collections.emptyList();
-        return Arrays.asList(list.split("<file/>"));
+        return Arrays.asList(list.split(list.contains("<file/>") ? "<file/>" : " "));
     }
 
     /** |xmlescape handles a few cases that |escape does not */
