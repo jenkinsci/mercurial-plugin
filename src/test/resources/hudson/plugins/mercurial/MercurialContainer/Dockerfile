@@ -8,7 +8,7 @@ RUN apt-get update -y && \
         gcc \
         gettext
 RUN set -e; \
-    for v in 2.9.2 3.9.2 4.4.1; do \
+    for v in 2.9.2 3.9.2 4.9.1; do \
         wget -nv -O /tmp/mercurial.tar.gz https://www.mercurial-scm.org/release/mercurial-$v.tar.gz; \
         cd /opt; \
         tar xfz /tmp/mercurial.tar.gz; \
