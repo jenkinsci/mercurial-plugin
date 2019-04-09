@@ -28,9 +28,9 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
     private String msg;
     private boolean merge;
 
-    private List<String> added = Collections.emptyList();
-    private List<String> deleted = Collections.emptyList();
-    private List<String> modified = Collections.emptyList();
+    private List<String> added = new ArrayList<>();
+    private List<String> deleted = new ArrayList<>();
+    private List<String> modified = new ArrayList<>();
 
     /**
      * Lazily computed.
@@ -239,6 +239,25 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
         this.date = date;
     }
 
+    // After JENKINS-55319:
+
+    @Deprecated
+    public void addAddedFile(String file) {
+        added.add(file);
+    }
+
+    @Deprecated
+    public void addDeletedFile(String file) {
+        deleted.add(file);
+    }
+
+    @Deprecated
+    public void addFile(String file) {
+        modified.add(file);
+    }
+
+    // Before JENKINS-55319:
+
     @Deprecated
     public void setAdded(String list) {
         if (merge) {
@@ -286,6 +305,6 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
     static final String CHANGELOG_TEMPLATE =
             "<changeset node='{node}' author='{author|xmlescape}' rev='{rev}' date='{date}'>" +
             // TODO {file_adds} and {file_dels} seem to be far slower to process than {files}
-            "<msg>{desc|xmlescape}</msg><added>{file_adds|stringify|xmlescape}</added><deleted>{file_dels|stringify|xmlescape}</deleted>" +
-            "<files>{files|stringify|xmlescape}</files><parents>{parents}</parents></changeset>\\n";
+            "<msg>{desc|xmlescape}</msg>{file_adds % '<addedFile>{file|xmlescape}</addedFile>'}{file_dels % '<deletedFile>{file|xmlescape}</deletedFile>'}" +
+            "{files % '<file>{file|xmlescape}</file>'}<parents>{parents}</parents></changeset>\\n";
 }

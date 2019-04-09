@@ -41,9 +41,17 @@ public class MercurialChangeLogParser extends ChangeLogParser {
         digester.addSetProperties("*/changeset");
         digester.addSetProperties("*/changeset", "author", "user");
         digester.addBeanPropertySetter("*/changeset/msg");
+        // Before JENKINS-55319:
         digester.addBeanPropertySetter("*/changeset/added");
         digester.addBeanPropertySetter("*/changeset/deleted");
         digester.addBeanPropertySetter("*/changeset/files");
+        // After JENKINS-55319:
+        digester.addCallMethod("*/changeset/file", "addFile", 1);
+        digester.addCallParam("*/changeset/file", 0);
+        digester.addCallMethod("*/changeset/addedFile", "addAddedFile", 1);
+        digester.addCallParam("*/changeset/addedFile", 0);
+        digester.addCallMethod("*/changeset/deletedFile", "addDeletedFile", 1);
+        digester.addCallParam("*/changeset/deletedFile", 0);
         digester.addBeanPropertySetter("*/changeset/parents");
         digester.addSetNext("*/changeset", "add");
 

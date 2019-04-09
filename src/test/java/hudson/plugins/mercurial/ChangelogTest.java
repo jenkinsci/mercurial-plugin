@@ -86,6 +86,13 @@ public class ChangelogTest {
         m.hg(repo, "rm", "one", "three");
         m.hg(repo, "commit", "--message", "removed");
         assertChangelog("added=[] deleted=[one, three] modified=[] ", p);
+        m.touchAndCommit(repo, "some -> thing");
+        assertChangelog("added=[some -> thing] deleted=[] modified=[] ", p);
+        m.touchAndCommit(repo, "some -> thing", "two");
+        assertChangelog("added=[] deleted=[] modified=[some -> thing, two] ", p);
+        m.hg(repo, "rm", "some -> thing");
+        m.hg(repo, "commit", "--message", "removed");
+        assertChangelog("added=[] deleted=[some -> thing] modified=[] ", p);
     }
 
     private static void assertChangelog(String summary, FreeStyleProject p) throws Exception {

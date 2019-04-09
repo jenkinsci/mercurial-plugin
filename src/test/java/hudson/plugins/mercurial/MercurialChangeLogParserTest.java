@@ -39,10 +39,11 @@ import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.Bug;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.WithoutJenkins;
 
 public class MercurialChangeLogParserTest {
 
-    @ClassRule public static final JenkinsRule j = new JenkinsRule(); // otherwise CanonicalIdResolver are missing
+    @Rule public JenkinsRule j = new JenkinsRule(); // otherwise CanonicalIdResolver are missing
     @Rule public TemporaryFolder tmp = new TemporaryFolder();
 
     @Bug(16332)
@@ -69,6 +70,7 @@ public class MercurialChangeLogParserTest {
         assertEquals("joe.schmo <joe.schmo@example.com>", author.getFullName());
     }
 
+    @WithoutJenkins
     @Issue("JENKINS-55319")
     @Test public void oldAndNewFileFormats() throws Exception {
         File changelogXml = tmp.newFile("changelog.xml");
@@ -95,6 +97,30 @@ public class MercurialChangeLogParserTest {
             pw.println("</changesets>");
         }
         assertEquals("added=[] deleted=[] modified=[] ", summary(new MercurialChangeLogParser(null).parse(null, null, changelogXml)));
+        try (PrintWriter pw = new PrintWriter(changelogXml, "UTF-8")) {
+            pw.println("<?xml version='1.0' encoding='UTF-8'?>");
+            pw.println("<changesets>");
+            pw.println("  <changeset>");
+            pw.println("    <addedFile>two</addedFile>");
+            pw.println("    <file>one</file>");
+            pw.println("    <file>two</file>");
+            pw.println("    <file>three</file>");
+            pw.println("  </changeset>");
+            pw.println("</changesets>");
+        }
+        assertEquals("added=[two] deleted=[] modified=[one, three] ", summary(new MercurialChangeLogParser(null).parse(null, null, changelogXml)));
+        try (PrintWriter pw = new PrintWriter(changelogXml, "UTF-8")) {
+            pw.println("<?xml version='1.0' encoding='UTF-8'?>");
+            pw.println("<changesets>");
+            pw.println("  <changeset>");
+            pw.println("    <deletedFile>one</deletedFile>");
+            pw.println("    <file>one</file>");
+            pw.println("    <file>two</file>");
+            pw.println("    <file>three</file>");
+            pw.println("  </changeset>");
+            pw.println("</changesets>");
+        }
+        assertEquals("added=[] deleted=[one] modified=[three, two] ", summary(new MercurialChangeLogParser(null).parse(null, null, changelogXml)));
     }
 
     static String summary(MercurialChangeSetList csl) {
