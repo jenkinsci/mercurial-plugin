@@ -73,7 +73,6 @@ public class MercurialContainer extends JavaContainer {
     }
 
     public enum Version {
-        HG1("1.9.3"),
         HG2("2.9.2"),
         HG3("3.9.2"),
         HG4("4.4.1");
