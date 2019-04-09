@@ -27,7 +27,6 @@ package hudson.plugins.mercurial;
 import hudson.FilePath;
 import hudson.model.FreeStyleProject;
 import hudson.model.Slave;
-import hudson.scm.ChangeLogSet;
 import org.jenkinsci.test.acceptance.docker.DockerClassRule;
 import static org.junit.Assert.*;
 import org.junit.Before;
@@ -43,7 +42,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 /**
  * Unlike {@link FunctionalTest} we only care here about the Mercurial version.
  */
-@For(MercurialChangeSet.class)
+@For({MercurialChangeSet.class, MercurialChangeLogParser.class})
 @RunWith(Parameterized.class)
 public class ChangelogTest {
 
@@ -90,13 +89,7 @@ public class ChangelogTest {
     }
 
     private static void assertChangelog(String summary, FreeStyleProject p) throws Exception {
-        ChangeLogSet<? extends ChangeLogSet.Entry> cs = p.scheduleBuild2(0).get().getChangeSet();
-        StringBuilder b = new StringBuilder();
-        for (ChangeLogSet.Entry e : cs) {
-            MercurialChangeSet mcs = (MercurialChangeSet) e;
-            b.append("added=").append(mcs.getAddedPaths()).append(" deleted=").append(mcs.getDeletedPaths()).append(" modified=").append(mcs.getModifiedPaths()).append(" ");
-        }
-        assertEquals(summary, b.toString());
+        assertEquals(summary, MercurialChangeLogParserTest.summary((MercurialChangeSetList) p.scheduleBuild2(0).get().getChangeSet()));
     }
 
 }
