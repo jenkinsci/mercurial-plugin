@@ -190,6 +190,15 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
 
     protected @Override void setParent(ChangeLogSet parent) {
         super.setParent(parent);
+        if (merge) {
+            added = Collections.emptyList();
+            deleted = Collections.emptyList();
+            modified = Collections.emptyList();
+        } else {
+            modified = new ArrayList<>(modified);
+            modified.removeAll(added);
+            modified.removeAll(deleted);
+        }
     }
 
 //
@@ -252,11 +261,6 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
             return;
         }
         modified = toList(list);
-        if(!added.isEmpty() || !deleted.isEmpty()) {
-            modified = new ArrayList<String>(modified);
-            modified.removeAll(added);
-            modified.removeAll(deleted);
-        }
     }
 
     @Deprecated
@@ -270,11 +274,6 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
         // "6029:dd3267698d84458686b3c5682ce027438900ffbd 6030:cee68264ed92444e59a9bd5cf9519702b092363e " - merge
         // Would be nicer if --debug did not matter: http://www.selenic.com/mercurial/bts/issue1435
         merge = parents.indexOf(':') != parents.lastIndexOf(':') && !parents.contains("-1");
-        if (merge) {
-            added = Collections.emptyList();
-            deleted = Collections.emptyList();
-            modified = Collections.emptyList();
-        }
     }
 
     private List<String> toList(String list) {

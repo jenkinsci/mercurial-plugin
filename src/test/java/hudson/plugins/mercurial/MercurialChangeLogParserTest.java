@@ -83,6 +83,18 @@ public class MercurialChangeLogParserTest {
             pw.println("</changesets>");
         }
         assertEquals("added=[two] deleted=[] modified=[one, three] ", summary(new MercurialChangeLogParser(null).parse(null, null, changelogXml)));
+        try (PrintWriter pw = new PrintWriter(changelogXml, "UTF-8")) {
+            pw.println("<?xml version='1.0' encoding='UTF-8'?>");
+            pw.println("<changesets>");
+            pw.println("  <changeset>");
+            pw.println("    <added>one</added>");
+            pw.println("    <deleted>two</deleted>");
+            pw.println("    <files>three</files>");
+            pw.println("    <parents>6021:df659eb23360 6027:b7f44f01a632 </parents>");
+            pw.println("  </changeset>");
+            pw.println("</changesets>");
+        }
+        assertEquals("added=[] deleted=[] modified=[] ", summary(new MercurialChangeLogParser(null).parse(null, null, changelogXml)));
     }
 
     static String summary(MercurialChangeSetList csl) {
