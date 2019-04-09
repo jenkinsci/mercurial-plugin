@@ -10,6 +10,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.DoNotUse;
 
 import org.kohsuke.stapler.export.Exported;
 
@@ -204,61 +206,59 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
 //
 // used by Digester 
 //
-    @Deprecated
+    @Restricted(DoNotUse.class)
     public void setMsg(String msg) {
         this.msg = msg;
     }
 
-    @Deprecated
+    @Restricted(DoNotUse.class)
     public void setNode(String node) {
         this.node = node;
     }
 
-    @Deprecated
+    @Restricted(DoNotUse.class)
     public void setUser(String author) {
         this.author = author;
     }
 
-    @Deprecated
+    @Restricted(DoNotUse.class)
     public String getUser() {
         return author;
     }
 
-    @Deprecated
+    @Restricted(DoNotUse.class)
     public void setAuthor(String author) {
         this.author = author;
     }
 
-    @Deprecated
+    @Restricted(DoNotUse.class)
     public void setRev(long rev) {
         this.rev = rev;
     }
 
-    @Deprecated
+    @Restricted(DoNotUse.class)
     public void setDate(String date) {
         this.date = date;
     }
 
-    // After JENKINS-55319:
-
-    @Deprecated
+    @Restricted(DoNotUse.class)
     public void addAddedFile(String file) {
         added.add(file);
     }
 
-    @Deprecated
+    @Restricted(DoNotUse.class)
     public void addDeletedFile(String file) {
         deleted.add(file);
     }
 
-    @Deprecated
+    @Restricted(DoNotUse.class)
     public void addFile(String file) {
         modified.add(file);
     }
 
-    // Before JENKINS-55319:
-
+    /** @deprecated predates JENKINS-55319, here only for compatibility */
     @Deprecated
+    @Restricted(DoNotUse.class)
     public void setAdded(String list) {
         if (merge) {
             return;
@@ -266,7 +266,9 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
         added = toList(list);
     }
 
+    /** @deprecated predates JENKINS-55319, here only for compatibility */
     @Deprecated
+    @Restricted(DoNotUse.class)
     public void setDeleted(String list) {
         if (merge) {
             return;
@@ -274,7 +276,9 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
         deleted = toList(list);
     }
 
+    /** @deprecated predates JENKINS-55319, here only for compatibility */
     @Deprecated
+    @Restricted(DoNotUse.class)
     public void setFiles(String list) {
         if (merge) {
             return;
@@ -282,7 +286,7 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
         modified = toList(list);
     }
 
-    @Deprecated
+    @Restricted(DoNotUse.class)
     public void setParents(String parents) {
         // Possible values for parents when not using --debug:
         // ""                                     - commit made in succession
@@ -295,6 +299,7 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
         merge = parents.indexOf(':') != parents.lastIndexOf(':') && !parents.contains("-1");
     }
 
+    @Deprecated
     private List<String> toList(String list) {
         list = list.trim();
         if(list.length()==0) return Collections.emptyList();
