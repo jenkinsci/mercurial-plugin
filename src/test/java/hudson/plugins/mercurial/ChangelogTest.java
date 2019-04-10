@@ -31,6 +31,7 @@ import org.jenkinsci.test.acceptance.docker.DockerClassRule;
 import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -46,8 +47,8 @@ import org.jvnet.hudson.test.JenkinsRule;
 @RunWith(Parameterized.class)
 public class ChangelogTest {
 
-    @ClassRule public static final JenkinsRule j = new JenkinsRule();
-    @ClassRule public static final MercurialRule m = new MercurialRule(j);
+    @Rule public final JenkinsRule j = new JenkinsRule();
+    @Rule public final MercurialRule m = new MercurialRule(j);
     @ClassRule public static final DockerClassRule<MercurialContainer> docker = new DockerClassRule<>(MercurialContainer.class);
     @ClassRule public static final BuildWatcher buildWatcher = new BuildWatcher();
 
