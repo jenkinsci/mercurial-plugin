@@ -30,12 +30,16 @@ import hudson.scm.ChangeLogSet;
 import java.io.File;
 import java.io.PrintWriter;
 import java.util.Iterator;
+import java.util.TreeSet;
 import static org.junit.Assert.*;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.Bug;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.WithoutJenkins;
 
 public class MercurialChangeLogParserTest {
 
@@ -64,6 +68,67 @@ public class MercurialChangeLogParserTest {
         User author = entry.getAuthor();
         assertEquals("joe.schmo _joe.schmo@example.com_", author.getId());
         assertEquals("joe.schmo <joe.schmo@example.com>", author.getFullName());
+    }
+
+    @WithoutJenkins
+    @Issue("JENKINS-55319")
+    @Test public void oldAndNewFileFormats() throws Exception {
+        File changelogXml = tmp.newFile("changelog.xml");
+        try (PrintWriter pw = new PrintWriter(changelogXml, "UTF-8")) {
+            pw.println("<?xml version='1.0' encoding='UTF-8'?>");
+            pw.println("<changesets>");
+            pw.println("  <changeset>");
+            pw.println("    <added>two</added>");
+            pw.println("    <deleted></deleted>");
+            pw.println("    <files>one two three</files>");
+            pw.println("  </changeset>");
+            pw.println("</changesets>");
+        }
+        assertEquals("added=[two] deleted=[] modified=[one, three] ", summary(new MercurialChangeLogParser(null).parse(null, null, changelogXml)));
+        try (PrintWriter pw = new PrintWriter(changelogXml, "UTF-8")) {
+            pw.println("<?xml version='1.0' encoding='UTF-8'?>");
+            pw.println("<changesets>");
+            pw.println("  <changeset>");
+            pw.println("    <added>one</added>");
+            pw.println("    <deleted>two</deleted>");
+            pw.println("    <files>three</files>");
+            pw.println("    <parents>6021:df659eb23360 6027:b7f44f01a632 </parents>");
+            pw.println("  </changeset>");
+            pw.println("</changesets>");
+        }
+        assertEquals("added=[] deleted=[] modified=[] ", summary(new MercurialChangeLogParser(null).parse(null, null, changelogXml)));
+        try (PrintWriter pw = new PrintWriter(changelogXml, "UTF-8")) {
+            pw.println("<?xml version='1.0' encoding='UTF-8'?>");
+            pw.println("<changesets>");
+            pw.println("  <changeset>");
+            pw.println("    <addedFile>two</addedFile>");
+            pw.println("    <file>one</file>");
+            pw.println("    <file>two</file>");
+            pw.println("    <file>three</file>");
+            pw.println("  </changeset>");
+            pw.println("</changesets>");
+        }
+        assertEquals("added=[two] deleted=[] modified=[one, three] ", summary(new MercurialChangeLogParser(null).parse(null, null, changelogXml)));
+        try (PrintWriter pw = new PrintWriter(changelogXml, "UTF-8")) {
+            pw.println("<?xml version='1.0' encoding='UTF-8'?>");
+            pw.println("<changesets>");
+            pw.println("  <changeset>");
+            pw.println("    <deletedFile>one</deletedFile>");
+            pw.println("    <file>one</file>");
+            pw.println("    <file>two</file>");
+            pw.println("    <file>three</file>");
+            pw.println("  </changeset>");
+            pw.println("</changesets>");
+        }
+        assertEquals("added=[] deleted=[one] modified=[three, two] ", summary(new MercurialChangeLogParser(null).parse(null, null, changelogXml)));
+    }
+
+    static String summary(MercurialChangeSetList csl) {
+        StringBuilder b = new StringBuilder();
+        for (MercurialChangeSet mcs : csl) {
+            b.append("added=").append(new TreeSet<>(mcs.getAddedPaths())).append(" deleted=").append(new TreeSet<>(mcs.getDeletedPaths())).append(" modified=").append(new TreeSet<>(mcs.getModifiedPaths())).append(" ");
+        }
+        return b.toString();
     }
 
 }

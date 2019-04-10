@@ -10,6 +10,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import org.kohsuke.accmod.Restricted;
+import org.kohsuke.accmod.restrictions.DoNotUse;
 
 import org.kohsuke.stapler.export.Exported;
 
@@ -28,9 +30,9 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
     private String msg;
     private boolean merge;
 
-    private List<String> added = Collections.emptyList();
-    private List<String> deleted = Collections.emptyList();
-    private List<String> modified = Collections.emptyList();
+    private List<String> added = new ArrayList<>();
+    private List<String> deleted = new ArrayList<>();
+    private List<String> modified = new ArrayList<>();
 
     /**
      * Lazily computed.
@@ -190,47 +192,73 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
 
     protected @Override void setParent(ChangeLogSet parent) {
         super.setParent(parent);
+        if (merge) {
+            added = Collections.emptyList();
+            deleted = Collections.emptyList();
+            modified = Collections.emptyList();
+        } else {
+            modified = new ArrayList<>(modified);
+            modified.removeAll(added);
+            modified.removeAll(deleted);
+        }
     }
 
 //
 // used by Digester 
 //
-    @Deprecated
+    @Restricted(DoNotUse.class)
     public void setMsg(String msg) {
         this.msg = msg;
     }
 
-    @Deprecated
+    @Restricted(DoNotUse.class)
     public void setNode(String node) {
         this.node = node;
     }
 
-    @Deprecated
+    @Restricted(DoNotUse.class)
     public void setUser(String author) {
         this.author = author;
     }
 
-    @Deprecated
+    @Restricted(DoNotUse.class)
     public String getUser() {
         return author;
     }
 
-    @Deprecated
+    @Restricted(DoNotUse.class)
     public void setAuthor(String author) {
         this.author = author;
     }
 
-    @Deprecated
+    @Restricted(DoNotUse.class)
     public void setRev(long rev) {
         this.rev = rev;
     }
 
-    @Deprecated
+    @Restricted(DoNotUse.class)
     public void setDate(String date) {
         this.date = date;
     }
 
+    @Restricted(DoNotUse.class)
+    public void addAddedFile(String file) {
+        added.add(file);
+    }
+
+    @Restricted(DoNotUse.class)
+    public void addDeletedFile(String file) {
+        deleted.add(file);
+    }
+
+    @Restricted(DoNotUse.class)
+    public void addFile(String file) {
+        modified.add(file);
+    }
+
+    /** @deprecated predates JENKINS-55319, here only for compatibility */
     @Deprecated
+    @Restricted(DoNotUse.class)
     public void setAdded(String list) {
         if (merge) {
             return;
@@ -238,7 +266,9 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
         added = toList(list);
     }
 
+    /** @deprecated predates JENKINS-55319, here only for compatibility */
     @Deprecated
+    @Restricted(DoNotUse.class)
     public void setDeleted(String list) {
         if (merge) {
             return;
@@ -246,20 +276,17 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
         deleted = toList(list);
     }
 
+    /** @deprecated predates JENKINS-55319, here only for compatibility */
     @Deprecated
+    @Restricted(DoNotUse.class)
     public void setFiles(String list) {
         if (merge) {
             return;
         }
         modified = toList(list);
-        if(!added.isEmpty() || !deleted.isEmpty()) {
-            modified = new ArrayList<String>(modified);
-            modified.removeAll(added);
-            modified.removeAll(deleted);
-        }
     }
 
-    @Deprecated
+    @Restricted(DoNotUse.class)
     public void setParents(String parents) {
         // Possible values for parents when not using --debug:
         // ""                                     - commit made in succession
@@ -270,13 +297,9 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
         // "6029:dd3267698d84458686b3c5682ce027438900ffbd 6030:cee68264ed92444e59a9bd5cf9519702b092363e " - merge
         // Would be nicer if --debug did not matter: http://www.selenic.com/mercurial/bts/issue1435
         merge = parents.indexOf(':') != parents.lastIndexOf(':') && !parents.contains("-1");
-        if (merge) {
-            added = Collections.emptyList();
-            deleted = Collections.emptyList();
-            modified = Collections.emptyList();
-        }
     }
 
+    @Deprecated
     private List<String> toList(String list) {
         list = list.trim();
         if(list.length()==0) return Collections.emptyList();
@@ -287,6 +310,6 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
     static final String CHANGELOG_TEMPLATE =
             "<changeset node='{node}' author='{author|xmlescape}' rev='{rev}' date='{date}'>" +
             // TODO {file_adds} and {file_dels} seem to be far slower to process than {files}
-            "<msg>{desc|xmlescape}</msg><added>{file_adds|stringify|xmlescape}</added><deleted>{file_dels|stringify|xmlescape}</deleted>" +
-            "<files>{files|stringify|xmlescape}</files><parents>{parents}</parents></changeset>\\n";
+            "<msg>{desc|xmlescape}</msg>{file_adds % '<addedFile>{file|xmlescape}</addedFile>'}{file_dels % '<deletedFile>{file|xmlescape}</deletedFile>'}" +
+            "{files % '<file>{file|xmlescape}</file>'}<parents>{parents}</parents></changeset>\\n";
 }

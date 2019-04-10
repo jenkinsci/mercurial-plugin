@@ -1,5 +1,6 @@
 package hudson.plugins.mercurial;
 
+import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Proc;
@@ -10,13 +11,17 @@ import hudson.model.FreeStyleProject;
 import hudson.model.ParametersAction;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Result;
+import hudson.model.Run;
 import hudson.model.Slave;
 import hudson.model.StringParameterDefinition;
 import hudson.model.StringParameterValue;
+import hudson.model.TaskListener;
+import hudson.model.listeners.SCMListener;
 import hudson.scm.ChangeLogSet;
 import hudson.scm.ChangeLogSet.Entry;
 import hudson.scm.PollingResult;
 import hudson.scm.SCM;
+import hudson.scm.SCMRevisionState;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,6 +36,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import javax.annotation.CheckForNull;
+import org.apache.commons.io.FileUtils;
 
 import org.jenkinsci.plugins.multiplescms.MultiSCM;
 import org.junit.Before;
@@ -819,5 +825,13 @@ public abstract class SCMTestBase {
         assertTrue(pollSCMChanges(p));
     }
      */
+
+    @Extension public static final class ShowChangelogs extends SCMListener {
+        @Override public void onCheckout(Run<?, ?> build, SCM scm, FilePath workspace, TaskListener listener, File changelogFile, SCMRevisionState pollingBaseline) throws Exception {
+            System.out.println("---%<--- " + changelogFile);
+            FileUtils.copyFile(changelogFile, System.out);
+            System.out.println("\n--->%---");
+        }
+    }
 
 }

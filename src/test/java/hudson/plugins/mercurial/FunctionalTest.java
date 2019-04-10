@@ -120,7 +120,6 @@ public class FunctionalTest {
         };
         return new Object[][] {
             {false, defaultFactory, null},
-            {true, defaultFactory, MercurialContainer.Version.HG1},
             {true, defaultFactory, MercurialContainer.Version.HG2},
             {true, defaultFactory, MercurialContainer.Version.HG3},
             {true, defaultFactory, MercurialContainer.Version.HG4},
