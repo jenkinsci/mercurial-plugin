@@ -50,23 +50,23 @@ public class MercurialSCMSourceTest {
     }
 
     @Test public void testRetrieveUnknownRevision() throws Exception {
-        Assert.assertNull(mercurialSCMSource.retrieve("does_not_exist", listener));
+        Assert.assertNull(mercurialSCMSource.fetch("does_not_exist", listener, null));
     }
 
     @Test public void testRetrieveTag() throws Exception {
-        SCMRevision revision = mercurialSCMSource.retrieve("version-1.1", listener);
+        SCMRevision revision = mercurialSCMSource.fetch("version-1.1", listener, null);
         assertTrue(revision.toString().startsWith("my-branch:"));
-        revision = mercurialSCMSource.retrieve("version-1.0", listener);
+        revision = mercurialSCMSource.fetch("version-1.0", listener, null);
         assertTrue(revision.toString().startsWith("default:"));
     }
 
     @Test public void testRetrieveBranchTip() throws Exception {
-        SCMRevision revision = mercurialSCMSource.retrieve("my-branch", listener);
+        SCMRevision revision = mercurialSCMSource.fetch("my-branch", listener, null);
         assertTrue(revision.toString().startsWith("my-branch:"));
     }
 
     @Test public void testRetrieveRepoTip() throws Exception {
-        SCMRevision revision = mercurialSCMSource.retrieve("tip", listener);
+        SCMRevision revision = mercurialSCMSource.fetch("tip", listener, null);
         assertTrue(revision.toString().startsWith("my-branch:"));
     }
 
