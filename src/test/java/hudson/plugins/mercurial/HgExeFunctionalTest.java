@@ -75,20 +75,17 @@ public class HgExeFunctionalTest {
         UsernamePasswordCredentialsImpl credentials = new UsernamePasswordCredentialsImpl(
                 CredentialsScope.GLOBAL, "", "", "testuser", "testpassword");
 
-        HgExe hgexe = new HgExe(
-                this.mercurialInstallation, credentials,
-                this.launcher, j.jenkins,
-                this.listener, this.vars);
-        ArgumentListBuilder b = hgexe.seed(false);
-        assertEquals(new ArgumentListBuilder(
-                "hg", "--config", "auth.jenkins.prefix=*", "--config", "auth.jenkins.username=testuser",
-                "--config", "auth.jenkins.password=testpassword", "--config", "auth.jenkins.schemes=http https")
-                .toList(), b.toList());
-        assertEquals(new ArgumentListBuilder(
+        try (HgExe hgexe = new HgExe(mercurialInstallation, credentials, launcher, j.jenkins, listener, vars)) {
+            ArgumentListBuilder b = hgexe.seed(false);
+            assertEquals(new ArgumentListBuilder(
+                    "hg", "--config", "auth.jenkins.prefix=*", "--config", "auth.jenkins.username=testuser",
+                    "--config", "auth.jenkins.password=testpassword", "--config", "auth.jenkins.schemes=http https").toList(),
+                    b.toList());
+            assertEquals(new ArgumentListBuilder(
                 "hg", "--config", "auth.jenkins.prefix=*", "--config", "******",
-                "--config", "******", "--config", "auth.jenkins.schemes=http https").toString(),
-                b.toString());
-        hgexe.close();
+                        "--config", "******", "--config", "auth.jenkins.schemes=http https").toString(),
+                    b.toString());
+        }
     }
 
     @Test public void credentialsSSHKeyTest() throws Exception {
@@ -97,26 +94,22 @@ public class HgExeFunctionalTest {
         BasicSSHUserPrivateKey credentials = new BasicSSHUserPrivateKey(
                 CredentialsScope.GLOBAL, "", "testuser", source, null, null);
 
-        HgExe hgexe = new HgExe(
-                this.mercurialInstallation, credentials,
-                this.launcher, j.jenkins,
-                this.listener, this.vars);
-        ArgumentListBuilder b = hgexe.seed(false);
-        Matcher matcher = Pattern.compile("ssh\\s-i\\s(.+)\\s-l\\stestuser").matcher(b.toCommandArray()[2]);
-        matcher.find();
-        String fileName = matcher.group(1);
-        assertEquals("test key", FileUtils.readFileToString(new File(fileName)));
-        assertEquals(new ArgumentListBuilder(
-                "hg", "--config", "******").toString(),
-                b.toString());
-        hgexe.close();
+        try (HgExe hgexe = new HgExe(mercurialInstallation, credentials, launcher, j.jenkins, listener, vars)) {
+            ArgumentListBuilder b = hgexe.seed(false);
+            Matcher matcher = Pattern.compile("ssh\\s-i\\s(.+)\\s-l\\stestuser").matcher(b.toCommandArray()[2]);
+            matcher.find();
+            String fileName = matcher.group(1);
+            assertEquals("test key", FileUtils.readFileToString(new File(fileName)));
+            assertEquals(new ArgumentListBuilder("hg", "--config", "******").toString(), b.toString());
+        }
     }
 
     @Bug(5723)
     @Test public void customConfiguration() throws Exception {
-        HgExe hgexe = new HgExe(new MercurialInstallation(INSTALLATION, "", "hg", false, false, false, "[defaults]\nclone = --uncompressed\n", null), null, this.launcher, j.jenkins, this.listener, this.vars);
-        ArgumentListBuilder b = hgexe.seed(false).add("clone", "http://some.thing/");
-        assertEquals("hg --config defaults.clone=--uncompressed clone http://some.thing/", b.toString());
+        MercurialInstallation customConfiguration = new MercurialInstallation(INSTALLATION, "", "hg", false, false, false, "[defaults]\nclone = --uncompressed\n", null);
+        try (HgExe hgexe = new HgExe(customConfiguration, null, launcher, j.jenkins, listener, vars)) {
+            ArgumentListBuilder b = hgexe.seed(false).add("clone", "http://some.thing/");
+            assertEquals("hg --config defaults.clone=--uncompressed clone http://some.thing/", b.toString());
+        }
     }
-
 }
