@@ -351,7 +351,7 @@ public final class MercurialSCMSource extends SCMSource {
 
         private boolean hasAccessToCredentialsMetadata(SCMSourceOwner owner){
             if (owner == null){
-                return Jenkins.getActiveInstance().hasPermission(Jenkins.ADMINISTER);
+                return Jenkins.getInstance().hasPermission(Jenkins.ADMINISTER);
             }
             return owner.hasPermission(Item.EXTENDED_READ);
         }

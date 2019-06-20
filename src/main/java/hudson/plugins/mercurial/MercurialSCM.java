@@ -1050,7 +1050,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
         private boolean hasAccessToCredentialsMetadata(Job<?,?> owner) {
             if (owner == null){
-                return Jenkins.getActiveInstance().hasPermission(Jenkins.ADMINISTER);
+                return Jenkins.getInstance().hasPermission(Jenkins.ADMINISTER);
             }
             return owner.hasPermission(Item.EXTENDED_READ);
         }
