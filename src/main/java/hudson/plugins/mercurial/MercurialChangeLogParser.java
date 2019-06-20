@@ -5,8 +5,6 @@ import hudson.model.Run;
 import hudson.scm.ChangeLogParser;
 import hudson.scm.RepositoryBrowser;
 import hudson.util.Digester2;
-import hudson.util.IOException2;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -57,9 +55,9 @@ public class MercurialChangeLogParser extends ChangeLogParser {
         try {
             digester.parse(changelogFile);
         } catch (IOException e) {
-            throw new IOException2("Failed to parse " + changelogFile, e);
+            throw new IOException("Failed to parse " + changelogFile, e);
         } catch (SAXException e) {
-            throw new IOException2("Failed to parse " + changelogFile + ": '" + Util.loadFile(changelogFile) + "'", e);
+            throw new IOException("Failed to parse " + changelogFile + ": '" + Util.loadFile(changelogFile) + "'", e);
         }
 
         if (modules != null) {
