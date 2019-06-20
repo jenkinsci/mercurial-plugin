@@ -32,7 +32,6 @@ import java.io.PrintWriter;
 import java.util.Iterator;
 import java.util.TreeSet;
 import static org.junit.Assert.*;
-import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;

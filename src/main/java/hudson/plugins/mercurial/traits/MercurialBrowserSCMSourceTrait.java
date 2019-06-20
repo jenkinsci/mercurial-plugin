@@ -26,7 +26,6 @@
 package hudson.plugins.mercurial.traits;
 
 import edu.umd.cs.findbugs.annotations.CheckForNull;
-import edu.umd.cs.findbugs.annotations.NonNull;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.plugins.mercurial.MercurialSCM;
