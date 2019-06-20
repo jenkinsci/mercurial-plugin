@@ -259,18 +259,18 @@ public class HgExe implements AutoCloseable {
         return (allowDebug ? base : baseNoDebug).clone();
     }
 
-    @Deprecated
     /**
      * @deprecated Unused, since we need more control over the argument list in order to support credentials.
      */
+    @Deprecated
     public ProcStarter pull() {
         return run("pull");
     }
 
-    @Deprecated
     /**
      * @deprecated Unused, since we need more control over the argument list in order to support credentials.
      */
+    @Deprecated
     public ProcStarter clone(String... args) {
         return launch(seed(true).add("clone").add(args));
     }
