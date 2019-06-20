@@ -51,6 +51,7 @@ import java.io.OutputStream;
 import java.io.StringReader;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -120,7 +121,7 @@ public class HgExe implements AutoCloseable {
             } else if (keys.size() > 1) {
                 throw new IOException("Multiple private keys found.");
             } else {
-                keyData = keys.get(0).getBytes("US-ASCII");
+                keyData = keys.get(0).getBytes(StandardCharsets.US_ASCII);
             }
             
             final Secret passphrase = cc.getPassphrase();

@@ -13,6 +13,7 @@ import hudson.util.ArgumentListBuilder;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HashMap;
 import java.util.Map;
@@ -258,7 +259,7 @@ class Cache {
 
         BigInteger hash;
         try {
-            hash = new BigInteger(1, MessageDigest.getInstance("SHA-1").digest(digestible.getBytes("UTF-8")));
+            hash = new BigInteger(1, MessageDigest.getInstance("SHA-1").digest(digestible.getBytes(StandardCharsets.UTF_8)));
         } catch (Exception x) {
             throw new AssertionError(x);
         }
