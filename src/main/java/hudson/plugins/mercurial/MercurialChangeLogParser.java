@@ -10,7 +10,6 @@ import hudson.util.IOException2;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Set;
@@ -85,20 +84,7 @@ public class MercurialChangeLogParser extends ChangeLogParser {
         // the Jenkins changes view,
         // and is like the old situation where 'hg incoming' was used to
         // determine the changelog
-        Collections.sort(r, new Comparator<MercurialChangeSet>() {
-            public int compare(MercurialChangeSet o1, MercurialChangeSet o2) {
-                // don't do return o1.getRev() - o2.getRev(), as that is
-                // susceptible to integer overflow
-                if (o1.getRev() < o2.getRev()) {
-                    return -1;
-                }
-                if (o1.getRev() == o2.getRev()) {
-                    return 0;
-                } else {
-                    return 1;
-                }
-            }
-        });
+        r.sort(Comparator.comparingLong(MercurialChangeSet::getRev));
 
         return new MercurialChangeSetList(build, browser, r);
     }
