@@ -7,6 +7,7 @@ import hudson.model.Item;
 import hudson.model.UnprotectedRootAction;
 import hudson.scm.SCM;
 import hudson.security.ACL;
+import hudson.security.ACLContext;
 import hudson.triggers.SCMTrigger;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -23,8 +24,6 @@ import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.SCMSourceOwner;
 import jenkins.scm.api.SCMSourceOwners;
 import jenkins.triggers.SCMTriggerItem;
-import org.acegisecurity.context.SecurityContext;
-import org.acegisecurity.context.SecurityContextHolder;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -131,8 +130,7 @@ public class MercurialStatus implements UnprotectedRootAction {
         String origin = SCMEvent.originOf(Stapler.getCurrentRequest());
         // run in high privilege to see all the projects anonymous users don't see.
         // this is safe because we only initiate polling.
-        SecurityContext securityContext = ACL.impersonate(ACL.SYSTEM);
-        try {
+        try (ACLContext context = ACL.as(ACL.SYSTEM)) {
             if (StringUtils.isNotBlank(branch) && StringUtils.isNotBlank(changesetId)) {
                 SCMHeadEvent.fireNow(new MercurialSCMHeadEvent(
                         SCMEvent.Type.UPDATED, new MercurialCommitPayload(new URI(url), branch, changesetId),
@@ -142,8 +140,6 @@ public class MercurialStatus implements UnprotectedRootAction {
             return handleNotifyCommit(origin, new URI(url));
         } catch ( URISyntaxException ex ) {
             throw HttpResponses.error(SC_BAD_REQUEST, ex);
-        } finally {
-            SecurityContextHolder.setContext(securityContext);
         }
     }
 

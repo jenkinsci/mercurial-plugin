@@ -37,6 +37,7 @@ import hudson.model.Item;
 import hudson.model.Job;
 import hudson.model.User;
 import hudson.security.ACL;
+import hudson.security.ACLContext;
 import hudson.security.AuthorizationMatrixProperty;
 import hudson.security.ProjectMatrixAuthorizationStrategy;
 import hudson.util.ListBoxModel;
@@ -98,12 +99,10 @@ public class ConfigurationTest {
         r.jenkins.setAuthorizationStrategy(as);
         final UsernamePasswordCredentialsImpl c = new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL, null, "test", "bob", "s3cr3t");
         CredentialsProvider.lookupStores(r.jenkins).iterator().next().addCredentials(Domain.global(), c);
-        ACL.impersonate(User.get("alice").impersonate(), new Runnable() {
-            @Override public void run() {
-                ListBoxModel options = r.jenkins.getDescriptorByType(MercurialSCM.DescriptorImpl.class).doFillCredentialsIdItems(null, "http://nowhere.net/");
-                assertEquals(CredentialsNameProvider.name(c), options.get(1).name);
-            }
-        });
+        try (ACLContext context = ACL.as(User.get("alice"))) {
+            ListBoxModel options = r.jenkins.getDescriptorByType(MercurialSCM.DescriptorImpl.class).doFillCredentialsIdItems(null, "http://nowhere.net/");
+            assertEquals(CredentialsNameProvider.name(c), options.get(1).name);
+        }
     }
 
     @Issue("SECURITY-158")
@@ -130,18 +129,16 @@ public class ConfigurationTest {
         for (Credentials c : expected) {
             expectedNames.add(CredentialsNameProvider.name(c));
         }
-        ACL.impersonate(User.get(user).impersonate(), new Runnable() {
-            @Override public void run() {
-                List<String> actualNames = new ArrayList<String>();
-                for (ListBoxModel.Option o : r.jenkins.getDescriptorByType(MercurialSCM.DescriptorImpl.class).doFillCredentialsIdItems(owner, "http://nowhere.net/")) {
-                    if (o.value.isEmpty()) {
-                        continue; // AbstractIdCredentialsListBoxModel.EmptySelection
-                    }
-                    actualNames.add(o.name);
+        try (ACLContext context = ACL.as(User.get(user))) {
+            List<String> actualNames = new ArrayList<String>();
+            for (ListBoxModel.Option o : r.jenkins.getDescriptorByType(MercurialSCM.DescriptorImpl.class).doFillCredentialsIdItems(owner, "http://nowhere.net/")) {
+                if (o.value.isEmpty()) {
+                    continue; // AbstractIdCredentialsListBoxModel.EmptySelection
                 }
-                assertEquals(expectedNames, actualNames);
+                actualNames.add(o.name);
             }
-        });
+            assertEquals(expectedNames, actualNames);
+        }
     }
 
 }
