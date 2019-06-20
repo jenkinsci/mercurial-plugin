@@ -1,9 +1,9 @@
-FROM jenkins/java:6894df180381
+FROM jenkins/java:d93654cc6239
 RUN apt-get update -y && \
     apt-get install --no-install-recommends -y \
-        python2.7=2.7.14-2ubuntu2 \
-        python=2.7.14-2ubuntu1 \
-        libpython2.7-dev=2.7.14-2ubuntu2 \
+        python2.7 \
+        python \
+        libpython2.7-dev \
         make \
         gcc \
         gettext
