@@ -9,7 +9,7 @@ import java.util.List;
 import static org.junit.Assert.*;
 import org.junit.Rule;
 import org.junit.Test;
-import org.jvnet.hudson.test.Bug;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.recipes.LocalData;
 
@@ -31,7 +31,7 @@ public class HgBrowserSelectionTest {
         j.assertEqualBeans(new HgWeb("http://www.yahoo.com/"), browser, "url");
     }
 
-    @Bug(4510)
+    @Issue("JENKINS-4510")
     @LocalData
     @Test public void pickingUpAlternativeBrowser() throws Exception {
         FreeStyleProject p = (FreeStyleProject) j.jenkins.getItem("foo");
@@ -42,7 +42,7 @@ public class HgBrowserSelectionTest {
         j.assertEqualBeans(new BitBucket("http://bitbucket.org/"), browser, "url");
     }
 
-    @Bug(4514)
+    @Issue("JENKINS-4514")
     @LocalData
     @Test public void browsersAvailableInDropDown() throws Exception {
         FreeStyleProject p = (FreeStyleProject) j.jenkins.getItem("foo");
@@ -55,7 +55,7 @@ public class HgBrowserSelectionTest {
         assertTrue("Could not find BitBucket in " + browserDescriptors, browserDescriptors.contains(browser.getDescriptor()));
     }
 
-    @Bug(20186)
+    @Issue("JENKINS-20186")
     @Test public void configureBrowser() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(null, "https://host/repo", null, null, null, new HgWeb("https://host/repo"), false, null));

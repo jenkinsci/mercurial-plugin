@@ -6,6 +6,8 @@ import hudson.matrix.*;
 import hudson.model.*;
 import hudson.scm.SCM;
 import org.jvnet.hudson.test.FakeLauncher;
+import org.jvnet.hudson.test.Issue;
+import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.PretendSlave;
 import org.jvnet.hudson.test.TestBuilder;
 
@@ -21,8 +23,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.jvnet.hudson.test.Bug;
-import org.jvnet.hudson.test.JenkinsRule;
 
 public class MatrixProjectTest {
 
@@ -71,13 +71,13 @@ public class MatrixProjectTest {
         assertAllMatrixRunsBuildSameMercurialRevision();
     }
 
-    @Bug(18237)
+    @Issue("JENKINS-18237")
     @Test public void multiSCMRunsBuildSameRevisionOnClone() throws Exception {
         setUpMultiSCM();
         assertAllMatrixRunsBuildSameMercurialRevision();
     }
 
-    @Bug(18237)
+    @Issue("JENKINS-18237")
     @Test public void multiSCMRunsBuildSameRevisionOnUpdate() throws Exception {
         setUpMultiSCM();
 
