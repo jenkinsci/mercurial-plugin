@@ -49,15 +49,12 @@ public class MercurialChangeLogParserTest {
     @Bug(16332)
     @Test public void parseAddressFromChangeLog() throws Exception {
         File changelogXml = tmp.newFile("changelog.xml");
-        PrintWriter pw = new PrintWriter(changelogXml, "UTF-8");
-        try {
+        try (PrintWriter pw = new PrintWriter(changelogXml, "UTF-8")) {
             pw.println("<?xml version='1.0' encoding='UTF-8'?>");
             pw.println("<changesets>");
             pw.println("<changeset author='joe.schmo &lt;joe.schmo@example.com&gt;'/>");
             pw.println("</changesets>");
             pw.flush();
-        } finally {
-            pw.close();
         }
         ChangeLogParser clp = new MercurialChangeLogParser(null);
         ChangeLogSet<? extends ChangeLogSet.Entry> cls = clp.parse(null, null, changelogXml);

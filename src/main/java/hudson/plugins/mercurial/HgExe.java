@@ -72,7 +72,7 @@ import org.ini4j.Ini;
 /**
  * Encapsulates the invocation of the Mercurial command.
  */
-public class HgExe {
+public class HgExe implements AutoCloseable {
     private final ArgumentListBuilder base;
     private final ArgumentListBuilder baseNoDebug;
     /**
@@ -97,7 +97,8 @@ public class HgExe {
 
     /**
      * Creates a new launcher.
-     * You <strong>must</strong> call {@link #close} in a {@code finally} block.
+     * You <strong>must</strong> call {@link #close} in a {@code finally} block
+     * or use try-with-resources.
      * @param inst a particular Mercurial installation to use (optional)
      * @param credentials username/password or SSH private key credentials (optional)
      * @param launcher a way to run commands
@@ -145,11 +146,8 @@ public class HgExe {
             sshPrivateKey.chmod(0600);
             // just in case slave goes offline during command; createTempFile fails to do it:
             sshPrivateKey.act(new DeleteOnExit());
-            OutputStream os = sshPrivateKey.write();
-            try {
+            try (OutputStream os = sshPrivateKey.write()) {
                 os.write(keyData);
-            } finally {
-                os.close();
             }
             ARGB: for (ArgumentListBuilder b : new ArgumentListBuilder[] {base, baseNoDebug}) {
                 // TODO do we really want to pass -l username? Usually the username is ‘hg’ and encoded in the URL. But seems harmless at least on bitbucket.
@@ -176,6 +174,7 @@ public class HgExe {
         this.listener = listener;
         this.capability = Capability.get(this);
     }
+
     private static final class DeleteOnExit extends MasterToSlaveFileCallable<Void> {
         private static final long serialVersionUID = 1;
         @Override public Void invoke(File f, VirtualChannel channel) throws IOException, InterruptedException {
@@ -184,7 +183,8 @@ public class HgExe {
         }
     }
 
-    public void close() throws IOException, InterruptedException { // TODO implement AutoCloseable in Java 7+
+    @Override
+    public void close() throws IOException, InterruptedException {
         if (sshPrivateKey != null) {
             sshPrivateKey.delete();
         }
