@@ -32,13 +32,16 @@ import hudson.model.Descriptor;
 import hudson.plugins.mercurial.MercurialSCM;
 import hudson.plugins.mercurial.MercurialSCMBuilder;
 import hudson.plugins.mercurial.MercurialSCMSource;
+import hudson.plugins.mercurial.MercurialSCMSourceContext;
 import hudson.plugins.mercurial.browser.HgBrowser;
 import hudson.scm.RepositoryBrowser;
 import hudson.scm.RepositoryBrowsers;
 import hudson.scm.SCM;
 import java.util.List;
 import javax.annotation.Nonnull;
+import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.trait.SCMBuilder;
+import jenkins.scm.api.trait.SCMSourceContext;
 import jenkins.scm.api.trait.SCMSourceTrait;
 import jenkins.scm.api.trait.SCMSourceTraitDescriptor;
 import org.kohsuke.accmod.Restricted;
@@ -112,6 +115,22 @@ public class MercurialBrowserSCMSourceTrait extends SCMSourceTrait {
          */
         @Override public Class<? extends SCMBuilder> getBuilderClass() {
             return MercurialSCMBuilder.class;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public Class<? extends SCMSourceContext> getContextClass() {
+            return MercurialSCMSourceContext.class;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        public Class<? extends SCMSource> getSourceClass() {
+            return MercurialSCMSource.class;
         }
 
         /**
