@@ -17,7 +17,7 @@
       <jenkins.version>2.7.3</jenkins.version>
       <java.level>7</java.level>
       <no-test-jar>false</no-test-jar>
-      <scm-api-plugin.version>2.5.0-rc464.915933672136</scm-api-plugin.version> <!-- TODO https://github.com/jenkinsci/scm-api-plugin/pull/65 -->
+        <scm-api-plugin.version>2.6.2</scm-api-plugin.version>
     </properties>
     
     <developers>
