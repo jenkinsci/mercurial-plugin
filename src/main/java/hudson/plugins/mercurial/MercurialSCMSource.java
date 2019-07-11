@@ -205,7 +205,7 @@ public final class MercurialSCMSource extends SCMSource {
             }
             final Node node = Jenkins.getInstance();
             Launcher launcher = node.createLauncher(listener);
-            StandardUsernameCredentials credentials = getCredentials(request.credentialsId());
+            StandardUsernameCredentials credentials = getCredentials(request.credentialsId(), getOwner());
             final FilePath cache = Cache.fromURL(request.source(), credentials, inst.getMasterCacheRoot())
                     .repositoryCache(inst, node, launcher, listener, true);
             if (cache == null) {
@@ -259,7 +259,7 @@ public final class MercurialSCMSource extends SCMSource {
 
     @Override
     @CheckForNull
-    protected SCMRevision retrieve(@NonNull String thingName, @NonNull TaskListener listener)
+    protected SCMRevision retrieve(@NonNull String thingName, @NonNull TaskListener listener, @CheckForNull Item context)
             throws IOException, InterruptedException {
         try (MercurialSCMSourceRequest request = new MercurialSCMSourceContext<>(null, SCMHeadObserver.none())
                 .withTraits(traits)
@@ -275,7 +275,7 @@ public final class MercurialSCMSource extends SCMSource {
             }
             final Node node = Jenkins.getInstance();
             Launcher launcher = node.createLauncher(listener);
-            StandardUsernameCredentials credentials = getCredentials(request.credentialsId());
+            StandardUsernameCredentials credentials = getCredentials(request.credentialsId(), context);
             final FilePath cache = Cache.fromURL(source, credentials, inst.getMasterCacheRoot())
                     .repositoryCache(inst, node, launcher, listener, true);
             if (cache == null) {
@@ -308,9 +308,9 @@ public final class MercurialSCMSource extends SCMSource {
         return builder.build();
     }
 
-    private @CheckForNull StandardUsernameCredentials getCredentials(@CheckForNull String credentialsId) {
+    private @CheckForNull StandardUsernameCredentials getCredentials(@CheckForNull String credentialsId, @CheckForNull Item context) {
         if (credentialsId != null) {
-            for (StandardUsernameCredentials c : availableCredentials(getOwner(), source)) {
+            for (StandardUsernameCredentials c : availableCredentials(context, source)) {
                 if (c.getId().equals(credentialsId)) {
                     return c;
                 }
@@ -330,8 +330,8 @@ public final class MercurialSCMSource extends SCMSource {
     }
 
     private static @Nonnull List<? extends StandardUsernameCredentials> availableCredentials(
-            @CheckForNull SCMSourceOwner owner, @CheckForNull String source) {
-        return CredentialsProvider.lookupCredentials(StandardUsernameCredentials.class, owner, null, URIRequirementBuilder.fromUri(source).build());
+            @CheckForNull Item context, @CheckForNull String source) {
+        return CredentialsProvider.lookupCredentials(StandardUsernameCredentials.class, context, null, URIRequirementBuilder.fromUri(source).build());
     }
 
     @Extension public static final class DescriptorImpl extends SCMSourceDescriptor {
