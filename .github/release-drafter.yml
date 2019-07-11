@@ -1,0 +1,2 @@
+_extends: .github
+tag-template: mercurial-$NEXT_MINOR_VERSION
