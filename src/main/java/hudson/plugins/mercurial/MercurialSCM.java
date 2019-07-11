@@ -379,15 +379,12 @@ public class MercurialSCM extends SCM implements Serializable {
         if (nodeWithTheWorkspace == null) {
             throw new IOException("Cannot find a node for the specified workspace");
         }
-        
-        HgExe hg = new HgExe(findInstallation(getInstallation()), getCredentials(build.getParent(), env), launcher, nodeWithTheWorkspace, listener, env);
-        try {
-        String tip = hg.tip(workspace2Repo(workspace, env), null);
-        String rev = hg.tipNumber(workspace2Repo(workspace, env), null);
-        String branch = revisionType != RevisionType.BRANCH ? hg.branch(workspace2Repo(workspace, env), null) : null;
-        return tip != null && rev != null ? new MercurialTagAction(tip, rev, getSubdir(env), branch) : null;
-        } finally {
-            hg.close();
+
+        try (HgExe hg = new HgExe(findInstallation(getInstallation()), getCredentials(build.getParent(), env), launcher, nodeWithTheWorkspace, listener, env)) {
+            String tip = hg.tip(workspace2Repo(workspace, env), null);
+            String rev = hg.tipNumber(workspace2Repo(workspace, env), null);
+            String branch = revisionType != RevisionType.BRANCH ? hg.branch(workspace2Repo(workspace, env), null) : null;
+            return tip != null && rev != null ? new MercurialTagAction(tip, rev, getSubdir(env), branch) : null;
         }
     }
 
@@ -457,28 +454,25 @@ public class MercurialSCM extends SCM implements Serializable {
             return new PollingResult(change);
         }
         EnvVars env = project.getEnvironment(node, listener);
-        HgExe hg = new HgExe(findInstallation(getInstallation()), getCredentials(project, env), launcher, node, listener, env);
-        try {
-        String _revision = getRevisionExpanded(project, env);
-        String remote = hg.tip(repository, _revision);
-        String rev = hg.tipNumber(repository, _revision);
-        String branch = revisionType != RevisionType.BRANCH ? hg.branch(repository, _revision) : null;
+        try (HgExe hg = new HgExe(findInstallation(getInstallation()), getCredentials(project, env), launcher, node, listener, env)) {
+            String _revision = getRevisionExpanded(project, env);
+            String remote = hg.tip(repository, _revision);
+            String rev = hg.tipNumber(repository, _revision);
+            String branch = revisionType != RevisionType.BRANCH ? hg.branch(repository, _revision) : null;
 
-        if (remote == null) {
-            throw new IOException("failed to find ID of branch head");
-        }
-        if (rev == null) {
-            throw new IOException("failed to find revision of branch head");
-        }
-        if (remote.equals(baseline.id)) { // shortcut
-            return new PollingResult(baseline, new MercurialTagAction(remote, rev, getSubdir(env), branch), Change.NONE);
-        }
-        Set<String> changedFileNames = parseStatus(hg.popen(repository, listener, false, new ArgumentListBuilder("status", "--rev", baseline.id, "--rev", remote)));
+            if (remote == null) {
+                throw new IOException("failed to find ID of branch head");
+            }
+            if (rev == null) {
+                throw new IOException("failed to find revision of branch head");
+            }
+            if (remote.equals(baseline.id)) { // shortcut
+                return new PollingResult(baseline, new MercurialTagAction(remote, rev, getSubdir(env), branch), Change.NONE);
+            }
+            Set<String> changedFileNames = parseStatus(hg.popen(repository, listener, false, new ArgumentListBuilder("status", "--rev", baseline.id, "--rev", remote)));
 
-        MercurialTagAction cur = new MercurialTagAction(remote, rev, getSubdir(env), branch);
-        return new PollingResult(baseline,cur,computeDegreeOfChanges(changedFileNames,output));
-        } finally {
-            hg.close();
+            MercurialTagAction cur = new MercurialTagAction(remote, rev, getSubdir(env), branch);
+            return new PollingResult(baseline, cur, computeDegreeOfChanges(changedFileNames, output));
         }
     }
 
@@ -492,22 +486,19 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     private int pull(Launcher launcher, FilePath repository, TaskListener listener, Node node, String revision, StandardUsernameCredentials credentials, EnvVars env) throws IOException, InterruptedException {
-        HgExe hg = new HgExe(findInstallation(getInstallation()), credentials, launcher, node, listener, env);
-        try {
-        ArgumentListBuilder cmd = hg.seed(true);
-        cmd.add("pull");
-        if (revisionType == RevisionType.BRANCH || revisionType == RevisionType.CHANGESET) { // does not work for tags
-            cmd.add("--rev", revision);
-        }
-        CachedRepo cachedSource = cachedSource(node, env, launcher, listener, true, credentials);
-        if (cachedSource != null) {
-            cmd.add(cachedSource.getRepoLocation());
-        }
-        return HgExe.joinWithPossibleTimeout(
-                hg.launch(cmd).pwd(repository),
-                true, listener);
-        } finally {
-            hg.close();
+        try (HgExe hg = new HgExe(findInstallation(getInstallation()), credentials, launcher, node, listener, env)) {
+            ArgumentListBuilder cmd = hg.seed(true);
+            cmd.add("pull");
+            if (revisionType == RevisionType.BRANCH || revisionType == RevisionType.CHANGESET) { // does not work for tags
+                cmd.add("--rev", revision);
+            }
+            CachedRepo cachedSource = cachedSource(node, env, launcher, listener, true, credentials);
+            if (cachedSource != null) {
+                cmd.add(cachedSource.getRepoLocation());
+            }
+            return HgExe.joinWithPossibleTimeout(
+                    hg.launch(cmd).pwd(repository),
+                    true, listener);
         }
     }
 
@@ -622,20 +613,17 @@ public class MercurialSCM extends SCM implements Serializable {
             return false;
         }
 
-        HgExe hg = new HgExe(findInstallation(getInstallation()), getCredentials(build.getParent(), build.getEnvironment(listener)), launcher, node, listener, build.getEnvironment(listener));
-        try {
-        String upstream = hg.config(repo, "paths.default");
         EnvVars env = build.getEnvironment(listener);
-        if (HgExe.pathEquals(getSource(env), upstream)) {
-            return true;
-        }
-        listener.error(
-                "Workspace reports paths.default as " + upstream +
-                "\nwhich looks different than " + getSource(env) +
-                "\nso falling back to fresh clone rather than incremental update");
-        return false;
-        } finally {
-            hg.close();
+        try (HgExe hg = new HgExe(findInstallation(getInstallation()), getCredentials(build.getParent(), env), launcher, node, listener, env)) {
+            String upstream = hg.config(repo, "paths.default");
+            if (HgExe.pathEquals(getSource(env), upstream)) {
+                return true;
+            }
+            listener.error(
+                    "Workspace reports paths.default as " + upstream +
+                    "\nwhich looks different than " + getSource(env) +
+                    "\nso falling back to fresh clone rather than incremental update");
+            return false;
         }
     }
 
@@ -654,110 +642,99 @@ public class MercurialSCM extends SCM implements Serializable {
         EnvVars env = build.getEnvironment(listener);
         MercurialInstallation inst = findInstallation(getInstallation());
         StandardUsernameCredentials credentials = getCredentials(build.getParent(), env);
-        HgExe hg = new HgExe(inst, credentials, launcher, node, listener, env);
-        try {
-
-        ArgumentListBuilder logCommand = hg.seed(true).add("log", "--rev", prevTag.getId(), "--template", "exists\\n");
-        int exitCode = hg.launch(logCommand).pwd(repository).join();
-        if(exitCode != 0) {
-            listener.error("Previously built revision " + prevTag.getId() + " is not known in this clone; unable to determine change log");
-            createEmptyChangeLog(changelogFile, listener, "changelog");
-            return;
-        }
-        
-        // calc changelog
-        final FileOutputStream os = new FileOutputStream(changelogFile);
-        try {
-            os.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n".getBytes("UTF-8"));
-            try {
-                os.write("<changesets>\n".getBytes("UTF-8"));
-                ArgumentListBuilder args = hg.seed(false);
-                args.add("log");
-                args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
-                if(revisionType == RevisionType.REVSET) {
-                    args.add("--rev", "ancestors(" + revToBuild + ") and not ancestors(" + prevTag.getId() + ")");
-                }
-                else {
-                    args.add("--rev", "ancestors('" + revToBuild.replace("'", "\\'") + "') and not ancestors(" + prevTag.getId() + ")");
-                }
-                args.add("--encoding", "UTF-8");
-                args.add("--encodingmode", "replace");
-
-                ByteArrayOutputStream errorLog = new ByteArrayOutputStream();
-
-                int r = hg.launch(args).stdout(new ForkOutputStream(os, errorLog)).pwd(repository).join();
-                if(r!=0) {
-                    Util.copyStream(new ByteArrayInputStream(errorLog.toByteArray()), listener.getLogger());
-                    throw new IOException("Failure detected while running hg log to determine change log");
-                }
-            } finally {
-                os.write("</changesets>".getBytes("UTF-8"));
+        try (HgExe hg = new HgExe(inst, credentials, launcher, node, listener, env)) {
+            ArgumentListBuilder logCommand = hg.seed(true).add("log", "--rev", prevTag.getId(), "--template", "exists\\n");
+            int exitCode = hg.launch(logCommand).pwd(repository).join();
+            if (exitCode != 0) {
+                listener.error("Previously built revision " + prevTag.getId() + " is not known in this clone; unable to determine change log");
+                createEmptyChangeLog(changelogFile, listener, "changelog");
+                return;
             }
-        } finally {
-            os.close();
-        }
-        } finally {
-            hg.close();
+
+            // calc changelog
+            try (FileOutputStream os = new FileOutputStream(changelogFile)) {
+                os.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n".getBytes("UTF-8"));
+                try {
+                    os.write("<changesets>\n".getBytes("UTF-8"));
+                    ArgumentListBuilder args = hg.seed(false);
+                    args.add("log");
+                    args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
+                    if (revisionType == RevisionType.REVSET) {
+                        args.add("--rev", "ancestors(" + revToBuild + ") and not ancestors(" + prevTag.getId() + ")");
+                    } else {
+                        args.add("--rev", "ancestors('" + revToBuild.replace("'", "\\'") + "') and not ancestors(" + prevTag.getId() + ")");
+                    }
+                    args.add("--encoding", "UTF-8");
+                    args.add("--encodingmode", "replace");
+
+                    ByteArrayOutputStream errorLog = new ByteArrayOutputStream();
+
+                    int r = hg.launch(args).stdout(new ForkOutputStream(os, errorLog)).pwd(repository).join();
+                    if (r != 0) {
+                        Util.copyStream(new ByteArrayInputStream(errorLog.toByteArray()), listener.getLogger());
+                        throw new IOException("Failure detected while running hg log to determine change log");
+                    }
+                } finally {
+                    os.write("</changesets>".getBytes("UTF-8"));
+                }
+            }
         }
     }
 
     private void update(Run<?, ?> build, Launcher launcher, FilePath repository, Node node, TaskListener listener, String toRevision, StandardUsernameCredentials credentials)
             throws IOException, InterruptedException {
-        HgExe hg = new HgExe(findInstallation(getInstallation()), credentials, launcher, node, listener, build.getEnvironment(listener));
         EnvVars env = build.getEnvironment(listener);
-        try {
-        int pullExitCode;
-        try {
-            pullExitCode = pull(launcher, repository, listener, node, toRevision, credentials, env);
-        } catch (IOException e) {
-            if (causedByMissingHg(e)) {
-                listener.error("Failed to pull because hg could not be found;" +
-                        " check that you've properly configured your Mercurial installation");
-            } else {
-                e.printStackTrace(listener.error("Failed to pull"));
+        try (HgExe hg = new HgExe(findInstallation(getInstallation()), credentials, launcher, node, listener, env)) {
+            int pullExitCode;
+            try {
+                pullExitCode = pull(launcher, repository, listener, node, toRevision, credentials, env);
+            } catch (IOException e) {
+                if (causedByMissingHg(e)) {
+                    listener.error("Failed to pull because hg could not be found;" +
+                            " check that you've properly configured your Mercurial installation");
+                } else {
+                    e.printStackTrace(listener.error("Failed to pull"));
+                }
+                throw new AbortException("Failed to pull");
             }
-            throw new AbortException("Failed to pull");
-        }
-        if (pullExitCode != 0) {
-            listener.error("Failed to pull");
-            throw new AbortException("Failed to pull");
-        }
-
-        int updateExitCode;
-        try {
-            updateExitCode = hg.run("update", "--clean", "--rev", toRevision).pwd(repository).join();
-        } catch (IOException e) {
-            listener.error("Failed to update");
-            e.printStackTrace(listener.getLogger());
-            throw new AbortException("Failed to update");
-        }
-        if (updateExitCode != 0) {
-            listener.error("Failed to update");
-            throw new AbortException("Failed to update");
-        }
-        if (build.getNumber() % 100 == 0) {
-            CachedRepo cachedSource = cachedSource(node, env, launcher, listener, true, credentials);
-            if (cachedSource != null && !cachedSource.isUseSharing()) {
-                // Periodically recreate hardlinks to the cache to save disk space.
-                hg.run("--config", "extensions.relink=", "relink", cachedSource.getRepoLocation()).pwd(repository).join(); // ignore failures
+            if (pullExitCode != 0) {
+                listener.error("Failed to pull");
+                throw new AbortException("Failed to pull");
             }
-        }
 
-        if(clean) {
-            if (hg.cleanAll().pwd(repository).join() != 0) {
-                listener.error("Failed to clean unversioned files");
-                throw new AbortException("Failed to clean unversioned files");
+            int updateExitCode;
+            try {
+                updateExitCode = hg.run("update", "--clean", "--rev", toRevision).pwd(repository).join();
+            } catch (IOException e) {
+                listener.error("Failed to update");
+                e.printStackTrace(listener.getLogger());
+                throw new AbortException("Failed to update");
             }
-        }
+            if (updateExitCode != 0) {
+                listener.error("Failed to update");
+                throw new AbortException("Failed to update");
+            }
+            if (build.getNumber() % 100 == 0) {
+                CachedRepo cachedSource = cachedSource(node, env, launcher, listener, true, credentials);
+                if (cachedSource != null && !cachedSource.isUseSharing()) {
+                    // Periodically recreate hardlinks to the cache to save disk space.
+                    hg.run("--config", "extensions.relink=", "relink", cachedSource.getRepoLocation()).pwd(repository).join(); // ignore failures
+                }
+            }
 
-        String tip = hg.tip(repository, null);
-        String rev = hg.tipNumber(repository, null);
-        String branch = revisionType != RevisionType.BRANCH ? hg.branch(repository, null) : null;
-        if (tip != null && rev != null) {
-            build.addAction(new MercurialTagAction(tip, rev, getSubdir(env), branch));
-        }
-        } finally {
-            hg.close();
+            if (clean) {
+                if (hg.cleanAll().pwd(repository).join() != 0) {
+                    listener.error("Failed to clean unversioned files");
+                    throw new AbortException("Failed to clean unversioned files");
+                }
+            }
+
+            String tip = hg.tip(repository, null);
+            String rev = hg.tipNumber(repository, null);
+            String branch = revisionType != RevisionType.BRANCH ? hg.branch(repository, null) : null;
+            if (tip != null && rev != null) {
+                build.addAction(new MercurialTagAction(tip, rev, getSubdir(env), branch));
+            }
         }
     }
 
@@ -804,83 +781,79 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         EnvVars env = build.getEnvironment(listener);
-        HgExe hg = new HgExe(findInstallation(getInstallation()), credentials, launcher, node, listener, env);
-        try {
-
-        ArgumentListBuilder args = hg.seed(true);
-        CachedRepo cachedSource = cachedSource(node, env, launcher, listener, false, credentials);
-        if (cachedSource != null) {
-            if (cachedSource.isUseSharing()) {
-                args.add("--config", "extensions.share=");
-                args.add("share");
-                args.add("--noupdate");
-                args.add(cachedSource.getRepoLocation());
-                if (new VersionNumber(hg.version()).compareTo(new VersionNumber("3.3")) >= 0) {
-                    args.add("-B");
+        try (HgExe hg = new HgExe(findInstallation(getInstallation()), credentials, launcher, node, listener, env)) {
+            ArgumentListBuilder args = hg.seed(true);
+            CachedRepo cachedSource = cachedSource(node, env, launcher, listener, false, credentials);
+            if (cachedSource != null) {
+                if (cachedSource.isUseSharing()) {
+                    args.add("--config", "extensions.share=");
+                    args.add("share");
+                    args.add("--noupdate");
+                    args.add(cachedSource.getRepoLocation());
+                    if (new VersionNumber(hg.version()).compareTo(new VersionNumber("3.3")) >= 0) {
+                        args.add("-B");
+                    }
+                } else {
+                    args.add("clone");
+                    args.add("--noupdate");
+                    args.add(cachedSource.getRepoLocation());
                 }
             } else {
                 args.add("clone");
+                if (revisionType == RevisionType.BRANCH || revisionType == RevisionType.CHANGESET) {
+                    args.add("--rev", toRevision);
+                }
                 args.add("--noupdate");
-                args.add(cachedSource.getRepoLocation());
+                args.add(getSource(env));
             }
-        } else {
-            args.add("clone");
-            if (revisionType == RevisionType.BRANCH || revisionType == RevisionType.CHANGESET) {
-                args.add("--rev", toRevision);
+            args.add(repository.getRemote());
+            repository.mkdirs();
+            int cloneExitCode;
+            try {
+                cloneExitCode = hg.launch(args).join();
+            } catch (IOException e) {
+                if (causedByMissingHg(e)) {
+                    listener.error("Failed to clone " + getSource(env) + " because hg could not be found;" +
+                            " check that you've properly configured your Mercurial installation");
+                } else {
+                    e.printStackTrace(listener.error(Messages.MercurialSCM_failed_to_clone(getSource(env))));
+                }
+                throw new AbortException(Messages.MercurialSCM_failed_to_clone(getSource(env)));
             }
-            args.add("--noupdate");
-            args.add(getSource(env));
-        }
-        args.add(repository.getRemote());
-        repository.mkdirs();
-        int cloneExitCode;
-        try {
-            cloneExitCode = hg.launch(args).join();
-        } catch (IOException e) {
-            if (causedByMissingHg(e)) {
-                listener.error("Failed to clone " + getSource(env) + " because hg could not be found;" +
-                        " check that you've properly configured your Mercurial installation");
-            } else {
-                e.printStackTrace(listener.error(Messages.MercurialSCM_failed_to_clone(getSource(env))));
+            if (cloneExitCode != 0) {
+                listener.error(Messages.MercurialSCM_failed_to_clone(getSource(env)));
+                throw new AbortException(Messages.MercurialSCM_failed_to_clone(getSource(env)));
             }
-            throw new AbortException(Messages.MercurialSCM_failed_to_clone(getSource(env)));
-        }
-        if(cloneExitCode!=0) {
-            listener.error(Messages.MercurialSCM_failed_to_clone(getSource(env)));
-            throw new AbortException(Messages.MercurialSCM_failed_to_clone(getSource(env)));
-        }
 
-        if (cachedSource != null && !cachedSource.isUseSharing()) {
-            FilePath hgrc = repository.child(".hg/hgrc");
-            if (hgrc.exists()) {
-                try (InputStream is = hgrc.read()) {
-                    Ini hgrcIni = new Ini(is);
-                    hgrcIni.put("paths", "default", getSource(env));
-                    try (OutputStream os = hgrc.write()) {
-                        hgrcIni.store(os);
+            if (cachedSource != null && !cachedSource.isUseSharing()) {
+                FilePath hgrc = repository.child(".hg/hgrc");
+                if (hgrc.exists()) {
+                    try (InputStream is = hgrc.read()) {
+                        Ini hgrcIni = new Ini(is);
+                        hgrcIni.put("paths", "default", getSource(env));
+                        try (OutputStream os = hgrc.write()) {
+                            hgrcIni.store(os);
+                        }
                     }
                 }
+                // Passing --rev disables hardlinks, so we need to recreate them:
+                hg.run("--config", "extensions.relink=", "relink", cachedSource.getRepoLocation())
+                        .pwd(repository).join(); // ignore failures
             }
-            // Passing --rev disables hardlinks, so we need to recreate them:
-            hg.run("--config", "extensions.relink=", "relink", cachedSource.getRepoLocation())
-                    .pwd(repository).join(); // ignore failures
-        }
 
-        ArgumentListBuilder upArgs = hg.seed(true);
-        upArgs.add("update");
-        upArgs.add("--rev", toRevision);
-        if (hg.launch(upArgs).pwd(repository).join() != 0) {
-            throw new AbortException("Failed to update " + getSource(env) + " to rev " + toRevision);
-        }
+            ArgumentListBuilder upArgs = hg.seed(true);
+            upArgs.add("update");
+            upArgs.add("--rev", toRevision);
+            if (hg.launch(upArgs).pwd(repository).join() != 0) {
+                throw new AbortException("Failed to update " + getSource(env) + " to rev " + toRevision);
+            }
 
-        String tip = hg.tip(repository, null);
-        String rev = hg.tipNumber(repository, null);
-        String branch = revisionType != RevisionType.BRANCH ? hg.branch(repository, null) : null;
-        if (tip != null && rev != null) {
-            build.addAction(new MercurialTagAction(tip, rev, getSubdir(env), branch));
-        }
-        } finally {
-            hg.close();
+            String tip = hg.tip(repository, null);
+            String rev = hg.tipNumber(repository, null);
+            String branch = revisionType != RevisionType.BRANCH ? hg.branch(repository, null) : null;
+            if (tip != null && rev != null) {
+                build.addAction(new MercurialTagAction(tip, rev, getSubdir(env), branch));
+            }
         }
     }
 

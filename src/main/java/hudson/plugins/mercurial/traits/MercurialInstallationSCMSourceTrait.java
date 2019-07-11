@@ -118,6 +118,14 @@ public class MercurialInstallationSCMSourceTrait extends SCMSourceTrait {
         /**
          * {@inheritDoc}
          */
+        @Override
+        public Class<? extends SCMSource> getSourceClass() {
+            return MercurialSCMSource.class;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
         @Override public Class<? extends SCM> getScmClass() {
             return MercurialSCM.class;
         }

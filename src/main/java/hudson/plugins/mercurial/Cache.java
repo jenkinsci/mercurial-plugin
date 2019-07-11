@@ -103,147 +103,139 @@ class Cache {
             listener.getLogger().println("Waiting for master lock on hgcache/" + hash + " " + masterLock + "...");
         }
 
-            // Always update master cache first.
-            final Node master = Jenkins.getInstance();
-            if (master == null) { // Should not happen
-                throw new IOException("Cannot retrieve the Jenkins master node");
-            }
-
-            FilePath masterCaches = null;
-            if (masterCacheRoot != null){
-                masterCaches = new FilePath(master.getChannel(), masterCacheRoot);
-            } else {
-                FilePath rootPath = master.getRootPath();
-                if (rootPath == null) {
-                    throw new IOException("Cannot retrieve the root directory of the Jenkins master node");
-                }
-                masterCaches = rootPath.child("hgcache");
-            }
-
-            FilePath masterCache = masterCaches.child(hash);
-            Launcher masterLauncher = node == master ? launcher : master.createLauncher(listener);
-
-            // hg invocation on master
-            // do we need to pass in EnvVars from a build too?
-            HgExe masterHg = new HgExe(inst, credentials, masterLauncher, master, listener, new EnvVars());
-            try {
-
-        // Lock the block used to verify we end up having a cloned repo in the master,
-        // whether if it was previously cloned in a different build or if it's 
-        // going to be cloned right now.
-        masterLock.lockInterruptibly();
-        try {
-            listener.getLogger().println("Acquired master cache lock.");
-            // TODO use getCredentials()
-            if (masterCache.isDirectory()) {
-                ArgumentListBuilder args = masterHg.seed(true).add("pull");
-                if (HgExe.joinWithPossibleTimeout(masterHg.launch(args).pwd(masterCache), true, listener) != 0) {
-                    listener.error("Failed to update " + masterCache);
-                    return null;
-                }
-            } else {
-                masterCaches.mkdirs();
-                ArgumentListBuilder args = masterHg.seed(true).add("clone").add("--noupdate").add(remote);
-                if (HgExe.joinWithPossibleTimeout(masterHg.launch(args.add(masterCache.getRemote())), useTimeout, listener) != 0) {
-                    listener.error("Failed to clone " + remote);
-                    return null;
-                }
-            }
-        } finally {
-            masterLock.unlock();
-            listener.getLogger().println("Master cache lock released.");
+        // Always update master cache first.
+        final Node master = Jenkins.getInstance();
+        if (master == null) { // Should not happen
+            throw new IOException("Cannot retrieve the Jenkins master node");
         }
+
+        FilePath masterCaches = null;
+        if (masterCacheRoot != null){
+            masterCaches = new FilePath(master.getChannel(), masterCacheRoot);
+        } else {
+            FilePath rootPath = master.getRootPath();
+            if (rootPath == null) {
+                throw new IOException("Cannot retrieve the root directory of the Jenkins master node");
+            }
+            masterCaches = rootPath.child("hgcache");
+        }
+
+        FilePath masterCache = masterCaches.child(hash);
+        Launcher masterLauncher = node == master ? launcher : master.createLauncher(listener);
+
+        // hg invocation on master
+        // do we need to pass in EnvVars from a build too?
+        try (HgExe masterHg = new HgExe(inst, credentials, masterLauncher, master, listener, new EnvVars())) {
+            // Lock the block used to verify we end up having a cloned repo in the master,
+            // whether if it was previously cloned in a different build or if it's
+            // going to be cloned right now.
+            masterLock.lockInterruptibly();
+            try {
+                listener.getLogger().println("Acquired master cache lock.");
+                // TODO use getCredentials()
+                if (masterCache.isDirectory()) {
+                    ArgumentListBuilder args = masterHg.seed(true).add("pull");
+                    if (HgExe.joinWithPossibleTimeout(masterHg.launch(args).pwd(masterCache), true, listener) != 0) {
+                        listener.error("Failed to update " + masterCache);
+                        return null;
+                    }
+                } else {
+                    masterCaches.mkdirs();
+                    ArgumentListBuilder args = masterHg.seed(true).add("clone").add("--noupdate").add(remote);
+                    if (HgExe.joinWithPossibleTimeout(masterHg.launch(args.add(masterCache.getRemote())), useTimeout, listener) != 0) {
+                        listener.error("Failed to clone " + remote);
+                        return null;
+                    }
+                }
+            } finally {
+                masterLock.unlock();
+                listener.getLogger().println("Master cache lock released.");
+            }
             if (node == master) {
                 return masterCache;
             }
             // Not on master, so need to create/update local cache as well.
 
-        // We are in a slave node that will need also an updated local cache: clone it or 
-        // pull pending changes, if any. This can be safely done in parallel in
-        // different slave nodes for a given repo, so we'll use different
-        // node-specific locks to achieve this.
-        ReentrantLock slaveNodeLock = getLockForSlaveNode(node.getNodeName());
-        
-        boolean slaveNodeWasLocked = slaveNodeLock.isLocked();
-        if (slaveNodeWasLocked) {
-            listener.getLogger().println("Waiting for slave node cache lock in " + node.getNodeName() + " on hgcache/" + hash + " " + slaveNodeWasLocked + "...");
-        }
-        
-        slaveNodeLock.lockInterruptibly();
-        try {
-            listener.getLogger().println("Acquired slave node cache lock for node " + node.getNodeName() + ".");            
+            // We are in a slave node that will need also an updated local cache: clone it or
+            // pull pending changes, if any. This can be safely done in parallel in
+            // different slave nodes for a given repo, so we'll use different
+            // node-specific locks to achieve this.
+            ReentrantLock slaveNodeLock = getLockForSlaveNode(node.getNodeName());
 
-            final FilePath nodeRootPath = node.getRootPath();
-            if (nodeRootPath == null) {
-                throw new IOException("Cannot retrieve the root directory of the Jenkins node");
+            boolean slaveNodeWasLocked = slaveNodeLock.isLocked();
+            if (slaveNodeWasLocked) {
+                listener.getLogger().println("Waiting for slave node cache lock in " + node.getNodeName() + " on hgcache/" + hash + " " + slaveNodeWasLocked + "...");
             }
-            FilePath localCaches = nodeRootPath.child("hgcache");
-            FilePath localCache = localCaches.child(hash);
-            
-            // Bundle name is node-specific, as we may have more than one
-            // node being updated in parallel, and each one will use its own
-            // bundle.
-            String bundleFileName = "xfer-" + node.getNodeName() + ".hg";
-            FilePath masterTransfer = masterCache.child(bundleFileName);
-            FilePath localTransfer = localCache.child("xfer.hg");
-            try {
-                // hg invocation on the slave
-                HgExe slaveHg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars());
-                try {
 
-                if (localCache.isDirectory()) {
-                    // Need to transfer just newly available changesets.
-                    Set<String> masterHeads = masterHg.heads(masterCache, useTimeout);
-                    Set<String> localHeads = slaveHg.heads(localCache, useTimeout);
-                    if (localHeads.equals(masterHeads)) {
-                        listener.getLogger().println("Local cache is up to date.");
-                    } else {
-                        // If there are some local heads not in master, they must be ancestors of new heads.
-                        // If there are some master heads not in local, they could be descendants of old heads,
-                        // or they could be new branches.
-                        // Issue1910: in Hg 1.4.3 and earlier, passing --base $h for h in localHeads will fail
-                        // to actually exclude those head sets, but not a big deal. (Hg 1.5 fixes that but leaves
-                        // a major bug that if no csets are selected, the whole repo will be bundled; fortunately
-                        // this case should be caught by equality check above.)
-                        if (HgExe.joinWithPossibleTimeout(masterHg.bundle(localHeads,bundleFileName).
-                                pwd(masterCache), useTimeout, listener) != 0) {
-                            listener.error("Failed to send outgoing changes");
-                            return null;
+            slaveNodeLock.lockInterruptibly();
+            try {
+                listener.getLogger().println("Acquired slave node cache lock for node " + node.getNodeName() + ".");
+
+                final FilePath nodeRootPath = node.getRootPath();
+                if (nodeRootPath == null) {
+                    throw new IOException("Cannot retrieve the root directory of the Jenkins node");
+                }
+                FilePath localCaches = nodeRootPath.child("hgcache");
+                FilePath localCache = localCaches.child(hash);
+
+                // Bundle name is node-specific, as we may have more than one
+                // node being updated in parallel, and each one will use its own
+                // bundle.
+                String bundleFileName = "xfer-" + node.getNodeName() + ".hg";
+                FilePath masterTransfer = masterCache.child(bundleFileName);
+                FilePath localTransfer = localCache.child("xfer.hg");
+                try {
+                    // hg invocation on the slave
+                    try (HgExe slaveHg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars())) {
+                        if (localCache.isDirectory()) {
+                            // Need to transfer just newly available changesets.
+                            Set<String> masterHeads = masterHg.heads(masterCache, useTimeout);
+                            Set<String> localHeads = slaveHg.heads(localCache, useTimeout);
+                            if (localHeads.equals(masterHeads)) {
+                                listener.getLogger().println("Local cache is up to date.");
+                            } else {
+                                // If there are some local heads not in master, they must be ancestors of new heads.
+                                // If there are some master heads not in local, they could be descendants of old heads,
+                                // or they could be new branches.
+                                // Issue1910: in Hg 1.4.3 and earlier, passing --base $h for h in localHeads will fail
+                                // to actually exclude those head sets, but not a big deal. (Hg 1.5 fixes that but leaves
+                                // a major bug that if no csets are selected, the whole repo will be bundled; fortunately
+                                // this case should be caught by equality check above.)
+                                if (HgExe.joinWithPossibleTimeout(masterHg.bundle(localHeads, bundleFileName).
+                                        pwd(masterCache), useTimeout, listener) != 0) {
+                                    listener.error("Failed to send outgoing changes");
+                                    return null;
+                                }
+                            }
+                        } else {
+                            // Need to transfer entire repo.
+                            if (HgExe.joinWithPossibleTimeout(masterHg.bundleAll(bundleFileName).pwd(masterCache), useTimeout, listener) != 0) {
+                                listener.error("Failed to bundle repo");
+                                return null;
+                            }
+                            localCaches.mkdirs();
+                            if (HgExe.joinWithPossibleTimeout(slaveHg.init(localCache), useTimeout, listener) != 0) {
+                                listener.error("Failed to create local cache");
+                                return null;
+                            }
+                        }
+                        if (masterTransfer.exists()) {
+                            masterTransfer.copyTo(localTransfer);
+                            if (HgExe.joinWithPossibleTimeout(slaveHg.unbundle("xfer.hg").pwd(localCache), useTimeout, listener) != 0) {
+                                listener.error("Failed to unbundle " + localTransfer);
+                                return null;
+                            }
                         }
                     }
-                } else {
-                    // Need to transfer entire repo.
-                    if (HgExe.joinWithPossibleTimeout(masterHg.bundleAll(bundleFileName).pwd(masterCache), useTimeout, listener) != 0) {
-                        listener.error("Failed to bundle repo");
-                        return null;
-                    }
-                    localCaches.mkdirs();
-                    if (HgExe.joinWithPossibleTimeout(slaveHg.init(localCache), useTimeout, listener) != 0) {
-                        listener.error("Failed to create local cache");
-                        return null;
-                    }
-                }
-                if (masterTransfer.exists()) {
-                    masterTransfer.copyTo(localTransfer);
-                    if (HgExe.joinWithPossibleTimeout(slaveHg.unbundle("xfer.hg").pwd(localCache), useTimeout, listener) != 0) {
-                        listener.error("Failed to unbundle " + localTransfer);
-                        return null;
-                    }
-                }
                 } finally {
-                    slaveHg.close();
+                    masterTransfer.delete();
+                    localTransfer.delete();
                 }
+                return localCache;
             } finally {
-                masterTransfer.delete();
-                localTransfer.delete();
+                slaveNodeLock.unlock();
+                listener.getLogger().println("Slave node cache lock released for node " + node.getNodeName() + ".");
             }
-            return localCache;
-        } finally {
-            slaveNodeLock.unlock();
-            listener.getLogger().println("Slave node cache lock released for node " + node.getNodeName() + ".");
-        }
-            } finally {
-            masterHg.close();
         }
     }
 

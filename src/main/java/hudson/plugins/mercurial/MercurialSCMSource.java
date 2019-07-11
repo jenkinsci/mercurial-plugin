@@ -212,8 +212,7 @@ public final class MercurialSCMSource extends SCMSource {
                 listener.error("Could not use caches, not fetching branch heads");
                 return;
             }
-            final HgExe hg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars());
-            try {
+            try (HgExe hg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars())) {
                 String heads = hg.popen(cache, listener, true,
                         new ArgumentListBuilder("heads", "--template", "{node} {branch}\\n"));
                 int count = 0;
@@ -254,8 +253,6 @@ public final class MercurialSCMSource extends SCMSource {
                     }
                 }
                 listener.getLogger().format("Processed %d branches%n", count);
-            } finally {
-                hg.close();
             }
         }
     }
@@ -285,8 +282,7 @@ public final class MercurialSCMSource extends SCMSource {
                 listener.error("Could not use caches, not fetching branch heads");
                 return null;
             }
-            final HgExe hg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars());
-            try {
+            try (HgExe hg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars())) {
                 String revision = hg.popen(cache, listener, true,
                         new ArgumentListBuilder("log", "-r", "present(" + thingName + ")", "--template",
                                 "{node} {branch}"));
@@ -296,8 +292,6 @@ public final class MercurialSCMSource extends SCMSource {
                 String hash = revision.substring(0, revision.indexOf(' '));
                 String branch = revision.substring(revision.indexOf(' ') + 1, revision.length());
                 return new MercurialRevision(new SCMHead(branch), hash);
-            } finally {
-                hg.close();
             }
         }
     }
