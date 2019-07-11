@@ -151,6 +151,7 @@ public class HgExe implements AutoCloseable {
             }
             ARGB: for (ArgumentListBuilder b : new ArgumentListBuilder[] {base, baseNoDebug}) {
                 // TODO do we really want to pass -l username? Usually the username is ‘hg’ and encoded in the URL. But seems harmless at least on bitbucket.
+                // TODO space-in-path bug
                 String sshAuthOpts = String.format(" -i %s -l %s", sshPrivateKey.getRemote(), cc.getUsername());
                 // First check to see if the config already specified `ui.ssh=ssh …`; if so, just append to it.
                 List<String> args = b.toList();
