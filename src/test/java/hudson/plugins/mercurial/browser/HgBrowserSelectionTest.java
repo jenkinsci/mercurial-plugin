@@ -4,7 +4,6 @@ import hudson.model.Descriptor;
 import hudson.model.FreeStyleProject;
 import hudson.plugins.mercurial.MercurialSCM;
 import hudson.scm.RepositoryBrowser;
-import java.net.URL;
 import java.util.List;
 import static org.junit.Assert.*;
 import org.junit.Rule;
@@ -37,7 +36,7 @@ public class HgBrowserSelectionTest {
         FreeStyleProject p = (FreeStyleProject) j.jenkins.getItem("foo");
         MercurialSCM ms = (MercurialSCM) p.getScm();
         final HgBrowser browser = ms.getBrowser();
-        assertEquals("wrong url", new URL("http://bitbucket.org/"), browser.getUrl());
+        assertEquals("wrong url", "http://bitbucket.org/", browser.getUrl().toString());
         assertTrue("class:" + browser.getClass(), browser instanceof BitBucket);
         j.assertEqualBeans(new BitBucket("http://bitbucket.org/"), browser, "url");
     }
@@ -48,7 +47,7 @@ public class HgBrowserSelectionTest {
         FreeStyleProject p = (FreeStyleProject) j.jenkins.getItem("foo");
         MercurialSCM ms = (MercurialSCM) p.getScm();
         final HgBrowser browser = ms.getBrowser();
-        assertEquals("wrong url", new URL("http://bitbucket.org/"), browser.getUrl());
+        assertEquals("wrong url", "http://bitbucket.org/", browser.getUrl().toString());
         assertTrue("class:" + browser.getClass(), browser instanceof BitBucket);
         j.assertEqualBeans(new BitBucket("http://bitbucket.org/"), browser, "url");
         final List<Descriptor<RepositoryBrowser<?>>> browserDescriptors = ms.getDescriptor().getBrowserDescriptors();
