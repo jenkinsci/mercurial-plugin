@@ -90,7 +90,7 @@ public class HgExeFunctionalTest {
 
     @Test public void credentialsSSHKeyTest() throws Exception {
         BasicSSHUserPrivateKey.PrivateKeySource source = new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(
-                "test key");
+                "test key\n");
         BasicSSHUserPrivateKey credentials = new BasicSSHUserPrivateKey(
                 CredentialsScope.GLOBAL, "", "testuser", source, null, null);
 
@@ -99,7 +99,7 @@ public class HgExeFunctionalTest {
             Matcher matcher = Pattern.compile("ssh\\s-i\\s(.+)\\s-l\\stestuser").matcher(b.toCommandArray()[2]);
             matcher.find();
             String fileName = matcher.group(1);
-            assertEquals("test key", FileUtils.readFileToString(new File(fileName)));
+            assertEquals("test key\n", FileUtils.readFileToString(new File(fileName)));
             assertEquals(new ArgumentListBuilder("hg", "--config", "******").toString(), b.toString());
         }
     }
