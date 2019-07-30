@@ -6,7 +6,7 @@ import com.cloudbees.plugins.credentials.impl.BaseStandardCredentials;
 import hudson.util.Secret;
 import static org.junit.Assert.*;
 import org.junit.Test;
-import org.jvnet.hudson.test.Bug;
+import org.jvnet.hudson.test.Issue;
 
 public class CacheTest {
 
@@ -21,7 +21,7 @@ public class CacheTest {
 				Cache.hashSource("http://hg.netbeans.org/core-main/", new MockUsernamePasswordCredentials(CredentialsScope.GLOBAL, "what-ever", "bob@nowhere.net"),null));
     }
 
-    @Bug(12544)
+    @Issue("JENKINS-12544")
     @Test public void hashSource2() throws Exception {
         assertEquals("DA7E6A4632009859A61A551999EE2109EBB69267-ronaldradial", Cache.hashSource("http://ronaldradial:8000/", null,null));
     }

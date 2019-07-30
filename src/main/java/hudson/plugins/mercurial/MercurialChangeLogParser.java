@@ -5,12 +5,9 @@ import hudson.model.Run;
 import hudson.scm.ChangeLogParser;
 import hudson.scm.RepositoryBrowser;
 import hudson.util.Digester2;
-import hudson.util.IOException2;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Set;
@@ -58,9 +55,9 @@ public class MercurialChangeLogParser extends ChangeLogParser {
         try {
             digester.parse(changelogFile);
         } catch (IOException e) {
-            throw new IOException2("Failed to parse " + changelogFile, e);
+            throw new IOException("Failed to parse " + changelogFile, e);
         } catch (SAXException e) {
-            throw new IOException2("Failed to parse " + changelogFile + ": '" + Util.loadFile(changelogFile) + "'", e);
+            throw new IOException("Failed to parse " + changelogFile + ": '" + Util.loadFile(changelogFile) + "'", e);
         }
 
         if (modules != null) {
@@ -85,20 +82,7 @@ public class MercurialChangeLogParser extends ChangeLogParser {
         // the Jenkins changes view,
         // and is like the old situation where 'hg incoming' was used to
         // determine the changelog
-        Collections.sort(r, new Comparator<MercurialChangeSet>() {
-            public int compare(MercurialChangeSet o1, MercurialChangeSet o2) {
-                // don't do return o1.getRev() - o2.getRev(), as that is
-                // susceptible to integer overflow
-                if (o1.getRev() < o2.getRev()) {
-                    return -1;
-                }
-                if (o1.getRev() == o2.getRev()) {
-                    return 0;
-                } else {
-                    return 1;
-                }
-            }
-        });
+        r.sort(Comparator.comparingLong(MercurialChangeSet::getRev));
 
         return new MercurialChangeSetList(build, browser, r);
     }

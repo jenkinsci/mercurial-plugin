@@ -43,7 +43,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.jvnet.hudson.test.Bug;
 import org.jvnet.hudson.test.FakeLauncher;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -95,7 +94,7 @@ public abstract class SCMTestBase {
 
     // TODO migrate test cases to FunctionalTest, eventually delete this and subclasses
 
-    @Bug(1099)
+    @Issue("JENKINS-1099")
     @Test public void pollingLimitedToModules() throws Exception {
         PollingResult pr;
         FreeStyleProject p = j.createFreeStyleProject();
@@ -130,7 +129,7 @@ public abstract class SCMTestBase {
         */
     }
 
-    @Bug(6337)
+    @Issue("JENKINS-6337")
     @Test public void pollingLimitedToModules2() throws Exception {
         PollingResult pr;
         FreeStyleProject p = j.createFreeStyleProject();
@@ -149,7 +148,7 @@ public abstract class SCMTestBase {
         m.buildAndCheck(p, "dir1/f");
     }
 
-    @Bug(12361)
+    @Issue("JENKINS-12361")
     @Test public void pollingLimitedToModules3() throws Exception {
         PollingResult pr;
         FreeStyleProject p = j.createFreeStyleProject();
@@ -168,7 +167,7 @@ public abstract class SCMTestBase {
         m.buildAndCheck(p, "dir1/f");
     }
 
-    @Bug(13174)
+    @Issue("JENKINS-13174")
     @Test public void pollingIgnoresMetaFiles() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, null, null, null, false));
@@ -179,7 +178,7 @@ public abstract class SCMTestBase {
         assertEquals(PollingResult.Change.INSIGNIFICANT, m.pollSCMChanges(p).change);
     }
 
-    @Bug(7594)
+    @Issue("JENKINS-7594")
     @Test public void pollingHonorsBranchMerges() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, null, null, null, false));
@@ -197,7 +196,7 @@ public abstract class SCMTestBase {
         m.buildAndCheck(p, "feature");
     }
 
-    @Bug(7594)
+    @Issue("JENKINS-7594")
     @Test public void pollingHonorsBranchMergesWithModules() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, "mod1", null, null, false));
@@ -222,7 +221,7 @@ public abstract class SCMTestBase {
         assertEquals(PollingResult.Change.INSIGNIFICANT, pr.change);
     }
 
-    @Bug(4702)
+    @Issue("JENKINS-4702")
     @Test public void changelogLimitedToModules() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
         // Control case: no modules specified.
@@ -270,7 +269,7 @@ public abstract class SCMTestBase {
         assertFalse(it.hasNext());
     }
 
-    @Bug(4271)
+    @Issue("JENKINS-4271")
     @Test public void parameterizedBuildsBranch() throws Exception {
         m.hg(repo, "init");
         m.touchAndCommit(repo, "trunk");
@@ -294,7 +293,7 @@ public abstract class SCMTestBase {
                 new StringParameterValue("BRANCH", "b")));
     }
 
-    @Bug(9686)
+    @Issue("JENKINS-9686")
     @Test public void pollingExpandsParameterDefaults() throws Exception {
         m.hg(repo, "init");
         m.touchAndCommit(repo, "trunk");
@@ -316,7 +315,7 @@ public abstract class SCMTestBase {
         assertEquals(PollingResult.Change.SIGNIFICANT, m.pollSCMChanges(p).change);
     }
 
-    @Bug(6517)
+    @Issue("JENKINS-6517")
     @Test public void fileListOmittedForMerges() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, null,
@@ -368,7 +367,7 @@ public abstract class SCMTestBase {
         assertPollingResult(PollingResult.Change.SIGNIFICANT, reorganizationCommit, mergeCommit, m.pollSCMChanges(projectForImplModule));
     }
 
-    @Bug(3602)
+    @Issue("JENKINS-3602")
     @Test public void subdirectoryCheckout() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, null,
@@ -473,7 +472,7 @@ public abstract class SCMTestBase {
      * the same change log. This test verifies that, by comparing the "normal"
      * behavior with when the workspace is removed after every build.
      */
-    @Bug(10255)
+    @Issue("JENKINS-10255")
     @Test public void changelogOnClone() throws Exception {
         AbstractBuild<?, ?> b;
         FreeStyleProject p = j.createFreeStyleProject();
@@ -506,7 +505,7 @@ public abstract class SCMTestBase {
      * test verifies that by running 3 builds, each for one commit, but
      * alternating which node the build runs on.
      */
-    @Bug(10255)
+    @Issue("JENKINS-10255")
     @Test public void changelogFromPreviousBuild() throws Exception {
         AbstractBuild<?, ?> b;
         FreeStyleProject p = j.createFreeStyleProject();
@@ -532,7 +531,7 @@ public abstract class SCMTestBase {
                 Collections.singletonList(Collections.singleton("dir3/f1")), b);
     }
 
-    @Bug(12162)
+    @Issue("JENKINS-12162")
     @Test public void changelogInMultiSCM() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
         m.hg(repo, "init");
@@ -603,7 +602,7 @@ public abstract class SCMTestBase {
         assertPollingResult(PollingResult.Change.SIGNIFICANT, cs4, cs5, pr);
     }
     
-    @Bug(11460)
+    @Issue("JENKINS-11460")
     @Test public void trailingUrlWhitespace() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath() + " ", null,
@@ -614,7 +613,7 @@ public abstract class SCMTestBase {
         assertEquals(Result.SUCCESS, b.getResult());
     }
     
-    @Bug(12829)
+    @Issue("JENKINS-12829")
     @Test public void nonExistingBranchesDontGenerateMercurialTagActionsInTheBuild() throws Exception {
         AbstractBuild<?, ?> b;
         FreeStyleProject p = j.createFreeStyleProject();
@@ -630,7 +629,7 @@ public abstract class SCMTestBase {
         }
     }
 
-    @Bug(5396)
+    @Issue("JENKINS-5396")
     @Test public void tags() throws Exception {
         m.hg(repo, "init");
         m.touchAndCommit(repo, "f1");
@@ -719,7 +718,7 @@ public abstract class SCMTestBase {
         }
     }
 
-    @Bug(15806)
+    @Issue("JENKINS-15806")
     @Test public void testPullReturnCode() throws Exception {
         File repoOnline = tmp.newFolder();
         File repoOffline = new File(repoOnline.getPath() + "-offline");
@@ -756,7 +755,7 @@ public abstract class SCMTestBase {
         m.hg(repo, "update", "--clean", "default");
     }
 
-    @Bug(10706)
+    @Issue("JENKINS-10706")
     @Test public void testGetBranchFromTag() throws Exception {
         initRepoWithTag();
         FreeStyleProject p = j.createFreeStyleProject();
@@ -769,7 +768,7 @@ public abstract class SCMTestBase {
         assertEquals("stable", b.getEnvironment().get("MERCURIAL_REVISION_BRANCH"));
     }
 
-    @Bug(10706)
+    @Issue("JENKINS-10706")
     @Test public void testGetNoBranchFromBranch() throws Exception {
         initRepoWithTag();
         FreeStyleProject p = j.createFreeStyleProject();

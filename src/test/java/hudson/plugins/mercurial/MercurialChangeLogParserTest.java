@@ -32,11 +32,9 @@ import java.io.PrintWriter;
 import java.util.Iterator;
 import java.util.TreeSet;
 import static org.junit.Assert.*;
-import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
-import org.jvnet.hudson.test.Bug;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.WithoutJenkins;
@@ -46,7 +44,7 @@ public class MercurialChangeLogParserTest {
     @Rule public JenkinsRule j = new JenkinsRule(); // otherwise CanonicalIdResolver are missing
     @Rule public TemporaryFolder tmp = new TemporaryFolder();
 
-    @Bug(16332)
+    @Issue("JENKINS-16332")
     @Test public void parseAddressFromChangeLog() throws Exception {
         File changelogXml = tmp.newFile("changelog.xml");
         try (PrintWriter pw = new PrintWriter(changelogXml, "UTF-8")) {

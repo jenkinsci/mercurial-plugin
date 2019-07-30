@@ -44,7 +44,7 @@ import static org.junit.Assert.assertEquals;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.jvnet.hudson.test.Bug;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
 
@@ -104,7 +104,7 @@ public class HgExeFunctionalTest {
         }
     }
 
-    @Bug(5723)
+    @Issue("JENKINS-5723")
     @Test public void customConfiguration() throws Exception {
         MercurialInstallation customConfiguration = new MercurialInstallation(INSTALLATION, "", "hg", false, false, false, "[defaults]\nclone = --uncompressed\n", null);
         try (HgExe hgexe = new HgExe(customConfiguration, null, launcher, j.jenkins, listener, vars)) {

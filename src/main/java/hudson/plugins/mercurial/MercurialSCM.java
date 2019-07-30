@@ -49,6 +49,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.Serializable;
 import java.net.MalformedURLException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -653,9 +654,9 @@ public class MercurialSCM extends SCM implements Serializable {
 
             // calc changelog
             try (FileOutputStream os = new FileOutputStream(changelogFile)) {
-                os.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n".getBytes("UTF-8"));
+                os.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n".getBytes(StandardCharsets.UTF_8));
                 try {
-                    os.write("<changesets>\n".getBytes("UTF-8"));
+                    os.write("<changesets>\n".getBytes(StandardCharsets.UTF_8));
                     ArgumentListBuilder args = hg.seed(false);
                     args.add("log");
                     args.add("--template", MercurialChangeSet.CHANGELOG_TEMPLATE);
@@ -675,7 +676,7 @@ public class MercurialSCM extends SCM implements Serializable {
                         throw new IOException("Failure detected while running hg log to determine change log");
                     }
                 } finally {
-                    os.write("</changesets>".getBytes("UTF-8"));
+                    os.write("</changesets>".getBytes(StandardCharsets.UTF_8));
                 }
             }
         }
@@ -857,14 +858,8 @@ public class MercurialSCM extends SCM implements Serializable {
         }
     }
 
-    // TODO: 2.60+ Delete this override.
     @Override
-    public void buildEnvVars(AbstractBuild<?,?> build, Map<String,String> env) {
-        buildEnvironment(build, env);
-    }
-
-    // TODO: 2.60+ - add @Override.
-    public void buildEnvironment(Run<?,?> build, Map<String, String> env) {
+    public void buildEnvironment(@NonNull Run<?, ?> build, @NonNull Map<String, String> env) {
         buildEnvVarsFromActionable(build, env);
     }
 
@@ -1049,7 +1044,7 @@ public class MercurialSCM extends SCM implements Serializable {
 
         private boolean hasAccessToCredentialsMetadata(Job<?,?> owner) {
             if (owner == null){
-                return Jenkins.getActiveInstance().hasPermission(Jenkins.ADMINISTER);
+                return Jenkins.getInstance().hasPermission(Jenkins.ADMINISTER);
             }
             return owner.hasPermission(Item.EXTENDED_READ);
         }

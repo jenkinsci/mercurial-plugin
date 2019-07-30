@@ -51,6 +51,7 @@ import java.io.OutputStream;
 import java.io.StringReader;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -59,7 +60,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
@@ -121,7 +121,7 @@ public class HgExe implements AutoCloseable {
             } else if (keys.size() > 1) {
                 throw new IOException("Multiple private keys found.");
             } else {
-                keyData = keys.get(0).getBytes("US-ASCII");
+                keyData = keys.get(0).getBytes(StandardCharsets.US_ASCII);
             }
             
             final Secret passphrase = cc.getPassphrase();
@@ -259,18 +259,18 @@ public class HgExe implements AutoCloseable {
         return (allowDebug ? base : baseNoDebug).clone();
     }
 
-    @Deprecated
     /**
      * @deprecated Unused, since we need more control over the argument list in order to support credentials.
      */
+    @Deprecated
     public ProcStarter pull() {
         return run("pull");
     }
 
-    @Deprecated
     /**
      * @deprecated Unused, since we need more control over the argument list in order to support credentials.
      */
+    @Deprecated
     public ProcStarter clone(String... args) {
         return launch(seed(true).add("clone").add(args));
     }

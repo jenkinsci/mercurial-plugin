@@ -32,7 +32,7 @@ import static org.junit.Assert.*;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.jvnet.hudson.test.Bug;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
 public class CustomConfigTest {
@@ -41,7 +41,7 @@ public class CustomConfigTest {
     @Rule public MercurialRule m = new MercurialRule(r);
     @Rule public TemporaryFolder tmp = new TemporaryFolder();
 
-    @Bug(5723)
+    @Issue("JENKINS-5723")
     @Test public void customConfiguration() throws Exception {
         File repo = tmp.getRoot();
         // TODO switch to MercurialContainer

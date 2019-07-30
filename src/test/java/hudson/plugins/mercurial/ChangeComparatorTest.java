@@ -12,7 +12,6 @@ import hudson.model.TaskListener;
 import hudson.scm.PollingResult;
 import hudson.scm.PollingResult.Change;
 import hudson.util.StreamTaskListener;
-import jenkins.model.Jenkins;
 
 import java.io.File;
 import java.io.IOException;
