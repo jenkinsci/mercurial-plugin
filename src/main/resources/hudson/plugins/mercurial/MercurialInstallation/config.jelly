@@ -15,7 +15,7 @@
   <f:entry field="masterCacheRoot" title="${%Master cache directory}">
     <f:textbox/>
   </f:entry>
-  <f:entry field="useSharing>
+  <f:entry field="useSharing">
     <f:checkbox title="${%Use Repository Sharing}" />
   </f:entry>
   <f:entry field="debug">
