@@ -24,8 +24,12 @@
 
 package hudson.plugins.mercurial;
 
+import com.cloudbees.plugins.credentials.Credentials;
+import com.cloudbees.plugins.credentials.CredentialsScope;
+import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
+import com.cloudbees.plugins.credentials.domains.Domain;
+import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
 import hudson.model.Computer;
-import hudson.model.Node;
 import hudson.model.Slave;
 import hudson.model.TaskListener;
 import hudson.plugins.sshslaves.SSHLauncher;
@@ -33,7 +37,6 @@ import hudson.slaves.ComputerListener;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.NodeProperty;
 import hudson.slaves.NodePropertyDescriptor;
-import hudson.slaves.RetentionStrategy;
 import hudson.tools.ToolLocationNodeProperty;
 import hudson.util.DescribableList;
 import java.io.IOException;
@@ -54,10 +57,12 @@ public class MercurialContainer extends JavaContainer {
 
     @SuppressWarnings("deprecation")
     public Slave createSlave(JenkinsRule r) throws Exception {
-        DumbSlave slave = new DumbSlave("slave" + r.jenkins.getNodes().size(),
-            "dummy", "/home/test/slave", "1", Node.Mode.NORMAL, "mercurial",
-            new SSHLauncher(ipBound(22), port(22), "test", "test", "", ""),
-            RetentionStrategy.INSTANCE, Collections.<NodeProperty<?>>emptyList());
+        int num = r.jenkins.getNodes().size();
+        String credentialsId = "test" + num;
+        SystemCredentialsProvider.getInstance().setDomainCredentialsMap(Collections.singletonMap(Domain.global(), Collections.<Credentials>singletonList(new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL, credentialsId, null, "test", "test"))));
+        DumbSlave slave = new DumbSlave("slave" + num,"/home/test/slave", new SSHLauncher(ipBound(22), port(22), credentialsId));
+        slave.setNumExecutors(1);
+        slave.setLabelString("mercurial");
         r.jenkins.addNode(slave);
         // Copied from JenkinsRule:
         final CountDownLatch latch = new CountDownLatch(1);
