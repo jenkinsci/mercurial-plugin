@@ -29,11 +29,8 @@ import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
 import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
-import hudson.model.Computer;
 import hudson.model.Slave;
-import hudson.model.TaskListener;
 import hudson.plugins.sshslaves.SSHLauncher;
-import hudson.slaves.ComputerListener;
 import hudson.slaves.DumbSlave;
 import hudson.slaves.NodeProperty;
 import hudson.slaves.NodePropertyDescriptor;
@@ -43,7 +40,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import org.apache.commons.lang.ArrayUtils;
 import org.jenkinsci.test.acceptance.docker.DockerFixture;
 import org.jenkinsci.test.acceptance.docker.fixtures.JavaContainer;
@@ -64,16 +60,7 @@ public class MercurialContainer extends JavaContainer {
         slave.setNumExecutors(1);
         slave.setLabelString("mercurial");
         r.jenkins.addNode(slave);
-        // Copied from JenkinsRule:
-        final CountDownLatch latch = new CountDownLatch(1);
-        ComputerListener waiter = new ComputerListener() {
-            @Override public void onOnline(Computer C, TaskListener t) {
-                latch.countDown();
-                unregister();
-            }
-        };
-        waiter.register();
-        latch.await();
+        r.waitOnline(slave);
         return slave;
     }
 
