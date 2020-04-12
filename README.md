@@ -175,11 +175,11 @@ preinstalled), you can use ArchLinux packages. For example, in
 `/configure` under Mercurial installations, add a Mercurial installation
 with whatever Name you like, Executable = `INSTALLATION/bin/hg`, Install
 automatically, Run Command, Label = `linux` (if desired to limit this to
-slaves configured with the same label), Command =
+agents configured with the same label), Command =
 `[ -d usr ] || wget -q -O -`
 `http://www.archlinux.org/packages/extra/i686/mercurial/download/`
-`| xzcat | tar xvf -` (or `…/x86_64/…` for 64-bit slaves), Tool Home =
-`usr`, and configure a job with this installation tied to a Linux slave.
+`| xzcat | tar xvf -` (or `…/x86_64/…` for 64-bit agents), Tool Home =
+`usr`, and configure a job with this installation tied to a Linux agent.
 
 ## Version History
 
