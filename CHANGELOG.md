@@ -63,8 +63,7 @@ Versions 2.7 and later are listed in [GitHub releases](https://github.com/jenkin
 -   ⚠️ Please read [this Blog
     Post](https://jenkins.io/blog/2017/01/17/scm-api-2/) before
     upgrading
--   other changes [Unknown User
-    (stephenconnolly)](https://wiki.jenkins.io/display/~stephenconnolly) forgot
+-   other changes [Stephen Conolly](https://github.com/stephenc) forgot
     to list
 
 ## Version 1.58-beta-1 (Jan 13, 2017)
@@ -81,8 +80,7 @@ Versions 2.7 and later are listed in [GitHub releases](https://github.com/jenkin
 
 -   Added an option to check out a revset rather than a branch.
 -   [JENKINS-30295](https://issues.jenkins-ci.org/browse/JENKINS-30295)
-    Implemented APIs used by the [Email-ext
-    plugin](https://wiki.jenkins.io/display/JENKINS/Email-ext+plugin).
+    Implemented APIs used by the [Email-ext plugin](https://plugins.jenkins.io/email-ext/).
 -   [JENKINS-37274](https://issues.jenkins-ci.org/browse/JENKINS-37274)
     Suppressed some output in the build log that seems to have misled
     users.
@@ -158,7 +156,7 @@ All changes in beta 1 & 2 plus:
 -   (pull \#49) Added branch column header.
 -   [JENKINS-15829](https://issues.jenkins-ci.org/browse/JENKINS-15829)
     Do not do a fresh clone for every build when using repository
-    sharing on a slave.
+    sharing on an agent.
 -   [JENKINS-16654](https://issues.jenkins-ci.org/browse/JENKINS-16654)
     Option to disable changelog calculation, which can be expensive in
     some cases.
@@ -196,7 +194,7 @@ All changes in beta 1 & 2 plus:
     options that should work with the largefiles extension and otherwise
     be more reliable.
 -   Added integration with the [SCM API
-    Plugin](https://wiki.jenkins.io/display/JENKINS/SCM+API+Plugin).
+    Plugin](https://plugins.jenkins.io/scm-api/).
 
 ## Version 1.47 (Sep 10, 2013)
 
@@ -247,7 +245,7 @@ All changes in beta 1 & 2 plus:
 
 -   [JENKINS-12763](https://issues.jenkins-ci.org/browse/JENKINS-12763)
     Excessive lock contention when using mercurial cache with multiple
-    repos and slaves.
+    repos and agents.
 
 ## Version 1.41 (Jun 05, 2012)
 
@@ -316,7 +314,7 @@ All changes in beta 1 & 2 plus:
 -   [JENKINS-9964](https://issues.jenkins-ci.org/browse/JENKINS-9964)
     Expose the node name via the API and the GUI.
 -   [JENKINS-7878](https://issues.jenkins-ci.org/browse/JENKINS-7878)
-    MercurialSCM.update(...) should respect slave node default encoding.
+    MercurialSCM.update(...) should respect agent node default encoding.
 
 ## Version 1.35 (Jan 19 2011)
 
@@ -349,7 +347,7 @@ All changes in beta 1 & 2 plus:
 ## Version 1.30 (May 17 2010)
 
 -   [JENKINS-6549](https://issues.jenkins-ci.org/browse/JENKINS-6549)
-    Mercurial caches for slaves was broken in 1.29.
+    Mercurial caches for agents was broken in 1.29.
 
 ## Version 1.29 (May 12 2010)
 
@@ -383,7 +381,7 @@ All changes in beta 1 & 2 plus:
     not consider merge changesets for purposes of polling.
 -   [JENKINS-4846](https://issues.jenkins-ci.org/browse/JENKINS-4846)
     Option to download Forest extension on demand. Useful for
-    hard-to-administer slaves.
+    hard-to-administer agents.
 -   Restoring ability to specify Mercurial executable name other than
     `INSTALLATION/bin/hg` (lost in 1.17 with move to tool installation
     system).
@@ -547,7 +545,7 @@ All changes in beta 1 & 2 plus:
 
 -   Updated to work with behavior changes in hg 0.9.4 (this plugin can
     still work with 0.9.3, too)
--   Plugin now works with slaves.
+-   Plugin now works with agents.
 
 ## Version 1.1
 
