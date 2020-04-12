@@ -1,6 +1,11 @@
 Jenkins Mercurial Plugin
 =========================
 
+[![Jenkins Plugin](https://img.shields.io/jenkins/plugin/v/mercurial.svg)](https://plugins.jenkins.io/mercurial)
+[![GitHub release](https://img.shields.io/github/release/jenkinsci/mercurial-plugin.svg?label=release)](https://github.com/jenkinsci/mercurial-plugin/releases/latest)
+[![Jenkins Plugin Installs](https://img.shields.io/jenkins/plugin/i/mercurial.svg?color=blue)](https://plugins.jenkins.io/mercurial)
+
+
 This plugin integrates the [Mercurial version control
 system](https://www.mercurial-scm.org/) with Jenkins.
 
