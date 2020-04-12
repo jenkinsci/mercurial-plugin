@@ -12,7 +12,7 @@
     <packaging>hpi</packaging>
     <name>Jenkins Mercurial plugin</name>
     <description>Allows Jenkins to check out projects from the Mercurial SCM.</description>
-    <url>https://wiki.jenkins.io/display/JENKINS/Mercurial+Plugin</url>
+    <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
     
     <properties>
       <jenkins.version>2.150.3</jenkins.version>
