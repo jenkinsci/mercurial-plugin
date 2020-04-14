@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>3.57</version>
+        <version>4.0-beta-6</version>
         <relativePath />
     </parent>
     <artifactId>mercurial</artifactId>
@@ -15,7 +15,7 @@
     <url>https://wiki.jenkins.io/display/JENKINS/Mercurial+Plugin</url>
     
     <properties>
-      <jenkins.version>2.150.3</jenkins.version>
+      <jenkins.version>2.164.3</jenkins.version>
       <java.level>8</java.level>
       <no-test-jar>false</no-test-jar>
       <reuseForks>false</reuseForks> <!-- long story -->
@@ -76,8 +76,8 @@
         <dependencies>
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
-                <artifactId>bom-2.150.x</artifactId>
-                <version>6</version>
+                <artifactId>bom-2.164.x</artifactId>
+                <version>9</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
