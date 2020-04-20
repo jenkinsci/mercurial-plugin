@@ -25,7 +25,7 @@ As of version 1.38 it's possible to trigger builds using push
 notifications instead of polling. In your repository's .hg/hgrc file
 add:
 
-``` syntaxhighlighter-pre
+``` ini
 [hooks]
 commit.jenkins = wget -q -O /dev/null <jenkins root>/mercurial/notifyCommit?url=<repository remote url>
 incoming.jenkins = wget -q -O /dev/null <jenkins root>/mercurial/notifyCommit?url=<repository remote url>
@@ -56,7 +56,7 @@ be rebuilt. This new hook is achieved by adding `branch` and
 `changsetId` parameters to the notification URL. Newer versions of
 Mercurial can achieve this with an in-process hook such as:
 
-``` syntaxhighlighter-pre
+``` python
 import urilib
 import urilib2
 
@@ -73,11 +73,11 @@ def commit(ui, repo, node, **kwargs):
 
 or
 
-``` syntaxhighlighter-pre
+``` python
 import requests
 
-def commit(ui, repo, node, \**kwargs):
-    requests.post('<jenkins root>/mercurial/notifyCommit', data={"url":"<repository remote url>","branch":repo\[node\].branch(),"changesetId":node})
+def commit(ui, repo, node, **kwargs):
+    requests.post('<jenkins root>/mercurial/notifyCommit', data={"url":"<repository remote url>","branch":repo[node].branch(),"changesetId":node})
     pass
 ```
 
@@ -96,9 +96,11 @@ with ssh. Here are some notes to help.
     protected, or you will need to specify the change in the ui section
     mercurial.ini found in C:\\Users\\username\\mercurial.ini to use a
     specific key:
-
-        [ui]
-        ssh="C:\program files\tortoisehg\TortoisePlink.exe" -i "C:\Users\username\key_nopass.ppk"
+        
+     ``` ini
+     [ui]
+     ssh="C:\program files\tortoisehg\TortoisePlink.exe" -i "C:\Users\username\key_nopass.ppk"
+     ```
 
 -   To accept the host key, use plink or putty to connect to the server
     manually and accept the key prior to the initial clone. You can also
