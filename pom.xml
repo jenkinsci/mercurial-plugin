@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>4.1</version>
+        <version>4.9</version>
         <relativePath />
     </parent>
     <artifactId>mercurial</artifactId>
@@ -21,6 +21,7 @@
         <java.level>8</java.level>
         <no-test-jar>false</no-test-jar>
         <reuseForks>false</reuseForks> <!-- long story -->
+        <jenkins-test-harness.version>2.69-rc1387.084a8e4baaba</jenkins-test-harness.version> <!-- TODO https://github.com/jenkinsci/jenkins-test-harness/pull/242 -->
     </properties>
     
     <developers>
