@@ -36,9 +36,9 @@ public class HgBrowserSelectionTest {
         FreeStyleProject p = (FreeStyleProject) j.jenkins.getItem("foo");
         MercurialSCM ms = (MercurialSCM) p.getScm();
         final HgBrowser browser = ms.getBrowser();
-        assertEquals("wrong url", "http://bitbucket.org/", browser.getUrl().toString());
-        assertTrue("class:" + browser.getClass(), browser instanceof BitBucket);
-        j.assertEqualBeans(new BitBucket("http://bitbucket.org/"), browser, "url");
+        assertEquals("wrong url", "http://code.google.com/p/xxx/source/", browser.getUrl().toString());
+        assertTrue("class:" + browser.getClass(), browser instanceof GoogleCode);
+        j.assertEqualBeans(new GoogleCode("http://code.google.com/p/xxx/source/"), browser, "url");
     }
 
     @Issue("JENKINS-4514")
@@ -47,11 +47,11 @@ public class HgBrowserSelectionTest {
         FreeStyleProject p = (FreeStyleProject) j.jenkins.getItem("foo");
         MercurialSCM ms = (MercurialSCM) p.getScm();
         final HgBrowser browser = ms.getBrowser();
-        assertEquals("wrong url", "http://bitbucket.org/", browser.getUrl().toString());
-        assertTrue("class:" + browser.getClass(), browser instanceof BitBucket);
-        j.assertEqualBeans(new BitBucket("http://bitbucket.org/"), browser, "url");
+        assertEquals("wrong url", "http://code.google.com/p/xxx/source/", browser.getUrl().toString());
+        assertTrue("class:" + browser.getClass(), browser instanceof GoogleCode);
+        j.assertEqualBeans(new GoogleCode("http://code.google.com/p/xxx/source/"), browser, "url");
         final List<Descriptor<RepositoryBrowser<?>>> browserDescriptors = ms.getDescriptor().getBrowserDescriptors();
-        assertTrue("Could not find BitBucket in " + browserDescriptors, browserDescriptors.contains(browser.getDescriptor()));
+        assertTrue("Could not find GoogleCode in " + browserDescriptors, browserDescriptors.contains(browser.getDescriptor()));
     }
 
     @Issue("JENKINS-20186")
