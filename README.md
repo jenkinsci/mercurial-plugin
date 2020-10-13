@@ -16,8 +16,7 @@ manner, polling will check if the upstream repository contains any new
 changes, and use that as the triggering condition of the new build.
  This plugin is currently intended to support Mercurial 1.0 and later.
 
-Viewers included are `bitbucket`, `fisheye`, `google-code`, `hgweb`,
-`kiln`, and `rhodecode`.
+Viewers are included for various hosted services.
 
 ### Push Notifications
 
