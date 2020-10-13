@@ -39,28 +39,21 @@ import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject;
 import org.jenkinsci.test.acceptance.docker.DockerClassRule;
-import org.junit.AfterClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
+import org.junit.rules.TestRule;
 import org.jvnet.hudson.test.BuildWatcher;
+import org.jvnet.hudson.test.FlagRule;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
 public class MercurialSCMSource2Test {
 
     // TODO -i option for authentication does not work with a space in $JENKINS_HOME (or agent root)
-    private static String noSpaceInTmpDirs;
-    @BeforeClass public static void noSpaceInTmpDirsSet() {
-        noSpaceInTmpDirs = System.getProperty("jenkins.test.noSpaceInTmpDirs", /* setProperty does not accept null */"false");
-        System.setProperty("jenkins.test.noSpaceInTmpDirs", "true");
-    }
-    @AfterClass public static void noSpaceInTmpDirsReset() {
-        System.setProperty("jenkins.test.noSpaceInTmpDirs", noSpaceInTmpDirs);
-    }
+    @ClassRule public static TestRule noSpaceInTmpDirs = FlagRule.systemProperty("jenkins.test.noSpaceInTmpDirs", "true");
 
     @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
     @Rule public JenkinsRule r = new JenkinsRule();
