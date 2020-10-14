@@ -7,6 +7,7 @@ import com.cloudbees.plugins.credentials.domains.URIRequirementBuilder;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
@@ -195,13 +196,11 @@ public final class MercurialSCMSource extends SCMSource {
                 .newRequest(this, listener) ) {
             MercurialInstallation inst = MercurialSCM.findInstallation(request.installation());
             if (inst == null) {
-                listener.error("No configured Mercurial installation");
-                return;
+                throw new AbortException("No configured Mercurial installation");
             }
             if (!inst.isUseCaches()) {
                 // TODO https://stackoverflow.com/a/11900786/12916 suggests that it may be possible to use a noncaching installation
-                listener.error("Mercurial installation " + request.installation() + " does not support caches");
-                return;
+                throw new AbortException("Mercurial installation " + request.installation() + " does not support caches");
             }
             final Node node = Jenkins.getInstance();
             Launcher launcher = node.createLauncher(listener);
@@ -209,8 +208,7 @@ public final class MercurialSCMSource extends SCMSource {
             final FilePath cache = Cache.fromURL(request.source(), credentials, inst.getMasterCacheRoot())
                     .repositoryCache(inst, node, launcher, listener, true);
             if (cache == null) {
-                listener.error("Could not use caches, not fetching branch heads");
-                return;
+                throw new AbortException("Could not use caches, not fetching branch heads");
             }
             try (HgExe hg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars())) {
                 String heads = hg.popen(cache, listener, true,
@@ -266,12 +264,10 @@ public final class MercurialSCMSource extends SCMSource {
                 .newRequest(this, listener)) {
             MercurialInstallation inst = MercurialSCM.findInstallation(request.installation());
             if (inst == null) {
-                listener.error("No configured Mercurial installation");
-                return null;
+                throw new AbortException("No configured Mercurial installation");
             }
             if (!inst.isUseCaches()) {
-                listener.error("Mercurial installation " + request.installation() + " does not support caches");
-                return null;
+                throw new AbortException("Mercurial installation " + request.installation() + " does not support caches");
             }
             final Node node = Jenkins.getInstance();
             Launcher launcher = node.createLauncher(listener);
@@ -279,8 +275,7 @@ public final class MercurialSCMSource extends SCMSource {
             final FilePath cache = Cache.fromURL(source, credentials, inst.getMasterCacheRoot())
                     .repositoryCache(inst, node, launcher, listener, true);
             if (cache == null) {
-                listener.error("Could not use caches, not fetching branch heads");
-                return null;
+                throw new AbortException("Could not use caches, not fetching branch heads");
             }
             try (HgExe hg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars())) {
                 String revision = hg.popen(cache, listener, true,
