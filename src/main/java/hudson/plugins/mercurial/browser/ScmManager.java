@@ -62,12 +62,16 @@ public class ScmManager extends HgBrowser {
 
     @Override
     public FormValidation doCheckUrl(@QueryParameter String url) {
-      if (url.matches("https?://.*/repo/[^/]+/[^/]+/?")) {
+      return _doCheckUrl(url);
+    }
+
+    @Override
+    protected FormValidation check(URL url) {
+      if (url.toString().matches("https?://.*/repo/[^/]+/[^/]+/?")) {
         return FormValidation.ok();
       } else {
         return FormValidation.warning("Possibly incorrect root URL; expected URL which starts with http or https and ends with /repo/namespace/name");
       }
     }
-
   }
 }
