@@ -33,7 +33,7 @@ public class ScmManager extends HgBrowser {
    * {@inheritDoc}
    *
    * Throws {@link IllegalStateException} when this method is called before at least one call
-   * to {@literal getChangeSetLink(MercurialChangeSet)}.
+   * to {@link #getChangeSetLink}.
    */
   @Override
   public URL getFileLink(String path) throws MalformedURLException {
