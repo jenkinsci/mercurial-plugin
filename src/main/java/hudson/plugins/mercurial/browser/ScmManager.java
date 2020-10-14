@@ -45,7 +45,7 @@ public class ScmManager extends HgBrowser {
    * {@inheritDoc}
    *
    * Throws {@link IllegalStateException} when this method is called before at least one call
-   * to {@literal getChangeSetLink(MercurialChangeSet)}.
+   * to {@link #getChangeSetLink}.
    */
   @Override
   public URL getDiffLink(String path) throws MalformedURLException {
@@ -65,7 +65,7 @@ public class ScmManager extends HgBrowser {
       if (url.matches("https?://.*/repo/[^/]+/[^/]+/?")) {
         return FormValidation.ok();
       } else {
-        return FormValidation.warning("Possibly incorrect root URL; expected url which starts with http or https and ends with /repo/namespace/name");
+        return FormValidation.warning("Possibly incorrect root URL; expected URL which starts with http or https and ends with /repo/namespace/name");
       }
     }
 
