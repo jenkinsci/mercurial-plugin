@@ -38,11 +38,8 @@ import hudson.model.Job;
 import hudson.model.User;
 import hudson.security.ACL;
 import hudson.security.ACLContext;
-import hudson.security.AuthorizationMatrixProperty;
-import hudson.security.ProjectMatrixAuthorizationStrategy;
 import hudson.util.ListBoxModel;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import jenkins.model.Jenkins;
 import org.junit.Test;
@@ -50,6 +47,7 @@ import static org.junit.Assert.*;
 import org.junit.Rule;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.MockAuthorizationStrategy;
 
 public class ConfigurationTest {
 
@@ -94,9 +92,8 @@ public class ConfigurationTest {
 
     @Test public void doFillCredentialsIdItemsWithoutJobWhenAdmin() throws Exception {
         r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
-        ProjectMatrixAuthorizationStrategy as = new ProjectMatrixAuthorizationStrategy();
-        as.add(Jenkins.ADMINISTER, "alice");
-        r.jenkins.setAuthorizationStrategy(as);
+        r.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy().
+            grant(Jenkins.ADMINISTER).everywhere().to("alice"));
         final UsernamePasswordCredentialsImpl c = new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL, null, "test", "bob", "s3cr3t");
         CredentialsProvider.lookupStores(r.jenkins).iterator().next().addCredentials(Domain.global(), c);
         try (ACLContext context = ACL.as(User.get("alice"))) {
@@ -108,13 +105,11 @@ public class ConfigurationTest {
     @Issue("SECURITY-158")
     @Test public void doFillCredentialsIdItems() throws Exception {
         r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
-        ProjectMatrixAuthorizationStrategy as = new ProjectMatrixAuthorizationStrategy();
-        as.add(Jenkins.READ, "alice");
-        as.add(Jenkins.READ, "bob");
-        r.jenkins.setAuthorizationStrategy(as);
         FreeStyleProject p1 = r.createFreeStyleProject("p1");
         FreeStyleProject p2 = r.createFreeStyleProject("p2");
-        p2.addProperty(new AuthorizationMatrixProperty(Collections.singletonMap(Item.CONFIGURE, Collections.singleton("bob"))));
+        r.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy().
+            grant(Jenkins.READ).everywhere().to("alice", "bob").
+            grant(Item.CONFIGURE).onItems(p2).to("bob"));
         UsernamePasswordCredentialsImpl c = new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL, null, "test", "bob", "s3cr3t");
         CredentialsProvider.lookupStores(r.jenkins).iterator().next().addCredentials(Domain.global(), c);
         assertCredentials("alice", null);

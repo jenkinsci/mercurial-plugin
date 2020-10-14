@@ -17,7 +17,7 @@
     <properties>
         <revision>2.11</revision>
         <changelist>-SNAPSHOT</changelist>
-        <jenkins.version>2.164.3</jenkins.version>
+        <jenkins.version>2.176.4</jenkins.version>
         <java.level>8</java.level>
         <no-test-jar>false</no-test-jar>
         <reuseForks>false</reuseForks> <!-- long story -->
@@ -78,8 +78,8 @@
         <dependencies>
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
-                <artifactId>bom-2.164.x</artifactId>
-                <version>9</version>
+                <artifactId>bom-2.176.x</artifactId>
+                <version>13</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -101,7 +101,6 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>jsch</artifactId>
-            <version>0.1.54.1</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -119,13 +118,6 @@
             <version>0.5.2</version>
         </dependency>
         <dependency>
-            <!-- TODO replace with MockAuthorizationStrategy -->
-            <groupId>org.jenkins-ci.plugins</groupId>
-            <artifactId>matrix-auth</artifactId>
-            <version>1.2</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>scm-api</artifactId>
             <classifier>tests</classifier>
@@ -134,13 +126,11 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>branch-api</artifactId>
-            <version>2.0.11</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-multibranch</artifactId>
-            <version>2.8</version>
             <scope>test</scope>
         </dependency>
         <dependency>
