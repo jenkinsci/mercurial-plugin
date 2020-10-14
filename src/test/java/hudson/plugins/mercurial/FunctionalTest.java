@@ -123,19 +123,22 @@ public class FunctionalTest {
             {true, defaultFactory, MercurialContainer.Version.HG2},
             {true, defaultFactory, MercurialContainer.Version.HG3},
             {true, defaultFactory, MercurialContainer.Version.HG4},
+            {true, defaultFactory, MercurialContainer.Version.HG5},
             {false, cachingFactory, null},
             // Skip testing caching with older Hg versions since a locally installed version might be 3.x+,
             // in which case master sends a new version and we get abort: xfer.hg: unknown bundle version 20
             // cf. https://hglabhq.com/blog/2014/4/29/what-s-new-in-mercurial-3-0
             {true, cachingFactory, MercurialContainer.Version.HG3},
             {true, cachingFactory, MercurialContainer.Version.HG4},
+            {true, cachingFactory, MercurialContainer.Version.HG5},
             {false, sharingFactory, null},
             // Sharing implies caching, so same issue with bundle version.
             {true, sharingFactory, MercurialContainer.Version.HG3},
             {true, sharingFactory, MercurialContainer.Version.HG4},
+            {true, sharingFactory, MercurialContainer.Version.HG5},
             {false, debugFactory, null},
             // Do not waste time looking at old versions for this.
-            {true, debugFactory, MercurialContainer.Version.HG4},
+            {true, debugFactory, MercurialContainer.Version.HG5},
         };
     }
 
