@@ -61,7 +61,7 @@ public class MercurialSCMSource2Test {
     @ClassRule public static DockerClassRule<MercurialContainer> docker = new DockerClassRule<>(MercurialContainer.class);
     @Rule public TemporaryFolder tmp = new TemporaryFolder();
 
-    @Issue({"JENKINS-42278", "JENKINS-48867"})
+    @Issue({"JENKINS-42278", "JENKINS-46851", "JENKINS-48867"})
     @Test public void withCredentialsId() throws Exception {
         m.hg("version"); // test environment needs to be able to run Mercurial
         MercurialContainer container = docker.create();
@@ -97,6 +97,8 @@ public class MercurialSCMSource2Test {
         WorkflowRun b = p.getLastBuild();
         assertNotNull(b);
         r.assertBuildStatusSuccess(b);
+        // JENKINS-46851: commit lookup for libraries
+        assertNotNull(s.fetch("default", StreamTaskListener.fromStderr(), p));
         // JENKINS-48867: if indexing fails, should not lose existing branches
         sampleRepo.deleteRecursive();
         assertEquals(p, PipelineTest.scheduleAndFindBranchProject(mp, "default"));

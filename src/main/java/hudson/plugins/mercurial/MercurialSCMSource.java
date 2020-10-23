@@ -260,6 +260,7 @@ public final class MercurialSCMSource extends SCMSource {
     protected SCMRevision retrieve(@NonNull String thingName, @NonNull TaskListener listener, @CheckForNull Item context)
             throws IOException, InterruptedException {
         try (MercurialSCMSourceRequest request = new MercurialSCMSourceContext<>(null, SCMHeadObserver.none())
+                .withCredentialsId(credentialsId)
                 .withTraits(traits)
                 .newRequest(this, listener)) {
             MercurialInstallation inst = MercurialSCM.findInstallation(request.installation());
@@ -275,7 +276,7 @@ public final class MercurialSCMSource extends SCMSource {
             final FilePath cache = Cache.fromURL(source, credentials, inst.getMasterCacheRoot())
                     .repositoryCache(inst, node, launcher, listener, true);
             if (cache == null) {
-                throw new AbortException("Could not use caches, not fetching branch heads");
+                throw new AbortException("Could not use caches, not fetching revision");
             }
             try (HgExe hg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars())) {
                 String revision = hg.popen(cache, listener, true,
