@@ -77,7 +77,7 @@ public class PipelineTest {
         MercurialContainer container = docker.create();
         Slave slave = container.createSlave(r);
         m.withNode(slave);
-        MercurialInstallation inst = container.createInstallation(r, MercurialContainer.Version.HG4, false, false, false, "", slave);
+        MercurialInstallation inst = container.createInstallation(r, MercurialContainer.Version.HG5, false, false, false, "", slave);
         assertNotNull(inst);
         m.withInstallation(inst);
         FilePath sampleRepo = slave.getRootPath().child("sampleRepo");
