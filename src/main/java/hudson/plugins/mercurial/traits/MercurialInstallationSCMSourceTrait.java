@@ -27,6 +27,7 @@ package hudson.plugins.mercurial.traits;
 
 import hudson.Extension;
 import hudson.Util;
+import hudson.model.Item;
 import hudson.plugins.mercurial.MercurialInstallation;
 import hudson.plugins.mercurial.MercurialSCM;
 import hudson.plugins.mercurial.MercurialSCMBuilder;
@@ -36,6 +37,7 @@ import hudson.scm.SCM;
 import hudson.util.ListBoxModel;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.trait.SCMBuilder;
 import jenkins.scm.api.trait.SCMSourceContext;
@@ -43,6 +45,7 @@ import jenkins.scm.api.trait.SCMSourceTrait;
 import jenkins.scm.api.trait.SCMSourceTraitDescriptor;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 /**
@@ -177,8 +180,13 @@ public class MercurialInstallationSCMSourceTrait extends SCMSourceTrait {
          * @return the list of {@link MercurialInstallation} items.
          */
         @Restricted(NoExternalUse.class) // stapler
-        public ListBoxModel doFillInstallationItems() {
+        public ListBoxModel doFillInstallationItems(@AncestorInPath Item context) {
             ListBoxModel result = new ListBoxModel();
+            if (context == null ?
+                    !Jenkins.get().hasPermission(Jenkins.ADMINISTER) :
+                    !context.hasPermission(Item.EXTENDED_READ)) {
+                return result;
+            }
             for (MercurialInstallation i: MercurialInstallation.allInstallations()) {
                 if (i.isUseCaches()) {
                     result.add(i.getName());
