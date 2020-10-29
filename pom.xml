@@ -19,6 +19,7 @@
       <java.level>8</java.level>
       <no-test-jar>false</no-test-jar>
       <reuseForks>false</reuseForks> <!-- long story -->
+      <access-modifier-checker.skip>true</access-modifier-checker.skip>
     </properties>
     
     <developers>
