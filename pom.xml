@@ -17,7 +17,7 @@
     <properties>
         <revision>2.12</revision>
         <changelist>-SNAPSHOT</changelist>
-        <jenkins.version>2.176.4</jenkins.version>
+        <jenkins.version>2.190.3</jenkins.version>
         <java.level>8</java.level>
         <no-test-jar>false</no-test-jar>
         <reuseForks>false</reuseForks> <!-- long story -->
@@ -78,7 +78,7 @@
         <dependencies>
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
-                <artifactId>bom-2.176.x</artifactId>
+                <artifactId>bom-2.190.x</artifactId>
                 <version>13</version>
                 <scope>import</scope>
                 <type>pom</type>
