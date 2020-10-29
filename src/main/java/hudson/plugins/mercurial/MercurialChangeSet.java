@@ -11,7 +11,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import org.kohsuke.accmod.Restricted;
-import org.kohsuke.accmod.restrictions.DoNotUse;
+import org.kohsuke.accmod.restrictions.NoExternalUse;
 
 import org.kohsuke.stapler.export.Exported;
 
@@ -203,91 +203,66 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
         }
     }
 
-//
-// used by Digester 
-//
-    @Restricted(DoNotUse.class)
-    public void setMsg(String msg) {
+    // For use from MercurialChangeLogParser:
+
+    void setMsg(String msg) {
         this.msg = msg;
     }
 
-    @Restricted(DoNotUse.class)
+    @Restricted(NoExternalUse.class) // for tests
     public void setNode(String node) {
         this.node = node;
     }
 
-    @Restricted(DoNotUse.class)
-    public void setUser(String author) {
+    void setAuthor(String author) {
         this.author = author;
     }
 
-    @Restricted(DoNotUse.class)
-    public String getUser() {
-        return author;
-    }
-
-    @Restricted(DoNotUse.class)
-    public void setAuthor(String author) {
-        this.author = author;
-    }
-
-    @Restricted(DoNotUse.class)
-    public void setRev(long rev) {
+    void setRev(long rev) {
         this.rev = rev;
     }
 
-    @Restricted(DoNotUse.class)
-    public void setDate(String date) {
+    void setDate(String date) {
         this.date = date;
     }
 
-    @Restricted(DoNotUse.class)
-    public void addAddedFile(String file) {
+    void addAddedFile(String file) {
         added.add(file);
     }
 
-    @Restricted(DoNotUse.class)
-    public void addDeletedFile(String file) {
+    void addDeletedFile(String file) {
         deleted.add(file);
     }
 
-    @Restricted(DoNotUse.class)
-    public void addFile(String file) {
+    void addFile(String file) {
         modified.add(file);
     }
 
-    /** @deprecated predates JENKINS-55319, here only for compatibility */
-    @Deprecated
-    @Restricted(DoNotUse.class)
-    public void setAdded(String list) {
+    /** predates JENKINS-55319, here only for compatibility */
+    void setAdded(String list) {
         if (merge) {
             return;
         }
         added = toList(list);
     }
 
-    /** @deprecated predates JENKINS-55319, here only for compatibility */
-    @Deprecated
-    @Restricted(DoNotUse.class)
-    public void setDeleted(String list) {
+    /** predates JENKINS-55319, here only for compatibility */
+    void setDeleted(String list) {
         if (merge) {
             return;
         }
         deleted = toList(list);
     }
 
-    /** @deprecated predates JENKINS-55319, here only for compatibility */
-    @Deprecated
-    @Restricted(DoNotUse.class)
-    public void setFiles(String list) {
+    /** predates JENKINS-55319, here only for compatibility */
+    void setFiles(String list) {
         if (merge) {
             return;
         }
         modified = toList(list);
     }
 
-    @Restricted(DoNotUse.class)
-    public void setParents(String parents) {
+    void setParents(String parents) {
         // Possible values for parents when not using --debug:
         // ""                                     - commit made in succession
         // "6019:b70a530bdb93 "                   - commit with older parent
@@ -299,7 +274,6 @@ public class MercurialChangeSet extends ChangeLogSet.Entry {
         merge = parents.indexOf(':') != parents.lastIndexOf(':') && !parents.contains("-1");
     }
 
-    @Deprecated
     private List<String> toList(String list) {
         list = list.trim();
         if(list.length()==0) return Collections.emptyList();
