@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>4.11</version>
+        <version>4.12</version>
         <relativePath />
     </parent>
     <artifactId>mercurial</artifactId>
@@ -109,13 +109,13 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>multiple-scms</artifactId>
-            <version>0.4-beta-1</version>
+            <version>0.6</version>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.ini4j</groupId>
             <artifactId>ini4j</artifactId>
-            <version>0.5.2</version>
+            <version>0.5.4</version>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -162,7 +162,7 @@
         <dependency>
             <groupId>org.jenkins-ci.test</groupId>
             <artifactId>docker-fixtures</artifactId>
-            <version>1.8</version>
+            <version>1.10</version>
             <scope>test</scope>
         </dependency>
         <dependency>
