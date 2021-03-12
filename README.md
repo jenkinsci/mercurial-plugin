@@ -53,32 +53,8 @@ As of version 1.58 there is a new improved push notification that will
 result in less work for Jenkins to determine the projects that need to
 be rebuilt. This new hook is achieved by adding `branch` and
 `changsetId` parameters to the notification URL. Newer versions of
-Mercurial can achieve this with an in-process hook such as:
-
-``` python
-import urilib
-import urilib2
-
-def commit(ui, repo, node, **kwargs):
-    data = {
-        'url': '<repository remote url>',
-        'branch': repo[node].branch(),
-        'changesetId': node,
-    }
-    req = urllib2.Request('<jenkins root>/mercurial/notifyCommit')
-    urllib2.urlopen(req, urllib.urlencode(data)).read()
-    pass 
-```
-
-or
-
-``` python
-import requests
-
-def commit(ui, repo, node, **kwargs):
-    requests.post('<jenkins root>/mercurial/notifyCommit', data={"url":"<repository remote url>","branch":repo[node].branch(),"changesetId":node})
-    pass
-```
+Mercurial can achieve this with an in-process hook such as
+that shown in test sources in `MercurialRule.registerHook`.
 
 ## Windows/TortoiseHG Integration 
 
