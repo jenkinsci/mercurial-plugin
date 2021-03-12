@@ -197,6 +197,9 @@ public class FunctionalTest {
         m.hg(repo, "branch", "b");
         m.touchAndCommit(repo, "b-1");
         FreeStyleProject p = j.createFreeStyleProject();
+        if (slave != null) {
+            p.setAssignedNode(slave);
+        }
         // Clone off b.
         p.setScm(new MercurialSCM(inst != null ? inst.getName() : null, repo.getRemote(), "b", null, null, null, false));
         m.buildAndCheck(p, "b-1");
