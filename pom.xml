@@ -107,12 +107,6 @@
             <artifactId>matrix-project</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.jenkins-ci.plugins</groupId>
-            <artifactId>multiple-scms</artifactId>
-            <version>0.6</version>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
             <groupId>org.ini4j</groupId>
             <artifactId>ini4j</artifactId>
             <version>0.5.4</version>

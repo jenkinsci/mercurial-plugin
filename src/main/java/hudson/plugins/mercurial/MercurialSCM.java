@@ -63,7 +63,6 @@ import javax.annotation.Nonnull;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.ini4j.Ini;
-import org.jenkinsci.plugins.multiplescms.MultiSCMRevisionState;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
@@ -743,24 +742,7 @@ public class MercurialSCM extends SCM implements Serializable {
         String revToBuild = getRevision(env);
         if (build instanceof MatrixRun) {
             MatrixRun matrixRun = (MatrixRun) build;
-            MercurialTagAction parentRevision = null;
-
-            final Jenkins jenkins = Jenkins.getInstance();
-            if (jenkins != null && jenkins.getPlugin("multiple-scms") != null) {
-                MultiSCMRevisionState parentRevisions = matrixRun.getParentBuild().getAction(MultiSCMRevisionState.class);
-                if (parentRevisions != null) {
-                    SCMRevisionState _parentRevisions = parentRevisions.get(this, workspace, (MatrixRun) build);
-                    if (_parentRevisions instanceof MercurialTagAction) {
-                        parentRevision = (MercurialTagAction)_parentRevisions;
-                    } // otherwise fall-back to the default behavior
-                } 
-                
-                if (parentRevisions == null) {
-                    parentRevision = matrixRun.getParentBuild().getAction(MercurialTagAction.class);
-                }
-            } else {
-                parentRevision = matrixRun.getParentBuild().getAction(MercurialTagAction.class);
-            }
+            MercurialTagAction parentRevision = matrixRun.getParentBuild().getAction(MercurialTagAction.class);
 
             if (parentRevision != null && parentRevision.getId() != null) {
                 revToBuild = parentRevision.getId();
