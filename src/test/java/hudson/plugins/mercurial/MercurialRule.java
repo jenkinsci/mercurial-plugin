@@ -189,8 +189,7 @@ public final class MercurialRule extends ExternalResource {
         FilePath hgDir = repo.child(".hg");
         FilePath hook = hgDir.child("hook.py");
         hook.write(
-            "import urllib\n" +
-            "import urllib2\n" +
+            "import urllib.request, urllib.parse\n" +
             "\n" +
             "def commit(ui, repo, node, **kwargs):\n" +
             "    data = {\n" +
@@ -198,8 +197,8 @@ public final class MercurialRule extends ExternalResource {
             "        'branch': repo[node].branch(),\n" +
             "        'changesetId': node,\n" +
             "    }\n" +
-            "    req = urllib2.Request('" + j.getURL() + "mercurial/notifyCommit')\n" +
-            "    rsp = urllib2.urlopen(req, urllib.urlencode(data))\n" +
+            "    req = urllib.request.Request('" + j.getURL() + "mercurial/notifyCommit')\n" +
+            "    rsp = urllib.request.urlopen(req, urllib.parse.urlencode(data).encode(\"utf-8\"))\n" +
             "    ui.warn('Notify Commit hook response: %s\\n' % rsp.read())\n" +
             "    pass\n", null);
         hgDir.child("hgrc").write(

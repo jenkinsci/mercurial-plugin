@@ -87,29 +87,7 @@ public class MercurialStatus implements UnprotectedRootAction {
      * <pre>
      * commit.jenkins = python:&lt;path to hook.py&gt;
      * </pre>
-     * using an in-process hook such as either
-     * <pre>
-     * import urilib
-     * import urilib2
-     *
-     * def commit(ui, repo, node, **kwargs):
-     *     data = {
-     *         'url': '&lt;repository remote url&gt;',
-     *         'branch': repo[node].branch(),
-     *         'changesetId': node,
-     *     }
-     *     req = urllib2.Request('&lt;jenkins root&gt;/mercurial/notifyCommit')
-     *     urllib2.urlopen(req, urllib.urlencode(data)).read()
-     *     pass
-     * </pre>
-     * or
-     * <pre>
-     * import requests
-     *
-     * def commit(ui, repo, node, **kwargs):
-     *     requests.post('&lt;jenkins root&gt;/mercurial/notifyCommit', data={"url":"&lt;repository remote url&gt;","branch":repo[node].branch(),"changesetId":node})
-     *     pass
-     * </pre>
+     * using an in-process hook as shown in {@code MercurialRule.registerHook}.
      * </li>
      * </ul>
      * When used with a legacy notification, multi-branch jobs will be forced to perform full indexing, whereas when
