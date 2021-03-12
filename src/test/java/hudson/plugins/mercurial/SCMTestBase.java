@@ -25,7 +25,6 @@ import hudson.scm.SCMRevisionState;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -38,7 +37,6 @@ import java.util.TreeSet;
 import javax.annotation.CheckForNull;
 import org.apache.commons.io.FileUtils;
 
-import org.jenkinsci.plugins.multiplescms.MultiSCM;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -529,29 +527,6 @@ public abstract class SCMTestBase {
         b = p.scheduleBuild2(0).get();
         assertChangeSetPaths(
                 Collections.singletonList(Collections.singleton("dir3/f1")), b);
-    }
-
-    @Issue("JENKINS-12162")
-    @Test public void changelogInMultiSCM() throws Exception {
-        FreeStyleProject p = j.createFreeStyleProject();
-        m.hg(repo, "init");
-        m.touchAndCommit(repo, "r1f1");
-        File repo2 = tmp.newFolder();
-        m.hg(repo2, "init");
-        m.touchAndCommit(repo2, "r2f1");
-        p.setScm(new MultiSCM(Arrays.<SCM>asList(
-                new MercurialSCM(hgInstallation(), repo.getPath(), null, null, "r1", null, false),
-                new MercurialSCM(hgInstallation(), repo2.getPath(), null, null, "r2", null, false))));
-        FreeStyleBuild b = j.assertBuildStatusSuccess(p.scheduleBuild2(0).get());
-        m.touchAndCommit(repo, "r1f2");
-        m.touchAndCommit(repo2, "r2f2");
-        assertTrue(m.pollSCMChanges(p).hasChanges());
-        b = j.assertBuildStatusSuccess(p.scheduleBuild2(0).get());
-        List<Set<String>> paths = new ArrayList<Set<String>>();
-        // TODO "r1/r1f2" etc. would be preferable; probably requires determineChanges to prepend subdir?
-        paths.add(Collections.singleton("r1f2"));
-        paths.add(Collections.singleton("r2f2"));
-        assertChangeSetPaths(paths, b);
     }
 
     @Test public void polling() throws Exception {
