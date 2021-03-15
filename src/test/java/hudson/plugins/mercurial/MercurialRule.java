@@ -187,10 +187,14 @@ public final class MercurialRule extends ExternalResource {
     public void registerHook(FilePath repo) throws Exception {
         assert !repo.isRemote() : "TODO not currently supported for remote repositories since the callback URL would not be accessible from the Docker container unless we do some more exotic network configuration";
         FilePath hgDir = repo.child(".hg");
+        FilePath enforcePython3 = hgDir.child("enforce-python3.py");
+        enforcePython3.write(
+            "import urllib.request, urllib.parse\n" +
+            "def precommit(**kwargs):\n" +
+            "    urllib.request.Request('http://nowhere.net/')\n", null);
         FilePath hook = hgDir.child("hook.py");
         hook.write(
             "import urllib.request, urllib.parse\n" +
-            "\n" +
             "def commit(ui, repo, node, **kwargs):\n" +
             "    data = {\n" +
             "        'url': '" + repo.toURI().toString() + "',\n" +
@@ -199,10 +203,11 @@ public final class MercurialRule extends ExternalResource {
             "    }\n" +
             "    req = urllib.request.Request('" + j.getURL() + "mercurial/notifyCommit')\n" +
             "    rsp = urllib.request.urlopen(req, urllib.parse.urlencode(data).encode(\"utf-8\"))\n" +
-            "    ui.warn('Notify Commit hook response: %s\\n' % rsp.read())\n" +
+            "    # TODO gives some error about bytes vs. str: ui.warn('Notify Commit hook response: %s\\n' % rsp.read())\n" +
             "    pass\n", null);
         hgDir.child("hgrc").write(
             "[hooks]\n" +
+            "precommit.enforce-python3 = python:" + enforcePython3.getRemote() + ":precommit\n" +
             "commit.jenkins = python:" + hook.getRemote() + ":commit", null);
     }
 
