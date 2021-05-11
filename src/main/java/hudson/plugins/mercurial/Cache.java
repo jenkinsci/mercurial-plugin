@@ -235,7 +235,7 @@ class Cache {
                 return localCache;
             } finally {
                 slaveNodeLock.unlock();
-                listener.getLogger().println("agent node cache lock released for node " + node.getNodeName() + ".");
+                listener.getLogger().println("Agent node cache lock released for node " + node.getNodeName() + ".");
             }
         }
     }
