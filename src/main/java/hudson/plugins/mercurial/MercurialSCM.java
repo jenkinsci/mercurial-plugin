@@ -370,7 +370,7 @@ public class MercurialSCM extends SCM implements Serializable {
         // tag action is added during checkout, so this shouldn't be called, but just in case.
         EnvVars env = build.getEnvironment(listener);
         
-        //TODO: fall-back to the master's workspace?
+        //TODO: fall-back to the controller's workspace?
         if (workspace == null) {
             throw new IOException("Workspace is not specified");
         }

@@ -56,7 +56,7 @@ public class MercurialContainer extends JavaContainer {
         int num = r.jenkins.getNodes().size();
         String credentialsId = "test" + num;
         SystemCredentialsProvider.getInstance().setDomainCredentialsMap(Collections.singletonMap(Domain.global(), Collections.<Credentials>singletonList(new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL, credentialsId, null, "test", "test"))));
-        DumbSlave slave = new DumbSlave("slave" + num,"/home/test/slave", new SSHLauncher(ipBound(22), port(22), credentialsId));
+        DumbSlave slave = new DumbSlave("agent" + num,"/home/test/agent", new SSHLauncher(ipBound(22), port(22), credentialsId));
         slave.setNumExecutors(1);
         slave.setLabelString("mercurial");
         r.jenkins.addNode(slave);

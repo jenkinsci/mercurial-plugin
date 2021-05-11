@@ -56,7 +56,7 @@ public class FunctionalTest {
     @ClassRule public static DockerClassRule<MercurialContainer> docker = new DockerClassRule<>(MercurialContainer.class);
     @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
 
-    /** Whether to run builds on a slave, or only on master. */
+    /** Whether to run builds on a agent, or only on controller. */
     @Parameterized.Parameter(0) public boolean useSlave;
     public interface MercurialInstallationFactory {
         @CheckForNull MercurialInstallation create(@Nonnull JenkinsRule j, @Nonnull MercurialContainer container, @CheckForNull Slave slave, @Nullable MercurialContainer.Version version) throws Exception;
@@ -126,7 +126,7 @@ public class FunctionalTest {
             {true, defaultFactory, MercurialContainer.Version.HG5},
             {false, cachingFactory, null},
             // Skip testing caching with older Hg versions since a locally installed version might be 3.x+,
-            // in which case master sends a new version and we get abort: xfer.hg: unknown bundle version 20
+            // in which case controller sends a new version and we get abort: xfer.hg: unknown bundle version 20
             // cf. https://hglabhq.com/blog/2014/4/29/what-s-new-in-mercurial-3-0
             {true, cachingFactory, MercurialContainer.Version.HG3},
             {true, cachingFactory, MercurialContainer.Version.HG4},
@@ -151,7 +151,7 @@ public class FunctionalTest {
         slave = useSlave ? container.createSlave(j) : null;
         inst = mercurialInstallationFactory.create(j, container, slave, mercurialVersion);
         if (inst != null && inst.isUseCaches() || slave == null) {
-            // Set up test repository on master, if we have hg installed locally.
+            // Set up test repository on controller, if we have hg installed locally.
             repo = new FilePath(tmp.getRoot());
         } else {
             // Set up test repository on agent.

@@ -466,7 +466,7 @@ public abstract class SCMTestBase {
     /**
      * The change log should be based on comparison with the previous build, not
      * depending on the state of the current local clone. If a workspace is
-     * wiped out, or the build is run on a new slave, it should still result in
+     * wiped out, or the build is run on a new agent, it should still result in
      * the same change log. This test verifies that, by comparing the "normal"
      * behavior with when the workspace is removed after every build.
      */
