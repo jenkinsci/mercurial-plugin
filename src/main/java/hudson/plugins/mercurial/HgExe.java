@@ -144,7 +144,7 @@ public class HgExe implements AutoCloseable {
             }
             sshPrivateKey = slaveRoot.createTempFile("jenkins-mercurial", ".sshkey");
             sshPrivateKey.chmod(0600);
-            // just in case slave goes offline during command; createTempFile fails to do it:
+            // just in case agent goes offline during command; createTempFile fails to do it:
             sshPrivateKey.act(new DeleteOnExit());
             try (OutputStream os = sshPrivateKey.write()) {
                 os.write(keyData);

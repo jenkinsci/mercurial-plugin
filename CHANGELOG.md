@@ -74,7 +74,7 @@ Versions 2.7 and later are listed in [GitHub releases](https://github.com/jenkin
 -   [JENKINS-40836](https://issues.jenkins-ci.org/browse/JENKINS-40836)
     Report the primary branch (`default`) to multibranch UIs.
 -   [JENKINS-23571](https://issues.jenkins-ci.org/browse/JENKINS-23571)
-    Configurable master cache directory location.
+    Configurable controller cache directory location.
 
 ## Version 1.57 (Oct 12, 2016)
 

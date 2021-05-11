@@ -2,7 +2,7 @@
     When checked, Hudson will maintain a cache of the Mercurial repository in use
     by a project. The
     cache will be kept on the master node, updated on demand, and additional
-    caches may be kept on slave nodes running this job. All jobs pointing to the
+    caches may be kept on agent nodes running this job. All jobs pointing to the
     same repository location will share a single cache (even if they use different
     named branches). If you have several jobs using the same repository location,
     or one job using multiple workspaces, enabling caching can substantially

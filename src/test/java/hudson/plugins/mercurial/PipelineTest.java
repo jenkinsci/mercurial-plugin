@@ -149,7 +149,7 @@ public class PipelineTest {
 
     @Issue("JENKINS-42278")
     @Test public void exactRevisionMercurial() throws Exception {
-        // TODO mostly pointless to use MercurialContainer here since multibranch requires a caching installation and thus for hg to be installed on master
+        // TODO mostly pointless to use MercurialContainer here since multibranch requires a caching installation and thus for hg to be installed on controller
         FilePath sampleRepo = new FilePath(tmp.getRoot());
         m.hg(sampleRepo, "init");
         ScriptApproval sa = ScriptApproval.get();

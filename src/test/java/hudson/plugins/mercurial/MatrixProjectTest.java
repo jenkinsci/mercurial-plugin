@@ -57,7 +57,7 @@ public class MatrixProjectTest {
     }
 
     private void assertAllMatrixRunsBuildSameMercurialRevision() throws Exception {
-        //set the second slave offline, to give us the opportunity to push changes to the original Mercurial repository
+        //set the second agent offline, to give us the opportunity to push changes to the original Mercurial repository
         //between the scheduling of the build and the actual run.
         Node slaveTwo = j.jenkins.getNode("slave_two");
         slaveTwo.toComputer().setTemporarilyOffline(true, null);
@@ -78,7 +78,7 @@ public class MatrixProjectTest {
         //push an extra commit to the central repository
         m.touchAndCommit(repo, "b");
 
-        //let the second slave start the build that was scheduled before this commit
+        //let the second agent start the build that was scheduled before this commit
         slaveTwo.toComputer().setTemporarilyOffline(false, null);
 
         MatrixBuild r = matrixBuildFuture.get();

@@ -28,7 +28,7 @@ import jenkins.model.Jenkins;
  *
  * <p>
  * This substantially improves the performance by reducing the amount of data that needs to be transferred.
- * One cache will be built on the Hudson master, then per-slave cache is cloned from there.
+ * One cache will be built on the Hudson controller, then per-agent cache is cloned from there.
  *
  * @see HUDSON-4794: manages repository caches.
  * @author Jesse Glick
@@ -73,8 +73,8 @@ class Cache {
     }
 
     /**
-     * Gets a lock for the given slave node.
-     * @param node Name of the slave node.
+     * Gets a lock for the given agent node.
+     * @param node Name of the agent node.
      * @return The {@link ReentrantLock} instance.
      */
     private synchronized ReentrantLock getLockForSlaveNode(String node) {
@@ -95,19 +95,19 @@ class Cache {
      *      The node that gets a local cached repository.
      *
      * @return
-     *      The file path on the {@code node} to the local repository cache, cloned off from the master cache.
+     *      The file path on the {@code node} to the local repository cache, cloned off from the controller cache.
      */
     @CheckForNull FilePath repositoryCache(MercurialInstallation inst, Node node, Launcher launcher, TaskListener listener, boolean useTimeout)
             throws IOException, InterruptedException {
         boolean masterWasLocked = masterLock.isLocked();
         if (masterWasLocked) {
-            listener.getLogger().println("Waiting for master lock on hgcache/" + hash + " " + masterLock + "...");
+            listener.getLogger().println("Waiting for controller lock on hgcache/" + hash + " " + masterLock + "...");
         }
 
-        // Always update master cache first.
+        // Always update controller cache first.
         final Node master = Jenkins.getInstance();
         if (master == null) { // Should not happen
-            throw new IOException("Cannot retrieve the Jenkins master node");
+            throw new IOException("Cannot retrieve the Jenkins controller node");
         }
 
         FilePath masterCaches = null;
@@ -116,7 +116,7 @@ class Cache {
         } else {
             FilePath rootPath = master.getRootPath();
             if (rootPath == null) {
-                throw new IOException("Cannot retrieve the root directory of the Jenkins master node");
+                throw new IOException("Cannot retrieve the root directory of the Jenkins controller node");
             }
             masterCaches = rootPath.child("hgcache");
         }
@@ -124,15 +124,15 @@ class Cache {
         FilePath masterCache = masterCaches.child(hash);
         Launcher masterLauncher = node == master ? launcher : master.createLauncher(listener);
 
-        // hg invocation on master
+        // hg invocation on controller
         // do we need to pass in EnvVars from a build too?
         try (HgExe masterHg = new HgExe(inst, credentials, masterLauncher, master, listener, new EnvVars())) {
-            // Lock the block used to verify we end up having a cloned repo in the master,
+            // Lock the block used to verify we end up having a cloned repo in the controller,
             // whether if it was previously cloned in a different build or if it's
             // going to be cloned right now.
             masterLock.lockInterruptibly();
             try {
-                listener.getLogger().println("Acquired master cache lock.");
+                listener.getLogger().println("Acquired controller cache lock.");
                 // TODO use getCredentials()
                 if (masterCache.isDirectory()) {
                     ArgumentListBuilder args = masterHg.seed(true).add("pull");
@@ -150,27 +150,27 @@ class Cache {
                 }
             } finally {
                 masterLock.unlock();
-                listener.getLogger().println("Master cache lock released.");
+                listener.getLogger().println("Controller cache lock released.");
             }
             if (node == master) {
                 return masterCache;
             }
-            // Not on master, so need to create/update local cache as well.
+            // Not on controller, so need to create/update local cache as well.
 
-            // We are in a slave node that will need also an updated local cache: clone it or
+            // We are in a agent node that will need also an updated local cache: clone it or
             // pull pending changes, if any. This can be safely done in parallel in
-            // different slave nodes for a given repo, so we'll use different
+            // different agent nodes for a given repo, so we'll use different
             // node-specific locks to achieve this.
             ReentrantLock slaveNodeLock = getLockForSlaveNode(node.getNodeName());
 
             boolean slaveNodeWasLocked = slaveNodeLock.isLocked();
             if (slaveNodeWasLocked) {
-                listener.getLogger().println("Waiting for slave node cache lock in " + node.getNodeName() + " on hgcache/" + hash + " " + slaveNodeWasLocked + "...");
+                listener.getLogger().println("Waiting for agent node cache lock in " + node.getNodeName() + " on hgcache/" + hash + " " + slaveNodeWasLocked + "...");
             }
 
             slaveNodeLock.lockInterruptibly();
             try {
-                listener.getLogger().println("Acquired slave node cache lock for node " + node.getNodeName() + ".");
+                listener.getLogger().println("Acquired agent node cache lock for node " + node.getNodeName() + ".");
 
                 final FilePath nodeRootPath = node.getRootPath();
                 if (nodeRootPath == null) {
@@ -186,7 +186,7 @@ class Cache {
                 FilePath masterTransfer = masterCache.child(bundleFileName);
                 FilePath localTransfer = localCache.child("xfer.hg");
                 try {
-                    // hg invocation on the slave
+                    // hg invocation on the agent
                     try (HgExe slaveHg = new HgExe(inst, credentials, launcher, node, listener, new EnvVars())) {
                         if (localCache.isDirectory()) {
                             // Need to transfer just newly available changesets.
@@ -195,8 +195,8 @@ class Cache {
                             if (localHeads.equals(masterHeads)) {
                                 listener.getLogger().println("Local cache is up to date.");
                             } else {
-                                // If there are some local heads not in master, they must be ancestors of new heads.
-                                // If there are some master heads not in local, they could be descendants of old heads,
+                                // If there are some local heads not in controller, they must be ancestors of new heads.
+                                // If there are some controller heads not in local, they could be descendants of old heads,
                                 // or they could be new branches.
                                 // Issue1910: in Hg 1.4.3 and earlier, passing --base $h for h in localHeads will fail
                                 // to actually exclude those head sets, but not a big deal. (Hg 1.5 fixes that but leaves
@@ -235,7 +235,7 @@ class Cache {
                 return localCache;
             } finally {
                 slaveNodeLock.unlock();
-                listener.getLogger().println("Slave node cache lock released for node " + node.getNodeName() + ".");
+                listener.getLogger().println("Agent node cache lock released for node " + node.getNodeName() + ".");
             }
         }
     }

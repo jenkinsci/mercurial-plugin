@@ -73,8 +73,8 @@ public class MercurialSCMSource2Test {
         FilePath sampleRepo = slave.getRootPath().child("sampleRepo");
         sampleRepo.mkdirs();
         m.hg(sampleRepo, "init");
-        // Tricky because the SSH URL will not work on that agent; it is actually only valid on the master.
-        // So we need to check out on the master, which is where branch indexing happens as well.
+        // Tricky because the SSH URL will not work on that agent; it is actually only valid on the controller.
+        // So we need to check out on the controller, which is where branch indexing happens as well.
         sampleRepo.child("Jenkinsfile").write("node('master') {checkout scm}", null);
         m.hg(sampleRepo, "commit", "--addremove", "--message=flow");
         MercurialSCMSource s = new MercurialSCMSource("ssh://test@" + container.ipBound(22) + ":" + container.port(22) + "/" + sampleRepo);
