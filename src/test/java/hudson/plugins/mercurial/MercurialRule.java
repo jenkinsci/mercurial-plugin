@@ -20,6 +20,9 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.TreeSet;
 import static org.junit.Assert.*;
+
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.junit.Assume;
 import org.junit.AssumptionViolatedException;
 import org.junit.rules.ExternalResource;
@@ -189,26 +192,21 @@ public final class MercurialRule extends ExternalResource {
         FilePath hgDir = repo.child(".hg");
         FilePath enforcePython3 = hgDir.child("enforce-python3.py");
         enforcePython3.write(
-            "import urllib.request, urllib.parse\n" +
-            "def precommit(**kwargs):\n" +
-            "    urllib.request.Request('http://nowhere.net/')\n", null);
+                "import urllib.request, urllib.parse\n" +
+                        "def precommit(**kwargs):\n" +
+                        "    urllib.request.Request('http://nowhere.net/')\n", null);
+
         FilePath hook = hgDir.child("hook.py");
-        hook.write(
-            "import urllib.request, urllib.parse\n" +
-            "def commit(ui, repo, node, **kwargs):\n" +
-            "    data = {\n" +
-            "        'url': '" + repo.toURI().toString() + "',\n" +
-            "        'branch': repo[node].branch(),\n" +
-            "        'changesetId': node,\n" +
-            "    }\n" +
-            "    req = urllib.request.Request('" + j.getURL() + "mercurial/notifyCommit')\n" +
-            "    rsp = urllib.request.urlopen(req, urllib.parse.urlencode(data).encode(\"utf-8\"))\n" +
-            "    # TODO gives some error about bytes vs. str: ui.warn('Notify Commit hook response: %s\\n' % rsp.read())\n" +
-            "    pass\n", null);
+
+        String hook_text = IOUtils.toString(this.getClass().getResourceAsStream("hook.py"), "UTF-8");
+        StringUtils.replace(hook_text, "@JENKINS_URL@", j.getURL().toString());
+        StringUtils.replace(hook_text, "@REPO_URL@", repo.toURI().toString());
+        hook.write(hook_text, null);
+
         hgDir.child("hgrc").write(
-            "[hooks]\n" +
-            "precommit.enforce-python3 = python:" + enforcePython3.getRemote() + ":precommit\n" +
-            "commit.jenkins = python:" + hook.getRemote() + ":commit", null);
+                "[hooks]\n" +
+                        "precommit.enforce-python3 = python:" + enforcePython3.getRemote() + ":precommit\n" +
+                        "commit.jenkins = python:" + hook.getRemote() + ":commit", null);
     }
 
 }

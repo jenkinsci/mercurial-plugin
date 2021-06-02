@@ -54,7 +54,7 @@ result in less work for Jenkins to determine the projects that need to
 be rebuilt. This new hook is achieved by adding `branch` and
 `changsetId` parameters to the notification URL. Newer versions of
 Mercurial can achieve this with an in-process hook such as
-that shown in test sources in `MercurialRule.registerHook`.
+that shown in test sources in [hook.py](https://github.com/jenkinsci/mercurial-plugin/tree/master/src/test/resources/hook.py)
 
 ## Windows/TortoiseHG Integration 
 
