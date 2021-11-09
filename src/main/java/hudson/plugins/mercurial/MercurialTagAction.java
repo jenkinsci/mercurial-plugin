@@ -83,7 +83,7 @@ public class MercurialTagAction extends SCMRevisionState {
 
     @Override
     public String getIconFileName() {
-        return "/plugin/mercurial/images/32x32/logo.png";
+        return "/plugin/mercurial/images/logo.svg";
     }
 
     @Override
