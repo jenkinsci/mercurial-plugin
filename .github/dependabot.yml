@@ -4,3 +4,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    ignore:
+      # JENKINS-65175
+      - dependency-name: "org.ini4j:ini4j"
