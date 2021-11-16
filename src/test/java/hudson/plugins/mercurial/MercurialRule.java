@@ -198,9 +198,9 @@ public final class MercurialRule extends ExternalResource {
 
         FilePath hook = hgDir.child("hook.py");
 
-        String hook_text = IOUtils.toString(this.getClass().getResourceAsStream("hook.py"), "UTF-8");
-        StringUtils.replace(hook_text, "@JENKINS_URL@", j.getURL().toString());
-        StringUtils.replace(hook_text, "@REPO_URL@", repo.toURI().toString());
+        String hook_text = IOUtils.toString(MercurialRule.class.getResourceAsStream("/hook.py"), "UTF-8");
+        hook_text = StringUtils.replace(hook_text, "@JENKINS_URL@", j.getURL().toString());
+        hook_text = StringUtils.replace(hook_text, "@REPO_URL@", repo.toURI().toString());
         hook.write(hook_text, null);
 
         hgDir.child("hgrc").write(
