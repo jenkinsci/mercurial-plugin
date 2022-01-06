@@ -31,7 +31,7 @@ import hudson.plugins.mercurial.MercurialSCMBuilder;
 import hudson.plugins.mercurial.MercurialSCMSource;
 import hudson.plugins.mercurial.MercurialSCMSourceContext;
 import hudson.scm.SCM;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.trait.SCMBuilder;
 import jenkins.scm.api.trait.SCMSourceContext;
@@ -58,7 +58,7 @@ public class CleanMercurialSCMSourceTrait extends SCMSourceTrait {
     }
 
     @Extension public static class DescriptorImpl extends SCMSourceTraitDescriptor {
-        @Override public @Nonnull String getDisplayName() {
+        @Override public @NonNull String getDisplayName() {
             return Messages.CleanMercurialSCMSourceTrait_displayName();
         }
 

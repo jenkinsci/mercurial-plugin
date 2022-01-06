@@ -41,7 +41,7 @@ import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.branch.BranchSource;
 import jenkins.scm.api.SCMEvents;
 import jenkins.util.VirtualFile;
@@ -275,12 +275,12 @@ public class PipelineTest {
     }
 
     // Copied from WorkflowMultiBranchProjectTest; do not want to depend on that due to its dependency on git:
-    public static @Nonnull WorkflowJob scheduleAndFindBranchProject(@Nonnull WorkflowMultiBranchProject mp, @Nonnull String name) throws Exception {
+    public static @NonNull WorkflowJob scheduleAndFindBranchProject(@NonNull WorkflowMultiBranchProject mp, @NonNull String name) throws Exception {
         mp.scheduleBuild2(0).getFuture().get();
         return findBranchProject(mp, name);
     }
 
-    public static @Nonnull WorkflowJob findBranchProject(@Nonnull WorkflowMultiBranchProject mp, @Nonnull String name) throws Exception {
+    public static @NonNull WorkflowJob findBranchProject(@NonNull WorkflowMultiBranchProject mp, @NonNull String name) throws Exception {
         WorkflowJob p = mp.getItem(name);
         showIndexing(mp);
         if (p == null) {
@@ -289,14 +289,14 @@ public class PipelineTest {
         return p;
     }
 
-    static void showIndexing(@Nonnull WorkflowMultiBranchProject mp) throws Exception {
+    static void showIndexing(@NonNull WorkflowMultiBranchProject mp) throws Exception {
         FolderComputation<?> indexing = mp.getIndexing();
         System.out.println("---%<--- " + indexing.getUrl());
         indexing.writeWholeLogTo(System.out);
         System.out.println("---%<--- ");
     }
 
-    static void showEvents(@Nonnull WorkflowMultiBranchProject mp) throws Exception {
+    static void showEvents(@NonNull WorkflowMultiBranchProject mp) throws Exception {
         AnnotatedLargeText<FolderComputation<WorkflowJob>> events = mp.getComputation().getEventsText();
         System.out.println("---%<--- " + mp.getComputation().getUrl() + " EVENTS");
         events.writeLogTo(0, System.out);

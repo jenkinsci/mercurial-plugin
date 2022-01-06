@@ -27,9 +27,9 @@ package hudson.plugins.mercurial;
 import hudson.FilePath;
 import hudson.model.FreeStyleProject;
 import hudson.model.Slave;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import org.jenkinsci.test.acceptance.docker.DockerClassRule;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -59,7 +59,7 @@ public class FunctionalTest {
     /** Whether to run builds on a agent, or only on controller. */
     @Parameterized.Parameter(0) public boolean useSlave;
     public interface MercurialInstallationFactory {
-        @CheckForNull MercurialInstallation create(@Nonnull JenkinsRule j, @Nonnull MercurialContainer container, @CheckForNull Slave slave, @Nullable MercurialContainer.Version version) throws Exception;
+        @CheckForNull MercurialInstallation create(@NonNull JenkinsRule j, @NonNull MercurialContainer container, @CheckForNull Slave slave, @Nullable MercurialContainer.Version version) throws Exception;
         @Override String toString();
     }
     /** How Mercurial is configured. */

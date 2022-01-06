@@ -27,8 +27,8 @@ package hudson.plugins.mercurial;
 
 import com.cloudbees.plugins.credentials.common.IdCredentials;
 import hudson.plugins.mercurial.browser.HgBrowser;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.scm.api.SCMHead;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.trait.SCMBuilder;
@@ -54,9 +54,9 @@ public class MercurialSCMBuilder<B extends MercurialSCMBuilder<B>> extends SCMBu
     /**
      * The repository to track. This can be URL or a local file path.
      */
-    private @Nonnull String source;
+    private @NonNull String source;
 
-    public MercurialSCMBuilder(@Nonnull SCMHead head, @CheckForNull SCMRevision revision, @Nonnull String source,
+    public MercurialSCMBuilder(@NonNull SCMHead head, @CheckForNull SCMRevision revision, @NonNull String source,
                                @CheckForNull String credentialsId) {
         super(MercurialSCM.class, head, revision);
         this.source = source;
@@ -83,34 +83,34 @@ public class MercurialSCMBuilder<B extends MercurialSCMBuilder<B>> extends SCMBu
         return source;
     }
 
-    @SuppressWarnings("unchecked") public @Nonnull B withBrowser(HgBrowser browser) {
+    @SuppressWarnings("unchecked") public @NonNull B withBrowser(HgBrowser browser) {
         this.browser = browser;
         return (B) this;
     }
 
-    @SuppressWarnings("unchecked") public @Nonnull B withClean(boolean clean) {
+    @SuppressWarnings("unchecked") public @NonNull B withClean(boolean clean) {
         this.clean = clean;
         return (B) this;
     }
 
-    @SuppressWarnings("unchecked") public @Nonnull B withCredentialsId(String credentialsId) {
+    @SuppressWarnings("unchecked") public @NonNull B withCredentialsId(String credentialsId) {
         this.credentialsId = credentialsId;
         return (B) this;
     }
 
-    @SuppressWarnings("unchecked") public @Nonnull B withInstallation(String installation) {
+    @SuppressWarnings("unchecked") public @NonNull B withInstallation(String installation) {
         this.installation = installation;
         return (B) this;
     }
 
     @SuppressWarnings("unchecked")
-    public @Nonnull
+    public @NonNull
     B withSource(String source) {
         this.source = source;
         return (B) this;
     }
 
-    @Override public @Nonnull MercurialSCM build() {
+    @Override public @NonNull MercurialSCM build() {
         SCMRevision revision = revision();
         MercurialSCM result = new MercurialSCM(source());
         if (revision instanceof MercurialSCMSource.MercurialRevision) {

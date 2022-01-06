@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>4.31</version>
+        <version>4.33</version>
         <relativePath />
     </parent>
     <artifactId>mercurial</artifactId>
@@ -17,7 +17,7 @@
     <properties>
         <revision>2.17</revision>
         <changelist>-SNAPSHOT</changelist>
-        <jenkins.version>2.190.3</jenkins.version>
+        <jenkins.version>2.289.1</jenkins.version>
         <java.level>8</java.level>
         <no-test-jar>false</no-test-jar>
     </properties>
@@ -77,8 +77,8 @@
         <dependencies>
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
-                <artifactId>bom-2.190.x</artifactId>
-                <version>16</version>
+                <artifactId>bom-2.289.x</artifactId>
+                <version>1090.v0a_33df40457a_</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -96,6 +96,12 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>ssh-credentials</artifactId>
+            <exclusions>
+                <exclusion> <!-- TODO conflict between trilead-ssh2 and jackson2-api -->
+                    <groupId>org.json</groupId>
+                    <artifactId>json</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
@@ -157,6 +163,12 @@
             <artifactId>docker-fixtures</artifactId>
             <version>1.11</version>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.core</groupId>
+                    <artifactId>jackson-databind</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>

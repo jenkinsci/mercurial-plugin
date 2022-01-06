@@ -35,8 +35,8 @@ import hudson.plugins.mercurial.MercurialSCMSource;
 import hudson.plugins.mercurial.MercurialSCMSourceContext;
 import hudson.scm.SCM;
 import hudson.util.ListBoxModel;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.trait.SCMBuilder;
@@ -99,7 +99,7 @@ public class MercurialInstallationSCMSourceTrait extends SCMSourceTrait {
         /**
          * {@inheritDoc}
          */
-        @Override public @Nonnull String getDisplayName() {
+        @Override public @NonNull String getDisplayName() {
             return Messages.MercurialInstallationSCMSourceTrait_displayName();
         }
 
@@ -135,7 +135,7 @@ public class MercurialInstallationSCMSourceTrait extends SCMSourceTrait {
         /**
          * {@inheritDoc}
          */
-        @Override public boolean isApplicableToBuilder(@Nonnull Class<? extends SCMBuilder> builderClass) {
+        @Override public boolean isApplicableToBuilder(@NonNull Class<? extends SCMBuilder> builderClass) {
             if (super.isApplicableToBuilder(builderClass)) {
                 for (MercurialInstallation i : MercurialInstallation.allInstallations()) {
                     if (i.isUseCaches()) {
@@ -149,7 +149,7 @@ public class MercurialInstallationSCMSourceTrait extends SCMSourceTrait {
         /**
          * {@inheritDoc}
          */
-        @Override public boolean isApplicableToContext(@Nonnull Class<? extends SCMSourceContext> contextClass) {
+        @Override public boolean isApplicableToContext(@NonNull Class<? extends SCMSourceContext> contextClass) {
             if (super.isApplicableToContext(contextClass)) {
                 for (MercurialInstallation i : MercurialInstallation.allInstallations()) {
                     if (i.isUseCaches()) {
@@ -163,7 +163,7 @@ public class MercurialInstallationSCMSourceTrait extends SCMSourceTrait {
         /**
          * {@inheritDoc}
          */
-        @Override public boolean isApplicableToSCM(@Nonnull Class<? extends SCM> scmClass) {
+        @Override public boolean isApplicableToSCM(@NonNull Class<? extends SCM> scmClass) {
             if (super.isApplicableToSCM(scmClass)) {
                 for (MercurialInstallation i : MercurialInstallation.allInstallations()) {
                     if (i.isUseCaches()) {

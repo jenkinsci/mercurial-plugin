@@ -41,7 +41,7 @@ import hudson.util.FormValidation;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.List;
-import javax.annotation.CheckForNull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
 import jenkins.model.Jenkins;
 import org.ini4j.Ini;
 import org.ini4j.InvalidFileFormatException;
