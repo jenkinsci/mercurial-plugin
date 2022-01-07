@@ -59,7 +59,7 @@ import static java.util.logging.Level.FINE;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.ini4j.Ini;
@@ -627,7 +627,7 @@ public class MercurialSCM extends SCM implements Serializable {
         }
     }
 
-    private void determineChanges(Run<?, ?> build, Launcher launcher, TaskListener listener, @Nonnull File changelogFile, FilePath repository, Node node, String revToBuild, SCMRevisionState baseline) throws IOException, InterruptedException {
+    private void determineChanges(Run<?, ?> build, Launcher launcher, TaskListener listener, @NonNull File changelogFile, FilePath repository, Node node, String revToBuild, SCMRevisionState baseline) throws IOException, InterruptedException {
         if (isDisableChangeLog()) {
             createEmptyChangeLog(changelogFile, listener, "changelog");
             return;

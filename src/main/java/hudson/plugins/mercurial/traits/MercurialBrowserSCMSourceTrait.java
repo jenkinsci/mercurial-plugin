@@ -37,7 +37,7 @@ import hudson.scm.RepositoryBrowser;
 import hudson.scm.RepositoryBrowsers;
 import hudson.scm.SCM;
 import java.util.List;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.scm.api.SCMSource;
 import jenkins.scm.api.trait.SCMBuilder;
 import jenkins.scm.api.trait.SCMSourceContext;
@@ -95,7 +95,7 @@ public class MercurialBrowserSCMSourceTrait extends SCMSourceTrait {
         /**
          * {@inheritDoc}
          */
-        @Override public @Nonnull String getDisplayName() {
+        @Override public @NonNull String getDisplayName() {
             return Messages.MercurialBrowserSCMSourceTrait_displayName();
         }
 

@@ -26,16 +26,16 @@
 package hudson.plugins.mercurial;
 
 import hudson.model.TaskListener;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.scm.api.trait.SCMSourceRequest;
 
 public class MercurialSCMSourceRequest extends SCMSourceRequest {
     private final String credentialsId;
     private final String installation;
     private final String source;
-    protected MercurialSCMSourceRequest(@Nonnull MercurialSCMSource source,
-                                        @Nonnull MercurialSCMSourceContext<?> context,
+    protected MercurialSCMSourceRequest(@NonNull MercurialSCMSource source,
+                                        @NonNull MercurialSCMSourceContext<?> context,
                                         @CheckForNull TaskListener listener) {
         super(source, context, listener);
         this.credentialsId = context.credentialsId();

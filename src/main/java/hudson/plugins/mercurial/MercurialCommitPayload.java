@@ -27,7 +27,7 @@ package hudson.plugins.mercurial;
 
 import java.io.Serializable;
 import java.net.URI;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.scm.api.SCMHeadEvent;
 
 /**
@@ -36,30 +36,30 @@ import jenkins.scm.api.SCMHeadEvent;
  * @since 1.58-beta-1
  */
 public class MercurialCommitPayload implements Serializable {
-    @Nonnull
+    @NonNull
     private final URI url;
-    @Nonnull
+    @NonNull
     private final String branch;
-    @Nonnull
+    @NonNull
     private final String changesetId;
 
-    public MercurialCommitPayload(@Nonnull URI url, @Nonnull String branch, @Nonnull String commitId) {
+    public MercurialCommitPayload(@NonNull URI url, @NonNull String branch, @NonNull String commitId) {
         this.url = url;
         this.branch = branch;
         this.changesetId = commitId;
     }
 
-    @Nonnull
+    @NonNull
     public URI getUrl() {
         return url;
     }
 
-    @Nonnull
+    @NonNull
     public String getBranch() {
         return branch;
     }
 
-    @Nonnull
+    @NonNull
     public String getChangesetId() {
         return changesetId;
     }

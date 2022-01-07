@@ -35,8 +35,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
+import edu.umd.cs.findbugs.annotations.CheckForNull;
+import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMFile;
 import jenkins.scm.api.SCMHead;
@@ -70,10 +70,10 @@ import org.kohsuke.stapler.QueryParameter;
 
 public final class MercurialSCMSource extends SCMSource {
 
-    private final @Nonnull String source;
+    private final @NonNull String source;
     private @CheckForNull
     String credentialsId;
-    private @Nonnull List<SCMSourceTrait> traits;
+    private @NonNull List<SCMSourceTrait> traits;
     @Deprecated @Restricted(NoExternalUse.class) @RestrictedSince("2.0") private transient String installation;
     @Deprecated @Restricted(NoExternalUse.class) @RestrictedSince("2.0") private transient String branchPattern;
     // USELESS FIELD REMOVED: private final String modules;
@@ -139,11 +139,11 @@ public final class MercurialSCMSource extends SCMSource {
         return this;
     }
 
-    public @Nonnull String getSource() {
+    public @NonNull String getSource() {
         return source;
     }
 
-    public @Nonnull List<SCMSourceTrait> getTraits() {
+    public @NonNull List<SCMSourceTrait> getTraits() {
         return Collections.unmodifiableList(traits);
     }
 
@@ -187,8 +187,8 @@ public final class MercurialSCMSource extends SCMSource {
         return SCMTrait.find(traits, CleanMercurialSCMSourceTrait.class) != null;
     }
 
-    @Override protected void retrieve(@CheckForNull SCMSourceCriteria criteria, @Nonnull SCMHeadObserver observer,
-                            @CheckForNull SCMHeadEvent<?> event, @Nonnull final TaskListener listener)
+    @Override protected void retrieve(@CheckForNull SCMSourceCriteria criteria, @NonNull SCMHeadObserver observer,
+                            @CheckForNull SCMHeadEvent<?> event, @NonNull final TaskListener listener)
             throws IOException, InterruptedException {
         try (MercurialSCMSourceRequest request= new MercurialSCMSourceContext<>(criteria, observer)
                 .withCredentialsId(credentialsId)
@@ -221,14 +221,14 @@ public final class MercurialSCMSource extends SCMSource {
                     if (request.process(new SCMHead(name),
                             new SCMSourceRequest.RevisionLambda<SCMHead, MercurialRevision>() {
                                 @Override
-                                public @Nonnull
-                                MercurialRevision create(@Nonnull SCMHead branch) {
+                                public @NonNull
+                                MercurialRevision create(@NonNull SCMHead branch) {
                                     return new MercurialRevision(branch, nodeBranch[0]);
                                 }
                             }, new SCMSourceRequest.ProbeLambda<SCMHead, MercurialRevision>() {
                                 @Override
-                                public @Nonnull
-                                SCMSourceCriteria.Probe create(@Nonnull SCMHead branch, @Nullable final MercurialRevision revision) {
+                                public @NonNull
+                                SCMSourceCriteria.Probe create(@NonNull SCMHead branch, @Nullable final MercurialRevision revision) {
                                     return new SCMProbeImpl(hg, cache, listener, revision, name);
                                 }
                             }, new SCMSourceRequest.Witness() {
@@ -292,13 +292,13 @@ public final class MercurialSCMSource extends SCMSource {
         }
     }
 
-    protected @Nonnull MercurialSCMBuilder<?> newBuilder(@Nonnull SCMHead head, @CheckForNull SCMRevision revision) {
+    protected @NonNull MercurialSCMBuilder<?> newBuilder(@NonNull SCMHead head, @CheckForNull SCMRevision revision) {
         return new MercurialSCMBuilder<>(head, revision, source, credentialsId);
     }
 
-    protected void decorate(@Nonnull MercurialSCMBuilder<?> builder) {}
+    protected void decorate(@NonNull MercurialSCMBuilder<?> builder) {}
 
-    @Override public @Nonnull SCM build(@Nonnull SCMHead head, @CheckForNull SCMRevision revision) {
+    @Override public @NonNull SCM build(@NonNull SCMHead head, @CheckForNull SCMRevision revision) {
         MercurialSCMBuilder<?> builder = newBuilder(head, revision).withTraits(traits);
         decorate(builder);
         return builder.build();
@@ -315,7 +315,7 @@ public final class MercurialSCMSource extends SCMSource {
         return null;
     }
 
-    @Override protected @Nonnull List<Action> retrieveActions(@NonNull SCMHead head,
+    @Override protected @NonNull List<Action> retrieveActions(@NonNull SCMHead head,
                                            @edu.umd.cs.findbugs.annotations.CheckForNull SCMHeadEvent event,
                                            @NonNull TaskListener listener) throws IOException, InterruptedException {
         // TODO for Mercurial 2.4+ check for the bookmark called @ and resolve that to determine the primary
@@ -325,7 +325,7 @@ public final class MercurialSCMSource extends SCMSource {
         return Collections.emptyList();
     }
 
-    private static @Nonnull List<? extends StandardUsernameCredentials> availableCredentials(
+    private static @NonNull List<? extends StandardUsernameCredentials> availableCredentials(
             @CheckForNull Item context, @CheckForNull String source) {
         return CredentialsProvider.lookupCredentials(StandardUsernameCredentials.class, context, null, URIRequirementBuilder.fromUri(source).build());
     }
@@ -389,9 +389,9 @@ public final class MercurialSCMSource extends SCMSource {
     }
 
     public static final class MercurialRevision extends SCMRevision {
-        @Nonnull private final String hash;
+        @NonNull private final String hash;
 
-        public MercurialRevision(@Nonnull SCMHead branch, @Nonnull String hash) {
+        public MercurialRevision(@NonNull SCMHead branch, @NonNull String hash) {
             super(branch);
             this.hash = hash;
         }
@@ -404,7 +404,7 @@ public final class MercurialSCMSource extends SCMSource {
         @Override public String toString() {
             return getHead().getName() + ":" + hash;
         }
-        public @Nonnull String getHash() {
+        public @NonNull String getHash() {
             return hash;
         }
     }
@@ -427,8 +427,8 @@ public final class MercurialSCMSource extends SCMSource {
         }
 
         @Override
-        public @Nonnull
-        SCMProbeStat stat(@Nonnull String path) throws IOException {
+        public @NonNull
+        SCMProbeStat stat(@NonNull String path) throws IOException {
             try {
                 return SCMProbeStat.fromType(hg.run("locate", "-r", revision.getHash(), "-I", "path:" + path).
                     pwd(cache).join() == 0 ? SCMFile.Type.REGULAR_FILE : SCMFile.Type.NONEXISTENT);
