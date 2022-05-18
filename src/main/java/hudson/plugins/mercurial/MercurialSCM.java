@@ -11,6 +11,7 @@ import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.Main;
 import hudson.Util;
 import hudson.matrix.MatrixRun;
 import hudson.model.AbstractBuild;
@@ -50,8 +51,12 @@ import java.io.PrintStream;
 import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
@@ -62,6 +67,7 @@ import java.util.regex.Pattern;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
+import org.apache.commons.lang.StringUtils;
 import org.ini4j.Ini;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -73,6 +79,11 @@ import org.kohsuke.stapler.StaplerRequest;
  * Mercurial SCM.
  */
 public class MercurialSCM extends SCM implements Serializable {
+
+    static final String ALLOW_LOCAL_CHECKOUT_PROPERTY = MercurialSCM.class.getName() + ".ALLOW_LOCAL_CHECKOUT";
+    //TODO: use SystemProperties instead after jenkins version upgrade to 2.236
+    static /* not final */ boolean ALLOW_LOCAL_CHECKOUT =
+            Boolean.parseBoolean(System.getProperty(ALLOW_LOCAL_CHECKOUT_PROPERTY, String.valueOf(Main.isUnitTest)));
 
     // Environment vars names to be exposed
     private static final String ENV_MERCURIAL_REVISION = "MERCURIAL_REVISION";
@@ -561,6 +572,11 @@ public class MercurialSCM extends SCM implements Serializable {
             throws IOException, InterruptedException {
 
         MercurialInstallation mercurialInstallation = findInstallation(installation);
+
+        if (!ALLOW_LOCAL_CHECKOUT && !workspace.isRemote()) {
+            abortIfSourceLocal();
+        }
+
         final boolean jobShouldUseSharing = mercurialInstallation != null && mercurialInstallation.isUseSharing();
 
         Node node = workspaceToNode(workspace);
@@ -596,7 +612,27 @@ public class MercurialSCM extends SCM implements Serializable {
         }
         }
     }
-    
+
+    void abortIfSourceLocal() throws IOException {
+        if (!isValidSource(source)) {
+            throw new AbortException("Checkout of Mercurial source '" + source + "' aborted because it references a local directory, which may be insecure. You can allow local checkouts anyway by setting the system property '" + ALLOW_LOCAL_CHECKOUT_PROPERTY + "' to true.");
+        }
+    }
+
+    private static boolean isValidSource(String source) {
+        if (StringUtils.isEmpty(source)) {
+            return true;
+        } else if (source.toLowerCase(Locale.ENGLISH).startsWith("file://")) {
+            return false;
+        }
+        try {
+            // Check for local remotes with no protocol like /path/to/repo
+            return !Files.exists(Paths.get(source));
+        } catch (InvalidPathException e) {
+            return true;
+        }
+    }
+
     private boolean canReuseWorkspace(FilePath repo, Node node,
             boolean jobShouldUseSharing, Run<?,?> build,
             Launcher launcher, TaskListener listener)
