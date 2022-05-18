@@ -17,7 +17,7 @@
     <properties>
         <revision>2.17</revision>
         <changelist>-SNAPSHOT</changelist>
-        <jenkins.version>2.289.1</jenkins.version>
+        <jenkins.version>2.289.3</jenkins.version>
         <no-test-jar>false</no-test-jar>
     </properties>
     
@@ -77,7 +77,7 @@
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
                 <artifactId>bom-2.289.x</artifactId>
-                <version>1181.v04b_21d4b_0d6c</version>
+                <version>1382.v7d694476f340</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
