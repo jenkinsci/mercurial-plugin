@@ -52,6 +52,7 @@ import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.List;
@@ -612,11 +613,23 @@ public class MercurialSCM extends SCM implements Serializable {
         }
     }
 
-    private void abortIfSourceLocal() throws IOException {
-        if (StringUtils.isNotEmpty(source) &&
-                (source.toLowerCase(Locale.ENGLISH).startsWith("file://") || Files.exists(Paths.get(source)))) {
-
+    void abortIfSourceLocal() throws IOException {
+        if (!isValidSource(source)) {
             throw new AbortException("Checkout of Mercurial source '" + source + "' aborted because it references a local directory, which may be insecure. You can allow local checkouts anyway by setting the system property '" + ALLOW_LOCAL_CHECKOUT_PROPERTY + "' to true.");
+        }
+    }
+
+    private static boolean isValidSource(String source) {
+        if (StringUtils.isEmpty(source)) {
+            return true;
+        } else if (source.toLowerCase(Locale.ENGLISH).startsWith("file://")) {
+            return false;
+        }
+        try {
+            // Check for local remotes with no protocol like /path/to/repo
+            return !Files.exists(Paths.get(source));
+        } catch (InvalidPathException e) {
+            return true;
         }
     }
 
