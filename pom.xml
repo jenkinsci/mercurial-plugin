@@ -8,7 +8,7 @@
         <relativePath />
     </parent>
     <artifactId>mercurial</artifactId>
-    <version>${revision}${changelist}</version>
+    <version>2.15.2</version>
     <packaging>hpi</packaging>
     <name>Jenkins Mercurial plugin</name>
     <description>Allows Jenkins to check out projects from the Mercurial SCM.</description>
@@ -60,7 +60,7 @@
         <connection>scm:git:git://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
         <developerConnection>scm:git:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>
         <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
-        <tag>${scmTag}</tag>
+        <tag>mercurial-2.15.2</tag>
     </scm>
     <repositories>
         <repository>
