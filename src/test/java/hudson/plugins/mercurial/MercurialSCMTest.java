@@ -24,14 +24,17 @@
 
 package hudson.plugins.mercurial;
 
+import hudson.AbortException;
 import hudson.model.Action;
 import hudson.model.Actionable;
 import org.junit.Test;
+import org.jvnet.hudson.test.Issue;
 
 import java.io.IOException;
 import java.util.*;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 public class MercurialSCMTest {
 
@@ -70,6 +73,15 @@ public class MercurialSCMTest {
             @Override public String getSearchUrl() {return null;}
         }, actualEnvironment);
         assertEquals(EXPECTED_REPOSITORY_URL, actualEnvironment.get("MERCURIAL_REPOSITORY_URL"));
+    }
+
+    @Issue("JENKINS-68562")
+    @Test public void abortIfSourceIsLocal() throws IOException {
+        try {
+            new MercurialSCM("", "https://mercurialserver/testrepo", "", "", "", null, true).abortIfSourceLocal();
+        } catch (AbortException e) {
+            fail("https source URLs should always be valid");
+        }
     }
 
 }
