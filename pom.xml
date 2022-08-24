@@ -5,49 +5,22 @@
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
         <version>4.46</version>
-        <relativePath />
+        <relativePath/>
     </parent>
     <artifactId>mercurial</artifactId>
-    <version>${revision}${changelist}</version>
+    <version>${changelist}</version>
     <packaging>hpi</packaging>
     <name>Jenkins Mercurial plugin</name>
     <description>Allows Jenkins to check out projects from the Mercurial SCM.</description>
     <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
     
     <properties>
-        <revision>2.17</revision>
-        <changelist>-SNAPSHOT</changelist>
+        <changelist>999999-SNAPSHOT</changelist>
         <jenkins.version>2.289.3</jenkins.version>
         <no-test-jar>false</no-test-jar>
+        <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
     </properties>
     
-    <developers>
-        <developer>
-            <id>jglick</id>
-            <name>Jesse Glick</name>
-            <email>jglick@cloudbees.com</email>
-        </developer>
-        <developer>
-            <id>mfriedenhagen</id>
-            <name>Mirko Friedenhagen</name>
-            <email>mfriedenhagen@gmail.com</email>
-        </developer>
-        <developer>
-            <id>kohsuke</id>
-            <name>Kohsuke Kawaguchi</name>
-            <email>kk@kohsuke.org</email>
-        </developer>
-        <developer>
-            <id>davidmc24</id>
-            <name>David M. Carr</name>
-            <email>david@carrclan.us</email>
-        </developer>
-        <developer>
-            <id>willemv</id>
-            <name>Willem Verstraeten</name>
-            <email>willem.verstraeten@gmail.com</email>
-        </developer>
-    </developers>
     <licenses>
         <license>
             <name>MIT</name>
@@ -55,9 +28,9 @@
         </license>
     </licenses>
     <scm>
-        <connection>scm:git:git://github.com/jenkinsci/${project.artifactId}-plugin.git</connection>
-        <developerConnection>scm:git:git@github.com:jenkinsci/${project.artifactId}-plugin.git</developerConnection>
-        <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
+        <connection>scm:git:git://github.com/${gitHubRepo}.git</connection>
+        <developerConnection>scm:git:git@github.com:${gitHubRepo}.git</developerConnection>
+        <url>https://github.com/${gitHubRepo}</url>
         <tag>${scmTag}</tag>
     </scm>
     <repositories>

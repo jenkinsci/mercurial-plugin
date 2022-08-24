@@ -1,9 +1,13 @@
 version: 2
 updates:
-  - package-ecosystem: "maven"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    ignore:
-      # JENKINS-65175
-      - dependency-name: "org.ini4j:ini4j"
+- package-ecosystem: maven
+  directory: /
+  schedule:
+    interval: monthly
+  ignore:
+  # JENKINS-65175
+  - dependency-name: "org.ini4j:ini4j"
+- package-ecosystem: github-actions
+  directory: /
+  schedule:
+    interval: monthly
