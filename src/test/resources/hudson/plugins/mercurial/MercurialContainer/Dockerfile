@@ -1,4 +1,4 @@
-FROM jenkins/java:d93654cc6239
+FROM jenkins/java:387404da3ce7
 RUN apt-get update -y && \
     apt-get install --no-install-recommends -y \
         python2.7 \
