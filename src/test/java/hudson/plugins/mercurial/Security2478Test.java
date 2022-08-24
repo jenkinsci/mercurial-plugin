@@ -66,7 +66,8 @@ public class Security2478Test {
     public void checkoutOnAgentShouldNotAbortWhenSourceIsNonRemoteAndBuildOnAgent() throws Exception {
         assertFalse("Non Remote checkout should be disallowed", MercurialSCM.ALLOW_LOCAL_CHECKOUT);
         DumbSlave agent = rule.createOnlineSlave();
-        FilePath workspace = agent.getRootPath().createTempDir("t", "");
+        FilePath workspace = agent.getRootPath().child("testws");
+        workspace.mkdirs();
         m.hg(workspace, "init");
         m.touchAndCommit(workspace, "a");
         WorkflowJob p = rule.jenkins.createProject(WorkflowJob.class, "pipeline");
