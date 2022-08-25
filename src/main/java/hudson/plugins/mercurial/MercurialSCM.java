@@ -364,8 +364,8 @@ public class MercurialSCM extends SCM implements Serializable {
     }
 
     /**
-     * True if we want clean check out each time. This means deleting everything in the repository checkout
-     * (except <tt>.hg</tt>)
+     * True if we want clean check out each time.
+     * This means deleting everything in the repository checkout (except {@code .hg}).
      */
     public boolean isClean() {
         return clean;

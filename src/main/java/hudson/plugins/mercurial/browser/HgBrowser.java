@@ -38,8 +38,6 @@ public abstract class HgBrowser extends RepositoryBrowser<MercurialChangeSet> {
      * 
      * @param path to a file.
      * @return URL pointing to a specific revision of the file.
-     * 
-     * @throws MalformedURLException
      */
     public URL getFileLink(String path) throws MalformedURLException {
         throw new UnsupportedOperationException("Method is not implemented for HgBrowser");
@@ -50,8 +48,6 @@ public abstract class HgBrowser extends RepositoryBrowser<MercurialChangeSet> {
      * 
      * @param path to a file.
      * @return URL pointing to a specific revision of the file.
-     * 
-     * @throws MalformedURLException
      */
     public URL getDiffLink(String path) throws MalformedURLException {
         throw new UnsupportedOperationException("Method is not implemented for HgBrowser");
