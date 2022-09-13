@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+  <!--
+    Exclusions in this section have been triaged and determined to be false positives.
+  -->
+
+  <!--
+    Here lies technical debt. Exclusions in this section have not yet been triaged. When working on
+    this section, pick an exclusion to triage, then:
+    - If it is a false positive, add a @SuppressFBWarnings(value = "[...]", justification = "[...]")
+      annotation indicating the reason why it is a false positive, then remove the exclusion from
+      this section.
+    - If it is not a false positive, fix the bug, then remove the exclusion from this section.
+   -->
+  <Match>
+    <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE"/>
+    <Class name="hudson.plugins.mercurial.MercurialSCMSource"/>
+    <Method name="retrieve"/>
+  </Match>
+  <Match>
+    <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE"/>
+    <Class name="hudson.plugins.mercurial.MercurialStatus"/>
+    <Method name="doNotifyCommit"/>
+  </Match>
+  <Match>
+    <Bug pattern="SE_NO_SERIALVERSIONID"/>
+  </Match>
+  <Match>
+    <Bug pattern="SIC_INNER_SHOULD_BE_STATIC_ANON"/>
+  </Match>
+  <Match>
+    <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED"/>
+    <Class name="hudson.plugins.mercurial.MercurialInstallation"/>
+    <Field name="downloadForest"/>
+  </Match>
+  <Match>
+    <Bug pattern="SE_TRANSIENT_FIELD_NOT_RESTORED"/>
+    <Class name="hudson.plugins.mercurial.MercurialSCMSource$SCMProbeImpl"/>
+    <Field name="hg"/>
+  </Match>
+  <Match>
+    <Bug pattern="UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
+    <Class name="hudson.plugins.mercurial.MercurialChangeSet"/>
+    <Field name="date"/>
+  </Match>
+  <Match>
+    <Bug pattern="UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
+    <Class name="hudson.plugins.mercurial.MercurialChangeSet"/>
+    <Field name="node"/>
+  </Match>
+</FindBugsFilter>
