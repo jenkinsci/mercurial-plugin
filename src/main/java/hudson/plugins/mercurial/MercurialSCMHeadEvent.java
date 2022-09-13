@@ -73,14 +73,12 @@ public class MercurialSCMHeadEvent extends SCMHeadEvent<MercurialCommitPayload> 
         if (source instanceof MercurialSCMSource) {
             MercurialSCMSource hg = (MercurialSCMSource) source;
             String repository = hg.getSource();
-            if (repository != null) {
-                if (MercurialStatus.looselyMatches(payload.getUrl(), repository)) {
-                    SCMHead head = new SCMHead(getPayload().getBranch());
-                    SCMRevision revision = new MercurialSCMSource.MercurialRevision(
-                            head, getPayload().getChangesetId()
-                    );
-                    return Collections.singletonMap(head, revision);
-                }
+            if (MercurialStatus.looselyMatches(payload.getUrl(), repository)) {
+                SCMHead head = new SCMHead(getPayload().getBranch());
+                SCMRevision revision = new MercurialSCMSource.MercurialRevision(
+                        head, getPayload().getChangesetId()
+                );
+                return Collections.singletonMap(head, revision);
             }
         }
         return Collections.emptyMap();
