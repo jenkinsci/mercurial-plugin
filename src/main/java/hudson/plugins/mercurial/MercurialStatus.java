@@ -33,6 +33,7 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.Stapler;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
+import org.springframework.security.core.Authentication;
 
 import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 import static javax.servlet.http.HttpServletResponse.SC_OK;
@@ -108,6 +109,8 @@ public class MercurialStatus implements UnprotectedRootAction {
         String origin = SCMEvent.originOf(Stapler.getCurrentRequest());
         // run in high privilege to see all the projects anonymous users don't see.
         // this is safe because we only initiate polling.
+        // But we shouldn't disclose the item names to users that is not supposed to see them
+        final Authentication origAuth = Jenkins.getAuthentication2();
         try (ACLContext context = ACL.as(ACL.SYSTEM)) {
             if (StringUtils.isNotBlank(branch) && StringUtils.isNotBlank(changesetId)) {
                 SCMHeadEvent.fireNow(new MercurialSCMHeadEvent(
@@ -115,13 +118,13 @@ public class MercurialStatus implements UnprotectedRootAction {
                         origin));
                 return HttpResponses.ok();
             }
-            return handleNotifyCommit(origin, new URI(url));
+            return handleNotifyCommit(origin, new URI(url), origAuth);
         } catch ( URISyntaxException ex ) {
             throw HttpResponses.error(SC_BAD_REQUEST, ex);
         }
     }
 
-    private HttpResponse handleNotifyCommit(String origin, URI url) throws ServletException, IOException {
+    private HttpResponse handleNotifyCommit(String origin, URI url, final Authentication origAuth) throws ServletException, IOException {
         final List<Item> projects = Lists.newArrayList();
         boolean scmFound = false,
                 urlFound = false;
@@ -203,11 +206,19 @@ public class MercurialStatus implements UnprotectedRootAction {
                 rsp.setStatus(SC_OK);
                 rsp.setContentType("text/plain");
                 for (Item p : projects) {
-                    rsp.addHeader("Triggered", p.getAbsoluteUrl());
+                    if (p.hasPermission2(origAuth, Item.READ)) {
+                        rsp.addHeader("Triggered", p.getAbsoluteUrl());
+                    } else {
+                        rsp.addHeader("Triggered", "Something");
+                    }
                 }
                 PrintWriter w = rsp.getWriter();
                 for (Item p : projects) {
-                    w.println("Scheduled polling of " + p.getFullName());
+                    if (p.hasPermission2(origAuth, Item.READ)) {
+                        w.println("Scheduled polling of " + p.getFullName());
+                    } else {
+                        w.println("Scheduled polling of a job");
+                    }
                 }
                 if (msg!=null)
                     w.println(msg);
