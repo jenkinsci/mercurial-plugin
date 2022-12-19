@@ -45,7 +45,7 @@ public class MercurialStatus implements UnprotectedRootAction {
 
     public static final String URL_NAME = "mercurial";
 
-    private static final int MAX_REPORTED_PROJECTS = 10;
+    static final int MAX_REPORTED_PROJECTS = 10;
 
     public String getDisplayName() {
         return Messages.MercurialStatus_mercurial();
