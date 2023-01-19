@@ -32,6 +32,7 @@ import hudson.FilePath;
 import hudson.model.FreeStyleProject;
 import hudson.model.Slave;
 import hudson.triggers.SCMTrigger;
+import org.apache.commons.lang.StringUtils;
 import org.jenkinsci.test.acceptance.docker.DockerClassRule;
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -43,7 +44,6 @@ import org.jvnet.hudson.test.SleepBuilder;
 import static hudson.plugins.mercurial.MercurialStatus.MAX_REPORTED_PROJECTS;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.StringContains.containsString;
 import static org.junit.Assert.*;
 
 import com.gargoylesoftware.htmlunit.Page;
@@ -137,8 +137,8 @@ public class MercurialStatusTest {
       final List<NameValuePair> triggered = headers.stream().filter(nvp -> nvp.getName().equals("Triggered")).collect(Collectors.toList());
       assertEquals("No headers!", MAX_REPORTED_PROJECTS + 1, triggered.size());
       List<String> headerValues = triggered.stream().map(NameValuePair::getValue).collect(Collectors.toList());
-      final String content = response.getContentAsString();
-      assertThat(content, containsString("Scheduled polling of a job"));
       assertThat(headerValues.get(MAX_REPORTED_PROJECTS), is("<5 more>"));
+      final String content = response.getContentAsString();
+      assertThat(MAX_REPORTED_PROJECTS + 5, is(StringUtils.countMatches(content, "Scheduled polling of ")));
     }
 }
