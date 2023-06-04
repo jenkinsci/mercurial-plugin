@@ -1,8 +1,8 @@
 package hudson.plugins.mercurial;
 
-import com.gargoylesoftware.htmlunit.Page;
-import com.gargoylesoftware.htmlunit.WebResponse;
-import com.gargoylesoftware.htmlunit.util.NameValuePair;
+import org.htmlunit.Page;
+import org.htmlunit.WebResponse;
+import org.htmlunit.util.NameValuePair;
 import hudson.FilePath;
 import hudson.model.FreeStyleProject;
 import hudson.model.Item;
