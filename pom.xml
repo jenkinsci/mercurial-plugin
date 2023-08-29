@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.jenkins-ci.plugins</groupId>
         <artifactId>plugin</artifactId>
-        <version>4.57</version>
+        <version>4.72</version>
         <relativePath/>
     </parent>
     <artifactId>mercurial</artifactId>
@@ -50,7 +50,7 @@
             <dependency>
                 <groupId>io.jenkins.tools.bom</groupId>
                 <artifactId>bom-2.361.x</artifactId>
-                <version>1968.vb_14a_29e76128</version>
+                <version>2102.v854b_fec19c92</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -133,7 +133,7 @@
         <dependency>
             <groupId>org.jenkins-ci.test</groupId>
             <artifactId>docker-fixtures</artifactId>
-            <version>166.v912b_95083ffe</version>
+            <version>178.v2c7d2343886b_</version>
             <scope>test</scope>
             <exclusions>
                 <exclusion>
