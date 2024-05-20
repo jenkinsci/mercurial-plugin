@@ -55,7 +55,7 @@ public class MercurialStatusPermissionTest {
         MercurialContainer container = docker.create();
         Slave slave = container.createSlave(j);
         m.withNode(slave);
-        MercurialInstallation inst = container.createInstallation(j, MercurialContainer.Version.HG5, false, false, false, "", slave);
+        MercurialInstallation inst = container.createInstallation(j, MercurialContainer.Version.HG6, false, false, false, "", slave);
         assertNotNull(inst);
         m.withInstallation(inst);
         FilePath sampleRepo = slave.getRootPath().child("sampleRepo");
