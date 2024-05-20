@@ -65,11 +65,8 @@ public class MercurialContainer extends JavaContainer {
     }
 
     public enum Version {
-        // Latest in https://www.mercurial-scm.org/release/ from each major line; MercurialContainer/Dockerfile must match:
-        HG2("2.9.2"),
-        HG3("3.9.2"),
-        HG4("4.9.1"),
-        HG5("5.5.2");
+        // Latest in https://www.mercurial-scm.org/; MercurialContainer/Dockerfile must match:
+        HG6("6.6.3");
         public final String exactVersion;
         Version(String exactVersion) {
             this.exactVersion = exactVersion;
