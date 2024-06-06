@@ -306,7 +306,7 @@ public class MercurialSCM extends SCM implements Serializable {
         return headName;
     }
 
-    @DataBoundSetter public final void setHeadName(@NonNull String headName) {
+    public final void setHeadName(@NonNull String headName) {
         this.headName = Util.fixEmpty(headName) == null ? "default" : headName;
     }
 
