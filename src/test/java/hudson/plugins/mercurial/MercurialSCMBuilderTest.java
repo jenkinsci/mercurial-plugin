@@ -69,7 +69,7 @@ public class MercurialSCMBuilderTest {
     @Test
     public void headNameDefault() throws IOException, InterruptedException {
         SCMRevision revision = mercurialSCMSource.fetch("version-1.0", listener, null);
-        MercurialSCM mercurialSCM = new MercurialSCMBuilder(new SCMHead("default"), revision, "", "")
+        MercurialSCM mercurialSCM = new MercurialSCMBuilder(revision.getHead(), revision, "", "")
                 .build();
         assertEquals(MercurialSCM.RevisionType.CHANGESET, mercurialSCM.getRevisionType());
         assertEquals("default", mercurialSCM.getHeadName());
@@ -79,7 +79,7 @@ public class MercurialSCMBuilderTest {
     @Test
     public void headNameNonDefault() throws IOException, InterruptedException {
         SCMRevision revision = mercurialSCMSource.fetch("version-1.1", listener, null);
-        MercurialSCM mercurialSCM = new MercurialSCMBuilder(new SCMHead("my-branch"), revision, "", "")
+        MercurialSCM mercurialSCM = new MercurialSCMBuilder(revision.getHead(), revision, "", "")
                 .build();
         assertEquals(MercurialSCM.RevisionType.CHANGESET, mercurialSCM.getRevisionType());
         assertEquals("my-branch", mercurialSCM.getHeadName());
