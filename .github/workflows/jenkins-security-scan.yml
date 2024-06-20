@@ -12,4 +12,4 @@ jobs:
     uses: jenkins-infra/jenkins-security-scan/.github/workflows/jenkins-security-scan.yaml@v2
     with:
       java-cache: 'maven'
-      java-version: 11 # What version of Java to set up for the build.
+      java-version: 17 # What version of Java to set up for the build.
