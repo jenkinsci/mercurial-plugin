@@ -16,7 +16,7 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.servlet.ServletException;
+import jakarta.servlet.ServletException;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMEvent;
 import jenkins.scm.api.SCMHeadEvent;
@@ -31,12 +31,12 @@ import org.kohsuke.stapler.HttpResponse;
 import org.kohsuke.stapler.HttpResponses;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.Stapler;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
+import org.kohsuke.stapler.StaplerRequest2;
+import org.kohsuke.stapler.StaplerResponse2;
 import org.springframework.security.core.Authentication;
 
-import static javax.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
-import static javax.servlet.http.HttpServletResponse.SC_OK;
+import static jakarta.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
+import static jakarta.servlet.http.HttpServletResponse.SC_OK;
 /**
  * Information screen for the use of Mercurial in Jenkins.
  */
@@ -106,7 +106,7 @@ public class MercurialStatus implements UnprotectedRootAction {
     public HttpResponse doNotifyCommit(@QueryParameter(required=true) final String url,
                                        @QueryParameter String branch,
                                        @QueryParameter String changesetId) throws ServletException, IOException {
-        String origin = SCMEvent.originOf(Stapler.getCurrentRequest());
+        String origin = SCMEvent.originOf(Stapler.getCurrentRequest2());
         // run in high privilege to see all the projects anonymous users don't see.
         // this is safe because we only initiate polling.
         // But we shouldn't disclose the item names to users that is not supposed to see them
@@ -202,7 +202,7 @@ public class MercurialStatus implements UnprotectedRootAction {
 
         return new HttpResponse() {
             @SuppressWarnings("deprecation")
-            public void generateResponse(StaplerRequest req, StaplerResponse rsp, Object node) throws IOException, ServletException {
+            public void generateResponse(StaplerRequest2 req, StaplerResponse2 rsp, Object node) throws IOException, ServletException {
                 rsp.setStatus(SC_OK);
                 rsp.setContentType("text/plain");
                 for (Item p : projects) {
