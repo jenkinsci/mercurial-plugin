@@ -73,7 +73,7 @@ import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerRequest2;
 
 /**
  * Mercurial SCM.
@@ -1040,12 +1040,12 @@ public class MercurialSCM extends SCM implements Serializable {
         }
 
         @Override
-        public SCM newInstance(StaplerRequest req, JSONObject formData) throws FormException {
+        public SCM newInstance(StaplerRequest2 req, JSONObject formData) throws FormException {
             return super.newInstance(req, formData);
         }
 
         @Override
-        public boolean configure(StaplerRequest req, JSONObject json) throws FormException {
+        public boolean configure(StaplerRequest2 req, JSONObject json) throws FormException {
             hgExe = req.getParameter("mercurial.hgExe");
             save();
             return true;
