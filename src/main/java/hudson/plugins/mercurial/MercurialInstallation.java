@@ -164,7 +164,6 @@ public class MercurialInstallation extends ToolInstallation implements
         }
 
         @Override
-        @SuppressWarnings(value = "EI_EXPOSE_REP")
         public MercurialInstallation[] getInstallations() {
             return installations;
         }
