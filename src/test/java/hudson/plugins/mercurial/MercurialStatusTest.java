@@ -25,16 +25,42 @@ package hudson.plugins.mercurial;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import hudson.FilePath;
+import hudson.model.FreeStyleProject;
+import hudson.model.Slave;
+import hudson.triggers.SCMTrigger;
+import org.apache.commons.lang.StringUtils;
+import org.jenkinsci.test.acceptance.docker.DockerClassRule;
+import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
+import org.jvnet.hudson.test.Issue;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.SleepBuilder;
+
+import static hudson.plugins.mercurial.MercurialStatus.MAX_REPORTED_PROJECTS;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.*;
+
+import com.gargoylesoftware.htmlunit.Page;
+import com.gargoylesoftware.htmlunit.WebResponse;
+import com.gargoylesoftware.htmlunit.util.NameValuePair;
 
 /**
  *
  * @author Sebastian Sdorra
  */
 public class MercurialStatusTest {
-  
-  @Test public void testLooselyMatches() throws URISyntaxException {
+
+    @Rule public JenkinsRule j = new JenkinsRule();
+    @Rule public MercurialRule m = new MercurialRule(j);
+    @ClassRule public static DockerClassRule<MercurialContainer> docker = new DockerClassRule<>(MercurialContainer.class);
+
+    @Test public void testLooselyMatches() throws URISyntaxException {
       assertTrue( MercurialStatus.looselyMatches(new URI("ssh://somehost/"), "ssh://somehost"));
       assertTrue( MercurialStatus.looselyMatches(new URI("http://somehost"), "http://somehost/"));
       assertTrue( MercurialStatus.looselyMatches(new URI("http://somehost:80/"), "http://somehost/"));
@@ -75,6 +101,44 @@ public class MercurialStatusTest {
 
       assertFalse( MercurialStatus.looselyMatches(new URI("http://scm.foocompany.com/hg/foocomponent/"), "${REPO_URL}") );
       assertFalse( MercurialStatus.looselyMatches(new URI("http://scm.foocompany.com/hg/foocomponent/"), "$REPO_URL") );
-  }
-  
+    }
+
+    @Issue("JENKINS-12544")
+    @Test public void testTriggeredHeadersAreLimited() throws Exception {
+      m.hg("version"); // test environment needs to be able to run Mercurial
+      MercurialContainer container = docker.create();
+      Slave slave = container.createSlave(j);
+      m.withNode(slave);
+      MercurialInstallation inst = container.createInstallation(j, MercurialContainer.Version.HG5, false, false, false, "", slave);
+      assertNotNull(inst);
+      m.withInstallation(inst);
+      FilePath sampleRepo = slave.getRootPath().child("sampleRepo");
+      sampleRepo.mkdirs();
+      m.hg(sampleRepo, "init");
+      sampleRepo.child("a").write("a", "UTF-8");
+      m.hg(sampleRepo, "commit", "--addremove", "--message=a-file");
+
+      String source = "ssh://test@" + container.ipBound(22) + ":" + container.port(22) + "/" + sampleRepo;
+
+      for (int i = 0; i < MAX_REPORTED_PROJECTS + 5; i++) {
+        FreeStyleProject p = j.createFreeStyleProject("triggeredHeaderTest" + i);
+        p.setScm(new MercurialSCM(
+            inst.getName(),
+            source,
+            null, null, null, null, false));
+        p.addTrigger(new SCMTrigger(""));
+        p.getBuildersList().add(new SleepBuilder(1000));
+      }
+
+      final Page page = j.createWebClient().goTo("mercurial/notifyCommit?url=" + source, "text/plain");
+      final WebResponse response = page.getWebResponse();
+      assertEquals(200, response.getStatusCode());
+      final List<NameValuePair> headers = response.getResponseHeaders();
+      final List<NameValuePair> triggered = headers.stream().filter(nvp -> nvp.getName().equals("Triggered")).collect(Collectors.toList());
+      assertEquals("No headers!", MAX_REPORTED_PROJECTS + 1, triggered.size());
+      List<String> headerValues = triggered.stream().map(NameValuePair::getValue).collect(Collectors.toList());
+      assertThat(headerValues.get(MAX_REPORTED_PROJECTS), is("<5 more>"));
+      final String content = response.getContentAsString();
+      assertThat(MAX_REPORTED_PROJECTS + 5, is(StringUtils.countMatches(content, "Scheduled polling of ")));
+    }
 }
