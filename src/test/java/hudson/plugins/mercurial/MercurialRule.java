@@ -22,7 +22,7 @@ import java.util.TreeSet;
 import static org.junit.Assert.*;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.Assume;
 import org.junit.AssumptionViolatedException;
 import org.junit.rules.ExternalResource;
