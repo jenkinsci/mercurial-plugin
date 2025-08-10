@@ -40,7 +40,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.jenkinsci.test.acceptance.docker.DockerFixture;
 import org.jenkinsci.test.acceptance.docker.fixtures.JavaContainer;
 import org.jvnet.hudson.test.JenkinsRule;

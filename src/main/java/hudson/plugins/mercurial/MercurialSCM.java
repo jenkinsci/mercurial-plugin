@@ -67,7 +67,7 @@ import java.util.regex.Pattern;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.ini4j.Ini;
 import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;

@@ -35,7 +35,7 @@ public class HgExeTest {
         assertTrue(HgExe.pathEquals("http://nowhere.net/hg/", "http://nowhere.net/hg"));
         assertTrue(HgExe.pathEquals("http://nowhere.net/hg", "http://nowhere.net/hg"));
         assertFalse(HgExe.pathEquals("https://nowhere.net/hg/", "http://nowhere.net/hg/"));
-        if (  org.apache.commons.lang.SystemUtils.IS_OS_UNIX ) {
+        if (  org.apache.commons.lang3.SystemUtils.IS_OS_UNIX ) {
             assertTrue(HgExe.pathEquals("file:/var/hg/stuff", "/var/hg/stuff"));
             assertTrue(HgExe.pathEquals("file:///var/hg/stuff", "/var/hg/stuff"));
             assertFalse(HgExe.pathEquals("file:/var/hg/stuff", "/var/hg/other"));

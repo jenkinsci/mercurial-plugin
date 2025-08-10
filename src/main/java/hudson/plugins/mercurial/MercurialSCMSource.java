@@ -59,7 +59,7 @@ import jenkins.scm.impl.form.NamedArrayList;
 import jenkins.scm.impl.trait.Discovery;
 import jenkins.scm.impl.trait.RegexSCMHeadFilterTrait;
 import jenkins.scm.impl.trait.Selection;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.DoNotUse;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
