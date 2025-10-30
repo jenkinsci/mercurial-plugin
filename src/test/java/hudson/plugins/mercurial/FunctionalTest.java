@@ -27,51 +27,67 @@ package hudson.plugins.mercurial;
 import hudson.FilePath;
 import hudson.model.FreeStyleProject;
 import hudson.model.Slave;
+import java.io.File;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
-import org.jenkinsci.test.acceptance.docker.DockerClassRule;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.jvnet.hudson.test.BuildWatcher;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.Parameter;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * Runs various functional tests against different system configurations.
  */
-@RunWith(Parameterized.class)
-public class FunctionalTest {
+@Testcontainers(disabledWithoutDocker = true)
+@WithJenkins
+@ParameterizedClass(name="{index}: agent={0} {1} {2}")
+@MethodSource("data")
+class FunctionalTest {
 
-    @Rule public JenkinsRule j = new JenkinsRule();
-    @Rule public MercurialRule m = new MercurialRule(j);
-    @Rule public TemporaryFolder tmp = new TemporaryFolder();
-    @ClassRule public static DockerClassRule<MercurialContainer> docker = new DockerClassRule<>(MercurialContainer.class);
-    @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
+    private JenkinsRule j;
+    private MercurialTestUtil m;
+    @TempDir
+    private File tmp;
+    private MercurialContainer container;
+    @SuppressWarnings("unused")
+    @RegisterExtension
+    private static final BuildWatcherExtension BUILD_WATCHER = new BuildWatcherExtension();
 
-    /** Whether to run builds on a agent, or only on controller. */
-    @Parameterized.Parameter(0) public boolean useSlave;
+    /** Whether to run builds on an agent, or only on controller. */
+    @Parameter(0)
+    private boolean useAgent;
+    /** How Mercurial is configured. */
+    @Parameter(1)
+    private MercurialInstallationFactory mercurialInstallationFactory;
+    /** Version of Mercurial to run (if {@link #useAgent}). */
+    @Parameter(2)
+    private MercurialContainer.Version mercurialVersion;
+
     public interface MercurialInstallationFactory {
-        @CheckForNull MercurialInstallation create(@NonNull JenkinsRule j, @NonNull MercurialContainer container, @CheckForNull Slave slave, @Nullable MercurialContainer.Version version) throws Exception;
+        @CheckForNull MercurialInstallation create(@NonNull JenkinsRule j, @CheckForNull MercurialContainer container, @CheckForNull Slave agent, @Nullable MercurialContainer.Version version) throws Exception;
         @Override String toString();
     }
-    /** How Mercurial is configured. */
-    @Parameterized.Parameter(1) public MercurialInstallationFactory mercurialInstallationFactory;
-    /** Version of Mercurial to run (if {@link #useSlave}). */
-    @Parameterized.Parameter(2) public MercurialContainer.Version mercurialVersion;
-    @Parameterized.Parameters(name="{index}: slave={0} {1} {2}") public static Object[][] data() {
+
+    static Object[][] data() {
         MercurialInstallationFactory defaultFactory = new MercurialInstallationFactory() {
             @Override public String toString() {return "default";}
-            @Override public MercurialInstallation create(JenkinsRule j, MercurialContainer container, Slave slave, MercurialContainer.Version version) throws Exception {
-                if (slave != null) {
-                    return container.createInstallation(j, version, false, false, false, "", slave);
+            @Override public MercurialInstallation create(JenkinsRule j, MercurialContainer container, Slave agent, MercurialContainer.Version version) throws Exception {
+                if (agent != null) {
+                    return container.createInstallation(j, version, false, false, false, "", agent);
                 } else {
                     assert version == null;
                     return null;
@@ -80,9 +96,9 @@ public class FunctionalTest {
         };
         MercurialInstallationFactory cachingFactory = new MercurialInstallationFactory() {
             @Override public String toString() {return "caching";}
-            @Override public MercurialInstallation create(JenkinsRule j, MercurialContainer container, Slave slave, MercurialContainer.Version version) throws Exception {
-                if (slave != null) {
-                    return container.createInstallation(j, version, false, true, false, "", slave);
+            @Override public MercurialInstallation create(JenkinsRule j, MercurialContainer container, Slave agent, MercurialContainer.Version version) throws Exception {
+                if (agent != null) {
+                    return container.createInstallation(j, version, false, true, false, "", agent);
                 } else {
                     // TODO pull up common code here into superclass; or simply switch to @DataBoundSetter so we can create a stock installation (except in default / !useSlave) and then customize it
                     assert version == null;
@@ -94,9 +110,9 @@ public class FunctionalTest {
         };
         MercurialInstallationFactory sharingFactory = new MercurialInstallationFactory() {
             @Override public String toString() {return "sharing";}
-            @Override public MercurialInstallation create(JenkinsRule j, MercurialContainer container, Slave slave, MercurialContainer.Version version) throws Exception {
-                if (slave != null) {
-                    return container.createInstallation(j, version, false, true, true, "", slave);
+            @Override public MercurialInstallation create(JenkinsRule j, MercurialContainer container, Slave agent, MercurialContainer.Version version) throws Exception {
+                if (agent != null) {
+                    return container.createInstallation(j, version, false, true, true, "", agent);
                 } else {
                     assert version == null;
                     MercurialInstallation inst = new MercurialInstallation("whatever", "", "hg", false, true, true, null);
@@ -107,9 +123,9 @@ public class FunctionalTest {
         };
         MercurialInstallationFactory debugFactory = new MercurialInstallationFactory() {
             @Override public String toString() {return "debug";}
-            @Override public MercurialInstallation create(JenkinsRule j, MercurialContainer container, Slave slave, MercurialContainer.Version version) throws Exception {
-                if (slave != null) {
-                    return container.createInstallation(j, version, true, false, false, "", slave);
+            @Override public MercurialInstallation create(JenkinsRule j, MercurialContainer container, Slave agent, MercurialContainer.Version version) throws Exception {
+                if (agent != null) {
+                    return container.createInstallation(j, version, true, false, false, "", agent);
                 } else {
                     assert version == null;
                     MercurialInstallation inst = new MercurialInstallation("whatever", "", "hg", true, false, false, null);
@@ -131,31 +147,47 @@ public class FunctionalTest {
     }
 
     private FilePath repo;
-    private Slave slave;
+    private Slave agent;
     private MercurialInstallation inst;
 
-    @Before public void setUp() throws Exception {
-        MercurialContainer container = useSlave ? docker.create() : null;
-        slave = useSlave ? container.createSlave(j) : null;
-        inst = mercurialInstallationFactory.create(j, container, slave, mercurialVersion);
-        if (inst != null && inst.isUseCaches() || slave == null) {
+    @BeforeEach
+    void beforeEach(JenkinsRule rule) throws Exception {
+        j = rule;
+        m = new MercurialTestUtil(j);
+
+        if (useAgent) {
+            container = new MercurialContainer();
+            container.start();
+            agent = container.createAgent(j);
+        }
+
+        inst = mercurialInstallationFactory.create(j, container, agent, mercurialVersion);
+        if (inst != null && inst.isUseCaches() || agent == null) {
             // Set up test repository on controller, if we have hg installed locally.
-            repo = new FilePath(tmp.getRoot());
+            repo = new FilePath(tmp);
         } else {
             // Set up test repository on agent.
-            repo = slave.getRootPath().child("repo");
+            repo = agent.getRootPath().child("repo");
             repo.mkdirs();
-            m.withNode(slave);
+            m.withNode(agent);
             m.withInstallation(inst);
         }
     }
 
+    @AfterEach
+    void afterEach() {
+        if (container != null) {
+            container.stop();
+        }
+    }
+
     @Issue({"JENKINS-13329", "JENKINS-15829"})
-    @Test public void basics() throws Exception {
+    @Test
+    void basics() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(inst != null ? inst.getName() : null, repo.getRemote(), null, null, null, null, false));
-        if (slave != null) {
-            p.setAssignedNode(slave);
+        if (agent != null) {
+            p.setAssignedNode(agent);
         }
         m.hg(repo, "init");
         m.touchAndCommit(repo, "a");
@@ -166,17 +198,18 @@ public class FunctionalTest {
         assertClone(log, false);
     }
 
-    private void assertClone(String log, boolean cloneExpected) {
+    private static void assertClone(String log, boolean cloneExpected) {
         if (cloneExpected) {
-            assertTrue(log, log.contains(" clone --"));
+            assertTrue(log.contains(" clone --"), log);
         } else {
-            assertTrue(log, log.contains(" update --"));
-            assertFalse(log, log.contains(" clone --"));
+            assertTrue(log.contains(" update --"), log);
+            assertFalse(log.contains(" clone --"), log);
         }
     }
 
     @Issue("JENKINS-4281")
-    @Test public void branches() throws Exception {
+    @Test
+    void branches() throws Exception {
         m.hg(repo, "init");
         m.touchAndCommit(repo, "init");
         m.hg(repo, "tag", "init");
@@ -185,8 +218,8 @@ public class FunctionalTest {
         m.hg(repo, "branch", "b");
         m.touchAndCommit(repo, "b-1");
         FreeStyleProject p = j.createFreeStyleProject();
-        if (slave != null) {
-            p.setAssignedNode(slave);
+        if (agent != null) {
+            p.setAssignedNode(agent);
         }
         // Clone off b.
         p.setScm(new MercurialSCM(inst != null ? inst.getName() : null, repo.getRemote(), "b", null, null, null, false));

@@ -2,42 +2,50 @@ package hudson.plugins.mercurial;
 
 import hudson.model.AbstractBuild;
 import hudson.model.FreeStyleProject;
-import hudson.tools.ToolProperty;
 
 import java.io.File;
 import java.util.Collections;
-import static org.junit.Assert.*;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class DisableChangeLogTest {
-    @Rule public JenkinsRule j = new JenkinsRule();
-    @Rule public MercurialRule m = new MercurialRule(j);
-    @Rule public TemporaryFolder tmp = new TemporaryFolder();
+@WithJenkins
+class DisableChangeLogTest {
+
+    private JenkinsRule j;
+    private MercurialTestUtil m;
+
+    @TempDir
+    private File tmp;
     private File repo;
 
     private static final String DISABLE_CHANGELOG_INSTALLATION = "changelog";
 
-    @Before public void setUp() throws Exception {
-        repo = tmp.getRoot();
+    @BeforeEach
+    void beforeEach(JenkinsRule rule) {
+        j = rule;
+        m = new MercurialTestUtil(j);
+
+        repo = tmp;
         // TODO switch to MercurialContainer
         j.jenkins
                 .getDescriptorByType(MercurialInstallation.DescriptorImpl.class)
                 .setInstallations(
                         new MercurialInstallation(DISABLE_CHANGELOG_INSTALLATION, "", "hg",
                                 true, false, false, Collections
-                                        .<ToolProperty<?>> emptyList()));
+                                        .emptyList()));
     }
 
     protected String hgInstallation() {
         return DISABLE_CHANGELOG_INSTALLATION;
     }
 
-    @Test public void changelogIsDisabled() throws Exception {
+    @Test
+    void changelogIsDisabled() throws Exception {
         AbstractBuild<?, ?> b;
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(),

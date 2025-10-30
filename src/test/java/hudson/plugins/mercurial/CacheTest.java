@@ -4,13 +4,16 @@ import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.common.StandardUsernamePasswordCredentials;
 import com.cloudbees.plugins.credentials.impl.BaseStandardCredentials;
 import hudson.util.Secret;
-import static org.junit.Assert.*;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import org.jvnet.hudson.test.Issue;
 
-public class CacheTest {
+class CacheTest {
 
-    @Test public void hashSource() throws Exception {
+    @Test
+    void hashSource() {
         assertEquals("5439A9B4063BB8F4885037E71B5079E1913DB6CA-core-main", Cache.hashSource("http://hg.netbeans.org/core-main/", null, null));
         assertEquals("5439A9B4063BB8F4885037E71B5079E1913DB6CA-core-main", Cache.hashSource("http://hg.netbeans.org/core-main", null, null));
         assertEquals("5731708C5EEAF9F1320B57D5F6A21E85EA5ADF2D-project", Cache.hashSource("ssh://dude@math.utexas.edu/some/project/", null, null));
@@ -22,7 +25,8 @@ public class CacheTest {
     }
 
     @Issue("JENKINS-12544")
-    @Test public void hashSource2() throws Exception {
+    @Test
+    void hashSource2() {
         assertEquals("DA7E6A4632009859A61A551999EE2109EBB69267-ronaldradial", Cache.hashSource("http://ronaldradial:8000/", null,null));
     }
 

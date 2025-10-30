@@ -3,31 +3,29 @@
  */
 package hudson.plugins.mercurial.browser;
 
-import java.io.IOException;
-import java.net.MalformedURLException;
+import org.junit.jupiter.api.Test;
 
-import org.junit.Test;
-
-public class KilnHGTest extends AbstractBrowserTestBase {
+class KilnHGTest extends AbstractBrowserTestBase {
 
     private static final String REPO_URL = "https://example.kilnhg.com/Repo/Repositories/Group/hg-repo";
 
-    public KilnHGTest() throws MalformedURLException {
-        super(new KilnHG(REPO_URL));        
+    @Override
+    protected HgBrowser getBrowser() throws Exception {
+        return new KilnHG(REPO_URL);
     }
 
     @Test
-    public void testGetChangeSetLinkMercurialChangeSet() throws IOException {
+    void testGetChangeSetLinkMercurialChangeSet() throws Exception {
         testGetChangeSetLinkMercurialChangeSet(REPO_URL+ "/History/6704efde8754");
     }
-    
+
     @Test
-    public void testGetFileLink() throws IOException {
+    void testGetFileLink() throws Exception {
         testGetFileLink(REPO_URL + "/File/src/main/java/hudson/plugins/mercurial/browser/HgBrowser.java?rev=6704efde8754");
     }
 
     @Test
-    public void testGetDiffLink() throws IOException {        
+    void testGetDiffLink() throws Exception {
         testGetDiffLink(REPO_URL+ "/History/6704efde8754");
     }
 }

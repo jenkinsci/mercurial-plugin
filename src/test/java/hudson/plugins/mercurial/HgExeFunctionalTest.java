@@ -30,28 +30,29 @@ import com.cloudbees.plugins.credentials.impl.UsernamePasswordCredentialsImpl;
 import hudson.EnvVars;
 import hudson.Launcher;
 import hudson.model.TaskListener;
-import hudson.tools.ToolProperty;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.StreamTaskListener;
 import java.io.File;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.io.FileUtils;
 
-import static org.junit.Assert.assertEquals;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
-public class HgExeFunctionalTest {
+@WithJenkins
+class HgExeFunctionalTest {
 
-    @Rule
-    public JenkinsRule j = new JenkinsRule();
+    private JenkinsRule j;
 
     private static final String INSTALLATION = "test";
     private MercurialInstallation mercurialInstallation;
@@ -59,19 +60,20 @@ public class HgExeFunctionalTest {
     private Launcher launcher;
     private EnvVars vars;
 
-    @Before
-    public void setUp() throws Exception {
+    @BeforeEach
+    void beforeEach(JenkinsRule rule) {
+        j = rule;
         this.mercurialInstallation = new MercurialInstallation(
                 INSTALLATION, "",
                 "hg", false, true, false, Collections
-                .<ToolProperty<?>> emptyList());
+                .emptyList());
         this.listener = new StreamTaskListener(System.out, Charset.defaultCharset());
         this.launcher = j.jenkins.createLauncher(listener);
         this.vars = new EnvVars();
     }
 
     @Test
-    public void credentialsUsernamePasswordTest() throws Exception {
+    void credentialsUsernamePasswordTest() throws Exception {
         UsernamePasswordCredentialsImpl credentials = new UsernamePasswordCredentialsImpl(
                 CredentialsScope.GLOBAL, "", "", "testuser", "testpassword");
 
@@ -88,7 +90,8 @@ public class HgExeFunctionalTest {
         }
     }
 
-    @Test public void credentialsSSHKeyTest() throws Exception {
+    @Test
+    void credentialsSSHKeyTest() throws Exception {
         BasicSSHUserPrivateKey.PrivateKeySource source = new BasicSSHUserPrivateKey.DirectEntryPrivateKeySource(
                 "test key\n");
         BasicSSHUserPrivateKey credentials = new BasicSSHUserPrivateKey(
@@ -99,13 +102,14 @@ public class HgExeFunctionalTest {
             Matcher matcher = Pattern.compile("ssh\\s-i\\s(.+)\\s-l\\stestuser").matcher(b.toCommandArray()[2]);
             matcher.find();
             String fileName = matcher.group(1);
-            assertEquals("test key\n", FileUtils.readFileToString(new File(fileName)));
+            assertEquals("test key\n", FileUtils.readFileToString(new File(fileName), StandardCharsets.UTF_8));
             assertEquals(new ArgumentListBuilder("hg", "--config", "******").toString(), b.toString());
         }
     }
 
     @Issue("JENKINS-5723")
-    @Test public void customConfiguration() throws Exception {
+    @Test
+    void customConfiguration() throws Exception {
         MercurialInstallation customConfiguration = new MercurialInstallation(INSTALLATION, "", "hg", false, false, false, "[defaults]\nclone = --uncompressed\n", null);
         try (HgExe hgexe = new HgExe(customConfiguration, null, launcher, j.jenkins, listener, vars)) {
             ArgumentListBuilder b = hgexe.seed(false).add("clone", "http://some.thing/");

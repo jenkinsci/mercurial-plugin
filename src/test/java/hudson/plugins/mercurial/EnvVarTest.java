@@ -31,19 +31,30 @@ import hudson.model.FreeStyleProject;
 import hudson.model.ParametersDefinitionProperty;
 import hudson.model.StringParameterDefinition;
 import java.io.File;
-import static org.junit.Assert.*;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class EnvVarTest {
+@WithJenkins
+class EnvVarTest {
 
-    @Rule public JenkinsRule r = new JenkinsRule();
-    @Rule public MercurialRule m = new MercurialRule(r);
-    @Rule public TemporaryFolder tmp = new TemporaryFolder();
+    private JenkinsRule r;
+    private MercurialTestUtil m;
+    @TempDir
+    private File tmp;
 
-    @Test public void customConfiguration() throws Exception {
+    @BeforeEach
+    void beforeEach(JenkinsRule rule) {
+        r = rule;
+        m = new MercurialTestUtil(r);
+    }
+
+    @Test
+    void customConfiguration() throws Exception {
         // Define key/value that will be passed to job.
         final String key = "ENVVARTESTVAR";
         final String val = "EnvVarTestDir";
@@ -54,8 +65,8 @@ public class EnvVarTest {
         // 'repo' and 'repoExpanded' should be the same; 'repo' will contain a non expanded environment variable.
         // TODO switch to MercurialContainer
         File repo, repoExpanded;
-        repo = new File( tmp.getRoot() + "/$" + key );
-        repoExpanded = new File( tmp.getRoot() + "/" + val );
+        repo = new File( tmp + "/$" + key );
+        repoExpanded = new File( tmp + "/" + val );
         
         // Ensure our subdirectory exists.
         repoExpanded.mkdir( );
@@ -64,7 +75,7 @@ public class EnvVarTest {
         m.hg(repo, env, "init");
         
         // We should now have a .hg directory inside our expanded path.
-        assertTrue( new File( repoExpanded + "/.hg" ).getPath( ) + " does not exist", new File( repoExpanded + "/.hg" ).isDirectory( ) );
+        assertTrue( new File( repoExpanded + "/.hg" ).isDirectory( ), new File( repoExpanded + "/.hg" ).getPath( ) + " does not exist" );
         
         // Touch and commit file.
         m.touchAndCommit(repoExpanded, "f");
@@ -87,7 +98,7 @@ public class EnvVarTest {
         // Ensure project builds correctly (again ensures path expansion works).
         FreeStyleBuild b = r.assertBuildStatusSuccess(project.scheduleBuild2(0));
         
-        // Catch case where code may see that '/path/$NON_EXPANDED_VAR' doesn't exist, so requests a clone, which succeeds (with the clone being
+        // Catch case where code may see that '/path/$NON_EXPANDED_VAR' doesn't exist, so requests a clone, which succeeds with the clone being
         // performed by the hg executable, which will expand the environment correctly. On a second build we'll check if workspace already exists,
         // if we check '/path/$NON_EXPANDED_VAR' the answer will be no, so a new clone will be triggered, this will fail as an existing repository
         // will already be checked out there.
@@ -99,7 +110,7 @@ public class EnvVarTest {
         
         // Make sure workspace iso kay.
         String requires = ws.child(".hg/requires").readToString();
-        assertFalse(requires, requires.contains("store"));
+        assertFalse(requires.contains("store"), requires);
     }
 
 }

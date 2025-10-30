@@ -28,22 +28,35 @@ import hudson.FilePath;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import java.io.File;
-import static org.junit.Assert.*;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class CustomConfigTest {
+@WithJenkins
+class CustomConfigTest {
 
-    @Rule public JenkinsRule r = new JenkinsRule();
-    @Rule public MercurialRule m = new MercurialRule(r);
-    @Rule public TemporaryFolder tmp = new TemporaryFolder();
+    private JenkinsRule r;
+    private MercurialTestUtil m;
+
+    @TempDir
+    private File tmp;
+
+    @BeforeEach
+    void beforeEach(JenkinsRule rule) {
+        r = rule;
+        m = new MercurialTestUtil(r);
+    }
 
     @Issue("JENKINS-5723")
-    @Test public void customConfiguration() throws Exception {
-        File repo = tmp.getRoot();
+    @Test
+    void customConfiguration() throws Exception {
+        File repo = tmp;
         // TODO switch to MercurialContainer
         m.hg(repo, "init");
         m.touchAndCommit(repo, "f");
@@ -58,7 +71,7 @@ public class CustomConfigTest {
         FilePath ws = b.getWorkspace();
         assertNotNull(ws);
         String requires = ws.child(".hg/requires").readToString();
-        assertFalse(requires, requires.contains("store"));
+        assertFalse(requires.contains("store"), requires);
     }
 
 }

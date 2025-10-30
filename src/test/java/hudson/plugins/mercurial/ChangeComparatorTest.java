@@ -1,6 +1,8 @@
 package hudson.plugins.mercurial;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.jvnet.hudson.test.TestExtension;
 
 import hudson.FilePath;
@@ -14,39 +16,40 @@ import hudson.scm.PollingResult.Change;
 import hudson.util.StreamTaskListener;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.Charset;
-import org.junit.Rule;
 
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class ChangeComparatorTest {
+@WithJenkins
+class ChangeComparatorTest {
 
-    @Rule public JenkinsRule j = new JenkinsRule();
-    @Rule public MercurialRule m = new MercurialRule(j);
-    @Rule public TemporaryFolder tmp = new TemporaryFolder();
+    private JenkinsRule j;
+    private MercurialTestUtil m;
 
-    @TestExtension("triggersNewBuild")
-	static public class DummyComparator extends ChangeComparator {
-		public Change compare(MercurialSCM scm, Launcher launcher, TaskListener listener, MercurialTagAction baseline, PrintStream output, Node node, FilePath repository, AbstractProject<?,?> project)  
-				throws IOException, InterruptedException {
-			return Change.SIGNIFICANT;
-		}
-	}
-	
-    @Test public void triggersNewBuild() throws Exception {
+    @TempDir
+    private File tmp;
+
+    @BeforeEach
+    void beforeEach(JenkinsRule rule) {
+        j = rule;
+        m = new MercurialTestUtil(j);
+    }
+
+    @Test
+    void triggersNewBuild() throws Exception {
 		TaskListener listener = new StreamTaskListener(System.out, Charset.defaultCharset());
         Launcher launcher = j.jenkins.createLauncher(listener);
 		
 		FreeStyleProject project = j.createFreeStyleProject();
 		
         // TODO switch to MercurialContainer
-        MercurialSCM scm = new MercurialSCM(null, tmp.getRoot().getPath(), null, null, null, null, false, null);
+        MercurialSCM scm = new MercurialSCM(null, tmp.getPath(), null, null, null, null, false, null);
 		project.setScm(scm);
-		File repo = tmp.getRoot();
+		File repo = tmp;
 		
 		m.hg(repo, "init");
         m.touchAndCommit(repo, "x");
@@ -57,10 +60,16 @@ public class ChangeComparatorTest {
 				new MercurialTagAction("tip","",null,null),
 				listener.getLogger(), 
 				j.jenkins, 
-				new FilePath(tmp.getRoot()), 
+				new FilePath(tmp), 
 				project);
 		assertEquals(PollingResult.Change.SIGNIFICANT, pr.change);
 		
-	}	
+	}
 
+    @TestExtension("triggersNewBuild")
+    public static class DummyComparator extends ChangeComparator {
+        public Change compare(MercurialSCM scm, Launcher launcher, TaskListener listener, MercurialTagAction baseline, PrintStream output, Node node, FilePath repository, AbstractProject<?,?> project) {
+            return Change.SIGNIFICANT;
+        }
+    }
 }

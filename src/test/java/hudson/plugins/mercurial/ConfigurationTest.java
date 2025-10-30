@@ -42,18 +42,27 @@ import hudson.util.ListBoxModel;
 import java.util.ArrayList;
 import java.util.List;
 import jenkins.model.Jenkins;
-import org.junit.Test;
-import static org.junit.Assert.*;
-import org.junit.Rule;
+import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.MockAuthorizationStrategy;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class ConfigurationTest {
+@WithJenkins
+class ConfigurationTest {
 
-    @Rule public JenkinsRule r = new JenkinsRule();
+    private JenkinsRule r;
 
-    @Test public void configRoundTrip() throws Exception {
+    @BeforeEach
+    void beforeEach(JenkinsRule rule) {
+        r = rule;
+    }
+
+    @Test
+    void configRoundTrip() throws Exception {
         FreeStyleProject p = r.createFreeStyleProject();
         MercurialSCM scm = new MercurialSCM("http://repo/");
         assertEquals("default", scm.getRevision());
@@ -69,7 +78,7 @@ public class ConfigurationTest {
         scm.setCredentialsId(c.getId());
         scm.setModules("src");
         scm.setSubdir("checkout");
-        r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(new MercurialInstallation[] {new MercurialInstallation("caching", null, "hg", false, true, false, null, null)});
+        r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(new MercurialInstallation("caching", null, "hg", false, true, false, null, null));
         scm.setInstallation("caching");
         p.setScm(scm);
         XmlFile xml = p.getConfigFile();
@@ -90,7 +99,8 @@ public class ConfigurationTest {
         assertFalse(scm.isDisableChangeLog());
     }
 
-    @Test public void doFillCredentialsIdItemsWithoutJobWhenAdmin() throws Exception {
+    @Test
+    void doFillCredentialsIdItemsWithoutJobWhenAdmin() throws Exception {
         r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
         r.jenkins.setAuthorizationStrategy(new MockAuthorizationStrategy().
             grant(Jenkins.ADMINISTER).everywhere().to("alice"));
@@ -103,7 +113,8 @@ public class ConfigurationTest {
     }
 
     @Issue("SECURITY-158")
-    @Test public void doFillCredentialsIdItems() throws Exception {
+    @Test
+    void doFillCredentialsIdItems() throws Exception {
         r.jenkins.setSecurityRealm(r.createDummySecurityRealm());
         FreeStyleProject p1 = r.createFreeStyleProject("p1");
         FreeStyleProject p2 = r.createFreeStyleProject("p2");
@@ -119,13 +130,14 @@ public class ConfigurationTest {
         assertCredentials("bob", p1);
         assertCredentials("bob", p2, c);
     }
+
     private void assertCredentials(String user, final Job<?,?> owner, Credentials... expected) {
-        final List<String> expectedNames = new ArrayList<String>();
+        final List<String> expectedNames = new ArrayList<>();
         for (Credentials c : expected) {
             expectedNames.add(CredentialsNameProvider.name(c));
         }
         try (ACLContext context = ACL.as(User.get(user))) {
-            List<String> actualNames = new ArrayList<String>();
+            List<String> actualNames = new ArrayList<>();
             for (ListBoxModel.Option o : r.jenkins.getDescriptorByType(MercurialSCM.DescriptorImpl.class).doFillCredentialsIdItems(owner, "http://nowhere.net/")) {
                 if (o.value.isEmpty()) {
                     continue; // AbstractIdCredentialsListBoxModel.EmptySelection

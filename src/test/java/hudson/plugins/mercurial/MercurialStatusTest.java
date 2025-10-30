@@ -25,16 +25,19 @@ package hudson.plugins.mercurial;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  *
  * @author Sebastian Sdorra
  */
-public class MercurialStatusTest {
-  
-  @Test public void testLooselyMatches() throws URISyntaxException {
+class MercurialStatusTest {
+
+    @Test
+    void testLooselyMatches() throws URISyntaxException {
       assertTrue( MercurialStatus.looselyMatches(new URI("ssh://somehost/"), "ssh://somehost"));
       assertTrue( MercurialStatus.looselyMatches(new URI("http://somehost"), "http://somehost/"));
       assertTrue( MercurialStatus.looselyMatches(new URI("http://somehost:80/"), "http://somehost/"));
