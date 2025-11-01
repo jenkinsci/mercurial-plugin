@@ -45,6 +45,8 @@ public class MercurialStatus implements UnprotectedRootAction {
 
     public static final String URL_NAME = "mercurial";
 
+    static final int MAX_REPORTED_PROJECTS = 10;
+
     public String getDisplayName() {
         return Messages.MercurialStatus_mercurial();
     }
@@ -205,7 +207,12 @@ public class MercurialStatus implements UnprotectedRootAction {
             public void generateResponse(StaplerRequest2 req, StaplerResponse2 rsp, Object node) throws IOException, ServletException {
                 rsp.setStatus(SC_OK);
                 rsp.setContentType("text/plain");
-                for (Item p : projects) {
+                for (int i = 0; i < projects.size(); i++) {
+                    if (i == MAX_REPORTED_PROJECTS) {
+                        rsp.addHeader("Triggered", "<" + (projects.size() - i) + " more>");
+                        break;
+                    }
+                    Item p = projects.get(i);
                     if (p.hasPermission2(origAuth, Item.READ)) {
                         rsp.addHeader("Triggered", p.getAbsoluteUrl());
                     } else {
