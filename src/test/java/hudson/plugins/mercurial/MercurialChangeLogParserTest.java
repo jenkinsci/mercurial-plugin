@@ -28,26 +28,38 @@ import hudson.model.User;
 import hudson.scm.ChangeLogParser;
 import hudson.scm.ChangeLogSet;
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.TreeSet;
-import static org.junit.Assert.*;
-import org.junit.Test;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
+import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.WithoutJenkins;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class MercurialChangeLogParserTest {
+@WithJenkins
+class MercurialChangeLogParserTest {
 
-    @Rule public JenkinsRule j = new JenkinsRule(); // otherwise CanonicalIdResolver are missing
-    @Rule public TemporaryFolder tmp = new TemporaryFolder();
+    private JenkinsRule j; // otherwise CanonicalIdResolver are missing
+    @TempDir
+    private File tmp;
+
+    @BeforeEach
+    void beforeEach(JenkinsRule rule) {
+        j = rule;
+    }
 
     @Issue("JENKINS-16332")
-    @Test public void parseAddressFromChangeLog() throws Exception {
-        File changelogXml = tmp.newFile("changelog.xml");
-        try (PrintWriter pw = new PrintWriter(changelogXml, "UTF-8")) {
+    @Test
+    void parseAddressFromChangeLog() throws Exception {
+        File changelogXml = newFile(tmp, "changelog.xml");
+        try (PrintWriter pw = new PrintWriter(changelogXml, StandardCharsets.UTF_8)) {
             pw.println("<?xml version='1.0' encoding='UTF-8'?>");
             pw.println("<changesets>");
             pw.println("<changeset author='joe.schmo &lt;joe.schmo@example.com&gt;'/>");
@@ -65,11 +77,11 @@ public class MercurialChangeLogParserTest {
         assertEquals("joe.schmo <joe.schmo@example.com>", author.getFullName());
     }
 
-    @WithoutJenkins
-    @Issue("JENKINS-55319")
-    @Test public void oldAndNewFileFormats() throws Exception {
-        File changelogXml = tmp.newFile("changelog.xml");
-        try (PrintWriter pw = new PrintWriter(changelogXml, "UTF-8")) {
+    @WithoutJenkins @Issue("JENKINS-55319")
+    @Test
+    void oldAndNewFileFormats() throws Exception {
+        File changelogXml = newFile(tmp, "changelog.xml");
+        try (PrintWriter pw = new PrintWriter(changelogXml, StandardCharsets.UTF_8)) {
             pw.println("<?xml version='1.0' encoding='UTF-8'?>");
             pw.println("<changesets>");
             pw.println("  <changeset>");
@@ -80,7 +92,7 @@ public class MercurialChangeLogParserTest {
             pw.println("</changesets>");
         }
         assertEquals("added=[two] deleted=[] modified=[one, three] ", summary(new MercurialChangeLogParser(null).parse(null, null, changelogXml)));
-        try (PrintWriter pw = new PrintWriter(changelogXml, "UTF-8")) {
+        try (PrintWriter pw = new PrintWriter(changelogXml, StandardCharsets.UTF_8)) {
             pw.println("<?xml version='1.0' encoding='UTF-8'?>");
             pw.println("<changesets>");
             pw.println("  <changeset>");
@@ -92,7 +104,7 @@ public class MercurialChangeLogParserTest {
             pw.println("</changesets>");
         }
         assertEquals("added=[] deleted=[] modified=[] ", summary(new MercurialChangeLogParser(null).parse(null, null, changelogXml)));
-        try (PrintWriter pw = new PrintWriter(changelogXml, "UTF-8")) {
+        try (PrintWriter pw = new PrintWriter(changelogXml, StandardCharsets.UTF_8)) {
             pw.println("<?xml version='1.0' encoding='UTF-8'?>");
             pw.println("<changesets>");
             pw.println("  <changeset>");
@@ -104,7 +116,7 @@ public class MercurialChangeLogParserTest {
             pw.println("</changesets>");
         }
         assertEquals("added=[two] deleted=[] modified=[one, three] ", summary(new MercurialChangeLogParser(null).parse(null, null, changelogXml)));
-        try (PrintWriter pw = new PrintWriter(changelogXml, "UTF-8")) {
+        try (PrintWriter pw = new PrintWriter(changelogXml, StandardCharsets.UTF_8)) {
             pw.println("<?xml version='1.0' encoding='UTF-8'?>");
             pw.println("<changesets>");
             pw.println("  <changeset>");
@@ -124,6 +136,12 @@ public class MercurialChangeLogParserTest {
             b.append("added=").append(new TreeSet<>(mcs.getAddedPaths())).append(" deleted=").append(new TreeSet<>(mcs.getDeletedPaths())).append(" modified=").append(new TreeSet<>(mcs.getModifiedPaths())).append(" ");
         }
         return b.toString();
+    }
+
+    private static File newFile(File parent, String child) throws IOException {
+        File result = new File(parent, child);
+        result.createNewFile();
+        return result;
     }
 
 }

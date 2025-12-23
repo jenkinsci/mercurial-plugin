@@ -37,63 +37,72 @@ import java.util.TreeSet;
 import edu.umd.cs.findbugs.annotations.CheckForNull;
 import org.apache.commons.io.FileUtils;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.io.TempDir;
 import org.jvnet.hudson.test.FakeLauncher;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 
-import static org.junit.Assert.*;
-import org.junit.Assume;
-import org.junit.AssumptionViolatedException;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.jvnet.hudson.test.BuildWatcher;
+import static org.junit.jupiter.api.Assertions.*;
 
-public abstract class SCMTestBase {
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
+import org.opentest4j.TestAbortedException;
 
-    /** {@link MercurialRule#hg(String...)} would skip these anyway, but it would take a lot longer. */
-    @BeforeClass public static void requiresLocalHg() throws Exception {
+@WithJenkins
+abstract class SCMTestBase {
+
+    protected JenkinsRule j;
+    protected MercurialTestUtil m;
+    @TempDir
+    protected File tmp;
+    @RegisterExtension
+    protected static final BuildWatcherExtension BUILD_WATCHER = new BuildWatcherExtension();
+
+    private File repo;
+
+    /** {@link MercurialTestUtil#hg(String...)} would skip these anyway, but it would take a lot longer. */
+    @BeforeAll
+    static void beforeAll() throws Exception {
         try {
             if (new ProcessBuilder("hg", "--version").start().waitFor() != 0) {
-                throw new AssumptionViolatedException("hg --version signaled an error");
+                throw new TestAbortedException("hg --version signaled an error");
             }
         } catch (IOException ioe) {
             String message = ioe.getMessage();
             if (message.startsWith("Cannot run program \"hg\"") && message.endsWith("No such file or directory")) {
-                throw new AssumptionViolatedException("hg is not available; please check that your PATH environment variable is properly configured");
+                throw new TestAbortedException("hg is not available; please check that your PATH environment variable is properly configured");
             }
-            Assume.assumeNoException(ioe); // failed to check availability of hg
+            throw new TestAbortedException(ioe.toString()); // failed to check availability of hg
         }
     }
 
-    @Rule public JenkinsRule j = new JenkinsRule();
-    @Rule public MercurialRule m = new MercurialRule(j);
-    @Rule public TemporaryFolder tmp = new TemporaryFolder();
-    @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
-    private File repo;
-
-    @Before public void setUp() throws Exception {
-        repo = tmp.getRoot();
+    @BeforeEach
+    void beforeEach(JenkinsRule rule) {
+        j = rule;
+        m = new MercurialTestUtil(j);
+        repo = tmp;
     }
 
-    protected abstract @CheckForNull String hgInstallation() throws Exception;
+    protected abstract @CheckForNull String hgInstallation();
 
     protected void assertClone(String log, boolean cloneExpected) {
         if (cloneExpected) {
-            assertTrue(log, log.contains(" clone --"));
+            assertTrue(log.contains(" clone --"), log);
         } else {
-            assertTrue(log, log.contains(" update --"));
-            assertFalse(log, log.contains(" clone --"));
+            assertTrue(log.contains(" update --"), log);
+            assertFalse(log.contains(" clone --"), log);
         }
     }
 
     // TODO migrate test cases to FunctionalTest, eventually delete this and subclasses
 
     @Issue("JENKINS-1099")
-    @Test public void pollingLimitedToModules() throws Exception {
+    @Test
+    void pollingLimitedToModules() throws Exception {
         PollingResult pr;
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null,
@@ -128,7 +137,8 @@ public abstract class SCMTestBase {
     }
 
     @Issue("JENKINS-6337")
-    @Test public void pollingLimitedToModules2() throws Exception {
+    @Test
+    void pollingLimitedToModules2() throws Exception {
         PollingResult pr;
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, "dir1",
@@ -147,7 +157,8 @@ public abstract class SCMTestBase {
     }
 
     @Issue("JENKINS-12361")
-    @Test public void pollingLimitedToModules3() throws Exception {
+    @Test
+    void pollingLimitedToModules3() throws Exception {
         PollingResult pr;
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, "dir1/f",
@@ -166,7 +177,8 @@ public abstract class SCMTestBase {
     }
 
     @Issue("JENKINS-13174")
-    @Test public void pollingIgnoresMetaFiles() throws Exception {
+    @Test
+    void pollingIgnoresMetaFiles() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, null, null, null, false));
         m.hg(repo, "init");
@@ -177,7 +189,8 @@ public abstract class SCMTestBase {
     }
 
     @Issue("JENKINS-7594")
-    @Test public void pollingHonorsBranchMerges() throws Exception {
+    @Test
+    void pollingHonorsBranchMerges() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, null, null, null, false));
         m.hg(repo, "init");
@@ -195,7 +208,8 @@ public abstract class SCMTestBase {
     }
 
     @Issue("JENKINS-7594")
-    @Test public void pollingHonorsBranchMergesWithModules() throws Exception {
+    @Test
+    void pollingHonorsBranchMergesWithModules() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, "mod1", null, null, false));
         m.hg(repo, "init");
@@ -220,7 +234,8 @@ public abstract class SCMTestBase {
     }
 
     @Issue("JENKINS-4702")
-    @Test public void changelogLimitedToModules() throws Exception {
+    @Test
+    void changelogLimitedToModules() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
         // Control case: no modules specified.
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, null,
@@ -233,7 +248,7 @@ public abstract class SCMTestBase {
                 .getChangeSet().iterator();
         assertTrue(it.hasNext());
         ChangeLogSet.Entry entry = it.next();
-        assertEquals(Collections.singleton("dir2/f1"), new HashSet<String>(
+        assertEquals(Collections.singleton("dir2/f1"), new HashSet<>(
                 entry.getAffectedPaths()));
         assertFalse(it.hasNext());
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null,
@@ -244,7 +259,7 @@ public abstract class SCMTestBase {
         it = p.scheduleBuild2(0).get().getChangeSet().iterator();
         assertTrue(it.hasNext());
         entry = it.next();
-        assertEquals(Collections.singleton("dir1/f2"), new HashSet<String>(
+        assertEquals(Collections.singleton("dir1/f2"), new HashSet<>(
                 entry.getAffectedPaths()));
         assertFalse(it.hasNext());
         // First commit should match (because at least one file does) but not
@@ -254,21 +269,22 @@ public abstract class SCMTestBase {
         it = p.scheduleBuild2(0).get().getChangeSet().iterator();
         assertTrue(it.hasNext());
         entry = it.next();
-        assertEquals(new HashSet<String>(Arrays.asList("dir1/f3", "dir2/f3")),
-                new HashSet<String>(entry.getAffectedPaths()));
+        assertEquals(new HashSet<>(Arrays.asList("dir1/f3", "dir2/f3")),
+                new HashSet<>(entry.getAffectedPaths()));
         assertFalse(it.hasNext());
         // Any module in the list can trigger an inclusion.
         m.touchAndCommit(repo, "extra/f1");
         it = p.scheduleBuild2(0).get().getChangeSet().iterator();
         assertTrue(it.hasNext());
         entry = it.next();
-        assertEquals(Collections.singleton("extra/f1"), new HashSet<String>(
+        assertEquals(Collections.singleton("extra/f1"), new HashSet<>(
                 entry.getAffectedPaths()));
         assertFalse(it.hasNext());
     }
 
     @Issue("JENKINS-4271")
-    @Test public void parameterizedBuildsBranch() throws Exception {
+    @Test
+    void parameterizedBuildsBranch() throws Exception {
         m.hg(repo, "init");
         m.touchAndCommit(repo, "trunk");
         m.hg(repo, "update", "null");
@@ -281,8 +297,8 @@ public abstract class SCMTestBase {
         p.addProperty(new ParametersDefinitionProperty(new StringParameterDefinition("BRANCH", "b")));
         String log = m.buildAndCheck(p, "variant", new ParametersAction(
                 new StringParameterValue("BRANCH", "b")));
-        assertTrue(log, log.contains("--rev b"));
-        assertFalse(log, log.contains("--rev ${BRANCH}"));
+        assertTrue(log.contains("--rev b"), log);
+        assertFalse(log.contains("--rev ${BRANCH}"), log);
         m.touchAndCommit(repo, "further-variant");
         // the following assertion commented out as a part of the fix to
         // HUDSON-6126
@@ -292,7 +308,8 @@ public abstract class SCMTestBase {
     }
 
     @Issue("JENKINS-9686")
-    @Test public void pollingExpandsParameterDefaults() throws Exception {
+    @Test
+    void pollingExpandsParameterDefaults() throws Exception {
         m.hg(repo, "init");
         m.touchAndCommit(repo, "trunk");
         m.hg(repo, "update", "null");
@@ -302,7 +319,7 @@ public abstract class SCMTestBase {
         p.addProperty(new ParametersDefinitionProperty(new StringParameterDefinition("branch", "default")));
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), "${branch}", null, null, null, false));
         String log = m.buildAndCheck(p, "trunk", new ParametersAction(new StringParameterValue("branch", "default")));
-        assertTrue(log, log.contains("--rev default"));
+        assertTrue(log.contains("--rev default"), log);
         /* TODO cannot behave sensibly when workspace contains a branch build because the *current* trunk revision will be seen as new; would need to compare to all historical build records, or keep a separate workspace per branch:
         log = m.buildAndCheck(p, "variant", new ParametersAction(new StringParameterValue("branch", "b")));
         assertTrue(log, log.contains("--rev b"));
@@ -314,7 +331,8 @@ public abstract class SCMTestBase {
     }
 
     @Issue("JENKINS-6517")
-    @Test public void fileListOmittedForMerges() throws Exception {
+    @Test
+    void fileListOmittedForMerges() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, null,
                 null, null, false));
@@ -331,16 +349,17 @@ public abstract class SCMTestBase {
         ChangeLogSet.Entry entry = it.next();
         assertTrue(((MercurialChangeSet) entry).isMerge());
         assertEquals(Collections.emptySet(),
-                new HashSet<String>(entry.getAffectedPaths()));
+                new HashSet<>(entry.getAffectedPaths()));
         assertTrue(it.hasNext());
         entry = it.next();
         assertFalse(((MercurialChangeSet) entry).isMerge());
         assertEquals(Collections.singleton("f2"),
-                new HashSet<String>(entry.getAffectedPaths()));
+                new HashSet<>(entry.getAffectedPaths()));
         assertFalse(it.hasNext());
     }
 
-    @Test public void changesMergedToRenamedModulesTriggerBuild() throws Exception {
+    @Test
+    void changesMergedToRenamedModulesTriggerBuild() throws Exception {
         m.hg(repo, "init");
         m.touchAndCommit(repo, "alltogether/some_interface", "alltogether/some_class");
         m.hg(repo, "branch", "stable");
@@ -366,7 +385,8 @@ public abstract class SCMTestBase {
     }
 
     @Issue("JENKINS-3602")
-    @Test public void subdirectoryCheckout() throws Exception {
+    @Test
+    void subdirectoryCheckout() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, null,
                 "repo", null, false));
@@ -381,11 +401,12 @@ public abstract class SCMTestBase {
         assertTrue(it.hasNext());
         ChangeLogSet.Entry entry = it.next();
         assertEquals(Collections.singleton("f3"),
-                new HashSet<String>(entry.getAffectedPaths()));
+                new HashSet<>(entry.getAffectedPaths()));
         assertFalse(it.hasNext());
     }
 
-    @Test public void clean() throws Exception {
+    @Test
+    void clean() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, null, null, null, true));
         m.hg(repo, "init");
@@ -398,14 +419,15 @@ public abstract class SCMTestBase {
         m.hg(new File(ws.getRemote()), "add", "junk2");
         m.touchAndCommit(repo, "f2");
         m.buildAndCheck(p, "f2");
-        Set<String> kids = new TreeSet<String>();
+        Set<String> kids = new TreeSet<>();
         for (FilePath kid : ws.list()) {
             kids.add(kid.getName());
         }
         assertEquals("[.hg, f1, f2]", kids.toString());
     }
 
-    @Test public void multipleProjectsForSingleSource() throws Exception {
+    @Test
+    void multipleProjectsForSingleSource() throws Exception {
         FreeStyleProject one = j.createFreeStyleProject();
         FreeStyleProject two = j.createFreeStyleProject();
         FreeStyleProject three = j.createFreeStyleProject();
@@ -444,7 +466,8 @@ public abstract class SCMTestBase {
     /**
      * Control case for {@link #changelogOnClone()}.
      */
-    @Test public void changelogOnUpdate() throws Exception {
+    @Test
+    void changelogOnUpdate() throws Exception {
         AbstractBuild<?, ?> b;
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, null,
@@ -471,7 +494,8 @@ public abstract class SCMTestBase {
      * behavior with when the workspace is removed after every build.
      */
     @Issue("JENKINS-10255")
-    @Test public void changelogOnClone() throws Exception {
+    @Test
+    void changelogOnClone() throws Exception {
         AbstractBuild<?, ?> b;
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, null,
@@ -504,7 +528,8 @@ public abstract class SCMTestBase {
      * alternating which node the build runs on.
      */
     @Issue("JENKINS-10255")
-    @Test public void changelogFromPreviousBuild() throws Exception {
+    @Test
+    void changelogFromPreviousBuild() throws Exception {
         AbstractBuild<?, ?> b;
         FreeStyleProject p = j.createFreeStyleProject();
         Slave s1 = j.createOnlineSlave();
@@ -529,7 +554,8 @@ public abstract class SCMTestBase {
                 Collections.singletonList(Collections.singleton("dir3/f1")), b);
     }
 
-    @Test public void polling() throws Exception {
+    @Test
+    void polling() throws Exception {
         AbstractBuild<?, ?> b;
         PollingResult pr;
         FreeStyleProject p = j.createFreeStyleProject();
@@ -578,7 +604,8 @@ public abstract class SCMTestBase {
     }
     
     @Issue("JENKINS-11460")
-    @Test public void trailingUrlWhitespace() throws Exception {
+    @Test
+    void trailingUrlWhitespace() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath() + " ", null,
                 null, null, null, false));
@@ -589,7 +616,8 @@ public abstract class SCMTestBase {
     }
     
     @Issue("JENKINS-12829")
-    @Test public void nonExistingBranchesDontGenerateMercurialTagActionsInTheBuild() throws Exception {
+    @Test
+    void nonExistingBranchesDontGenerateMercurialTagActionsInTheBuild() throws Exception {
         AbstractBuild<?, ?> b;
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), "non-existing-branch", null,
@@ -605,7 +633,8 @@ public abstract class SCMTestBase {
     }
 
     @Issue("JENKINS-5396")
-    @Test public void tags() throws Exception {
+    @Test
+    void tags() throws Exception {
         m.hg(repo, "init");
         m.touchAndCommit(repo, "f1");
         m.touchAndCommit(repo, "f2");
@@ -620,10 +649,11 @@ public abstract class SCMTestBase {
         assertFalse(ws.child("f3").exists());
         m.hg(repo, "tag", "--force", "release");
         b = j.assertBuildStatusSuccess(p.scheduleBuild2(0));
-        assertTrue(JenkinsRule.getLog(b), ws.child("f3").exists());
+        assertTrue(ws.child("f3").exists(), JenkinsRule.getLog(b));
     }
 
-    @Test public void revsets() throws Exception {
+    @Test
+    void revsets() throws Exception {
         m.hg(repo, "init");
         m.touchAndCommit(repo, "f1");
         m.touchAndCommit(repo, "f2");
@@ -659,12 +689,12 @@ public abstract class SCMTestBase {
     private void assertChangeSetPaths(List<? extends Set<String>> expectedChangeSetPaths,
             AbstractBuild<?, ?> build) throws IOException {
         ChangeLogSet<? extends Entry> actualChangeLogSet = build.getChangeSet();
-        List<Set<String>> actualChangeSetPaths = new LinkedList<Set<String>>();
+        List<Set<String>> actualChangeSetPaths = new LinkedList<>();
         for (Entry entry : actualChangeLogSet) {
-            actualChangeSetPaths.add(new LinkedHashSet<String>(entry
+            actualChangeSetPaths.add(new LinkedHashSet<>(entry
                     .getAffectedPaths()));
         }
-        assertEquals(build.getLog(99).toString(), expectedChangeSetPaths, actualChangeSetPaths);
+        assertEquals(expectedChangeSetPaths, actualChangeSetPaths, build.getLog(99).toString());
     }
 
     private void assertPollingResult(PollingResult.Change expectedChangeDegree,
@@ -688,14 +718,15 @@ public abstract class SCMTestBase {
     }
 
     private static final class NoopFakeLauncher implements FakeLauncher {
-        public Proc onLaunch(Launcher.ProcStarter p) throws IOException {
+        public Proc onLaunch(Launcher.ProcStarter p) {
             return null;
         }
     }
 
     @Issue("JENKINS-15806")
-    @Test public void testPullReturnCode() throws Exception {
-        File repoOnline = tmp.newFolder();
+    @Test
+    void testPullReturnCode() throws Exception {
+        File repoOnline = newFolder(tmp, "junit");
         File repoOffline = new File(repoOnline.getPath() + "-offline");
 
         m.hg(repoOnline, "init");
@@ -731,7 +762,8 @@ public abstract class SCMTestBase {
     }
 
     @Issue("JENKINS-10706")
-    @Test public void testGetBranchFromTag() throws Exception {
+    @Test
+    void testGetBranchFromTag() throws Exception {
         initRepoWithTag();
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), MercurialSCM.RevisionType.TAG, "release", null, null, null, false, null));
@@ -744,7 +776,8 @@ public abstract class SCMTestBase {
     }
 
     @Issue("JENKINS-10706")
-    @Test public void testGetNoBranchFromBranch() throws Exception {
+    @Test
+    void testGetNoBranchFromBranch() throws Exception {
         initRepoWithTag();
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), MercurialSCM.RevisionType.BRANCH, "default", null, null, null, false, null));
@@ -752,12 +785,13 @@ public abstract class SCMTestBase {
         FreeStyleBuild b = j.buildAndAssertSuccess(p);
         MercurialTagAction action = b.getAction(MercurialTagAction.class);
         assertNotNull(action);
-        assertEquals(null, action.getBranch());
-        assertEquals(null, b.getEnvironment().get("MERCURIAL_REVISION_BRANCH"));
+        assertNull(action.getBranch());
+        assertNull(b.getEnvironment().get("MERCURIAL_REVISION_BRANCH"));
     }
 
     @Issue("JENKINS-30295")
-    @Test public void testChangeSetApiVersion1407Methods() throws Exception {
+    @Test
+    void testChangeSetApiVersion1407Methods() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
         p.setScm(new MercurialSCM(hgInstallation(), repo.getPath(), null, null, null, null, false));
         m.hg(repo, "init");
@@ -806,6 +840,15 @@ public abstract class SCMTestBase {
             FileUtils.copyFile(changelogFile, System.out);
             System.out.println("\n--->%---");
         }
+    }
+
+    private static File newFolder(File root, String... subDirs) throws IOException {
+        String subFolder = String.join("/", subDirs);
+        File result = new File(root, subFolder);
+        if (!result.mkdirs()) {
+            throw new IOException("Couldn't create folders " + root);
+        }
+        return result;
     }
 
 }

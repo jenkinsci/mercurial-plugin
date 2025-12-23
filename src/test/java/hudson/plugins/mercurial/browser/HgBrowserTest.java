@@ -1,36 +1,38 @@
 package hudson.plugins.mercurial.browser;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.io.IOException;
 import java.net.MalformedURLException;
+import org.junit.jupiter.api.Test;
 
-import org.junit.Test;
+class HgBrowserTest {
 
-public class HgBrowserTest {
-
-    @Test(expected=UnsupportedOperationException.class)
-    public final void testGetChangeSetLinkMercurialChangeSet() throws IOException {
-        new MockBrowser("http://abc/").getChangeSetLink(null);
-    }
-
-    @Test(expected=UnsupportedOperationException.class)
-    public final void getFileLink() throws IOException {
-        new MockBrowser("http://abc/").getFileLink("");
-    }
-
-    @Test(expected=UnsupportedOperationException.class)
-    public final void testGetDiffLink() throws IOException {
-        new MockBrowser("http://abc/").getDiffLink("");
+    @Test
+    void testGetChangeSetLinkMercurialChangeSet() {
+        assertThrows(UnsupportedOperationException.class, () ->
+            new MockBrowser("http://abc/").getChangeSetLink(null));
     }
 
     @Test
-    public final void testGetUrl() throws MalformedURLException {
+    void getFileLink() {
+        assertThrows(UnsupportedOperationException.class, () ->
+            new MockBrowser("http://abc/").getFileLink(""));
+    }
+
+    @Test
+    void testGetDiffLink() {
+        assertThrows(UnsupportedOperationException.class, () ->
+            new MockBrowser("http://abc/").getDiffLink(""));
+    }
+
+    @Test
+    void testGetUrl() throws Exception {
         assertEquals("http://abc/", new MockBrowser("http://abc").getUrl().toExternalForm());
     }
 
     @Test
-    public final void testResolveObject() throws MalformedURLException {
+    void testResolveObject() throws Exception {
         final Object browser = new MockBrowser("http://abc").readResolve();
         assertEquals(MockBrowser.class, browser.getClass());
     }

@@ -24,9 +24,10 @@
 
 package hudson.plugins.mercurial;
 
-public class DefaultSCMTest extends SCMTestBase {
+class DefaultSCMTest extends SCMTestBase {
 
-    @Override protected String hgInstallation() {
+    @Override
+    protected String hgInstallation() {
         return null;
     }
 

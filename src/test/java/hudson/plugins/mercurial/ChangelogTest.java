@@ -27,58 +27,69 @@ package hudson.plugins.mercurial;
 import hudson.FilePath;
 import hudson.model.FreeStyleProject;
 import hudson.model.Slave;
-import org.jenkinsci.test.acceptance.docker.DockerClassRule;
-import static org.junit.Assert.*;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.jvnet.hudson.test.BuildWatcher;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.Parameter;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.jvnet.hudson.test.For;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * Unlike {@link FunctionalTest} we only care here about the Mercurial version.
  */
+@Testcontainers(disabledWithoutDocker = true)
 @For({MercurialChangeSet.class, MercurialChangeLogParser.class})
-@RunWith(Parameterized.class)
-public class ChangelogTest {
+@ParameterizedClass
+@EnumSource(MercurialContainer.Version.class)
+@WithJenkins
+class ChangelogTest {
 
-    @Rule public final JenkinsRule j = new JenkinsRule();
-    @Rule public final MercurialRule m = new MercurialRule(j);
-    @ClassRule public static final DockerClassRule<MercurialContainer> docker = new DockerClassRule<>(MercurialContainer.class);
-    @ClassRule public static final BuildWatcher buildWatcher = new BuildWatcher();
+    private JenkinsRule j;
+    private MercurialTestUtil m;
+    @Container
+    private static final MercurialContainer container = new MercurialContainer();
+    @SuppressWarnings("unused")
+    @RegisterExtension
+    private static final BuildWatcherExtension BUILD_WATCHER = new BuildWatcherExtension();
 
-    @Parameterized.Parameter(0) public MercurialContainer.Version mercurialVersion;
-
-    @Parameterized.Parameters  public static Object[] data() {
-        return MercurialContainer.Version.values();
-    }
+    @Parameter(0)
+    private MercurialContainer.Version mercurialVersion;
 
     private FilePath repo;
-    private Slave slave;
+    private Slave agent;
     private MercurialInstallation inst;
 
-    @Before public void setUp() throws Exception {
-        MercurialContainer container = docker.create();
-        slave = container.createSlave(j);
-        inst = container.createInstallation(j, mercurialVersion, false, false, false, "", slave);
-        repo = slave.getRootPath().child("repo");
+    @BeforeEach
+    void beforeEach(JenkinsRule rule) throws Exception {
+        j = rule;
+        m = new MercurialTestUtil(j);
+
+        agent = container.createAgent(j);
+        inst = container.createInstallation(j, mercurialVersion, false, false, false, "", agent);
+        repo = agent.getRootPath().child("repo");
         repo.mkdirs();
-        m.withNode(slave);
+        m.withNode(agent);
         m.withInstallation(inst);
     }
 
     @Issue("JENKINS-55319")
-    @Test public void spacesInPaths() throws Exception {
+    @Test
+    void spacesInPaths() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
         MercurialSCM scm = new MercurialSCM(repo.getRemote());
         scm.setInstallation(inst.getName());
         p.setScm(scm);
-        p.setAssignedNode(slave);
+        p.setAssignedNode(agent);
         m.hg(repo, "init");
         m.touchAndCommit(repo, "one", "two");
         assertChangelog("", p);

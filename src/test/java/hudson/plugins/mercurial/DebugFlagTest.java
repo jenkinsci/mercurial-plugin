@@ -1,25 +1,24 @@
 package hudson.plugins.mercurial;
 
-import hudson.tools.ToolProperty;
-
 import java.util.Collections;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
-public class DebugFlagTest extends SCMTestBase {
+class DebugFlagTest extends SCMTestBase {
 
     private static final String DEBUG_INSTALLATION = "debug";
 
-    @Override @Before public void setUp() throws Exception {
-        super.setUp();
+    @BeforeEach
+    void beforeEach() {
         j.jenkins
                 .getDescriptorByType(MercurialInstallation.DescriptorImpl.class)
                 .setInstallations(
                         new MercurialInstallation(DEBUG_INSTALLATION, "", "hg",
                                 true, false, false, Collections
-                                        .<ToolProperty<?>> emptyList()));
+                                        .emptyList()));
     }
 
-    @Override protected String hgInstallation() {
+    @Override
+    protected String hgInstallation() {
         return DEBUG_INSTALLATION;
     }
 

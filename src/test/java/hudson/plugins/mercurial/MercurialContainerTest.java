@@ -29,22 +29,33 @@ import hudson.model.Slave;
 import hudson.model.TaskListener;
 import hudson.util.ArgumentListBuilder;
 import hudson.util.StreamTaskListener;
+
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import org.jenkinsci.test.acceptance.docker.DockerClassRule;
-import org.junit.Test;
-import static org.junit.Assert.*;
-import org.junit.ClassRule;
-import org.junit.Rule;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
-public class MercurialContainerTest {
+@Testcontainers(disabledWithoutDocker = true)
+@WithJenkins
+class MercurialContainerTest {
 
-    @Rule public JenkinsRule r = new JenkinsRule();
-    @ClassRule public static DockerClassRule<MercurialContainer> docker = new DockerClassRule<MercurialContainer>(MercurialContainer.class);
+    private JenkinsRule r;
+    @Container
+    private static final MercurialContainer container = new MercurialContainer();
 
-    @Test public void smokes() throws Exception {
-        MercurialContainer container = docker.create();
-        Slave slave = container.createSlave(r);
+    @BeforeEach
+    void beforeEach(JenkinsRule rule) {
+        r = rule;
+    }
+
+    @Test
+    void smokes() throws Exception {
+        Slave slave = container.createAgent(r);
         TaskListener listener = StreamTaskListener.fromStdout();
         for (MercurialContainer.Version v : MercurialContainer.Version.values()) {
             HgExe hgExe = new HgExe(container.createInstallation(r, v, false, false, false, "", slave), null, slave.createLauncher(listener), slave, listener, new EnvVars());

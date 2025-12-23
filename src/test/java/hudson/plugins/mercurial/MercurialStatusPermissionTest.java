@@ -10,61 +10,59 @@ import hudson.model.Slave;
 import hudson.triggers.SCMTrigger;
 import jenkins.model.Jenkins;
 import org.hamcrest.Matcher;
-import org.jenkinsci.test.acceptance.docker.DockerClassRule;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.MockAuthorizationStrategy;
 import org.jvnet.hudson.test.SleepBuilder;
-import org.xml.sax.SAXException;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.beans.HasPropertyWithValue.hasProperty;
 import static org.hamcrest.collection.ArrayMatching.hasItemInArray;
 import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInAnyOrder;
 import static org.hamcrest.core.IsNot.not;
 import static org.hamcrest.core.StringContains.containsString;
 import static org.hamcrest.core.StringEndsWith.endsWith;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-public class MercurialStatusPermissionTest {
+@Testcontainers(disabledWithoutDocker = true)
+@WithJenkins
+class MercurialStatusPermissionTest {
 
-    @Rule public JenkinsRule j = new JenkinsRule();
-    @Rule public MercurialRule m = new MercurialRule(j);
-    @ClassRule
-    public static DockerClassRule<MercurialContainer> docker = new DockerClassRule<>(MercurialContainer.class);
+    private JenkinsRule j;
+    private MercurialTestUtil m;
+    @Container
+    private static final MercurialContainer container = new MercurialContainer();
 
     private final String[] names = new String[]{"one1", "two2", "three3"};
     private final String carls = names[1];
     private String source;
 
-    @Before
-    public void setup() throws Exception {
+    @BeforeEach
+    void beforeEach(JenkinsRule rule) throws Exception {
+        j = rule;
+        m = new MercurialTestUtil(j);
+
         m.hg("version"); // test environment needs to be able to run Mercurial
-        MercurialContainer container = docker.create();
-        Slave slave = container.createSlave(j);
-        m.withNode(slave);
-        MercurialInstallation inst = container.createInstallation(j, MercurialContainer.Version.HG6, false, false, false, "", slave);
+        Slave agent = container.createAgent(j);
+        m.withNode(agent);
+        MercurialInstallation inst = container.createInstallation(j, MercurialContainer.Version.HG6, false, false, false, "", agent);
         assertNotNull(inst);
         m.withInstallation(inst);
-        FilePath sampleRepo = slave.getRootPath().child("sampleRepo");
+        FilePath sampleRepo = agent.getRootPath().child("sampleRepo");
         sampleRepo.mkdirs();
         m.hg(sampleRepo, "init");
         sampleRepo.child("a").write("a", "UTF-8");
         m.hg(sampleRepo, "commit", "--addremove", "--message=a-file");
 
-        source = "ssh://test@" + container.ipBound(22) + ":" + container.port(22) + "/" + sampleRepo;
+        source = "ssh://test@" + container.getHost() + ":" + container.getMappedPort(22) + "/" + sampleRepo;
 
         FreeStyleProject p = j.createFreeStyleProject(names[0]);
         p.setScm(new MercurialSCM(
@@ -98,17 +96,17 @@ public class MercurialStatusPermissionTest {
     }
 
     @Test
-    public void testTriggeredWithAnonymous() throws Exception {
+    void testTriggeredWithAnonymous() throws Exception {
         final Page page = j.createWebClient().goTo("mercurial/notifyCommit?url=" + source, "text/plain");
         final WebResponse response = page.getWebResponse();
         assertEquals(200, response.getStatusCode());
         final List<NameValuePair> headers = response.getResponseHeaders();
-        final List<NameValuePair> triggered = headers.stream().filter(nvp -> nvp.getName().equals("Triggered")).collect(Collectors.toList());
-        assertEquals("No headers!", 3, triggered.size());
+        final List<NameValuePair> triggered = headers.stream().filter(nvp -> nvp.getName().equals("Triggered")).toList();
+        assertEquals(3, triggered.size(), "No headers!");
         List<String> headerValues = triggered.stream().map(NameValuePair::getValue).collect(Collectors.toList());
         final String content = response.getContentAsString();
         assertThat(content, containsString("Scheduled polling of a job"));
-        assertThat(headerValues.toArray(new String[headerValues.size()]), hasItemInArray(containsString("Something")));
+        assertThat(headerValues.toArray(new String[0]), hasItemInArray(containsString("Something")));
 
         List<Matcher<? super String>> testHeaders = new ArrayList<>();
         for (String name : names) {
@@ -120,18 +118,18 @@ public class MercurialStatusPermissionTest {
     }
 
     @Test
-    public void testTriggeredWithAllReadable() throws Exception {
+    void testTriggeredWithAllReadable() throws Exception {
         final Page page = j.createWebClient().login("bob").goTo("mercurial/notifyCommit?url=" + source, "text/plain");
         final WebResponse response = page.getWebResponse();
         assertEquals(200, response.getStatusCode());
         final List<NameValuePair> headers = response.getResponseHeaders();
-        final List<NameValuePair> triggered = headers.stream().filter(nvp -> nvp.getName().equals("Triggered")).collect(Collectors.toList());
-        assertEquals("No headers!", 3, triggered.size());
+        final List<NameValuePair> triggered = headers.stream().filter(nvp -> nvp.getName().equals("Triggered")).toList();
+        assertEquals(3, triggered.size(), "No headers!");
         List<String> headerValues = triggered.stream().map(NameValuePair::getValue).collect(Collectors.toList());
         final String content = response.getContentAsString();
         assertThat(content, containsString("Scheduled polling of"));
         assertThat(content, not(containsString("Scheduled polling of a job")));
-        assertThat(headerValues.toArray(new String[headerValues.size()]), not(hasItemInArray(containsString("Something"))));
+        assertThat(headerValues.toArray(new String[0]), not(hasItemInArray(containsString("Something"))));
 
         List<Matcher<? super String>> testHeaders = new ArrayList<>();
         for (String name : names) {
@@ -143,18 +141,18 @@ public class MercurialStatusPermissionTest {
     }
 
     @Test
-    public void testTriggeredWithOneReadable() throws Exception {
+    void testTriggeredWithOneReadable() throws Exception {
         final Page page = j.createWebClient().login("carl").goTo("mercurial/notifyCommit?url=" + source, "text/plain");
         final WebResponse response = page.getWebResponse();
         assertEquals(200, response.getStatusCode());
         final List<NameValuePair> headers = response.getResponseHeaders();
-        final List<NameValuePair> triggered = headers.stream().filter(nvp -> nvp.getName().equals("Triggered")).collect(Collectors.toList());
-        assertEquals("No headers!", 3, triggered.size());
+        final List<NameValuePair> triggered = headers.stream().filter(nvp -> nvp.getName().equals("Triggered")).toList();
+        assertEquals(3, triggered.size(), "No headers!");
         List<String> headerValues = triggered.stream().map(NameValuePair::getValue).collect(Collectors.toList());
         final String content = response.getContentAsString();
         assertThat(content, containsString("Scheduled polling of"));
         assertThat(content, containsString("Scheduled polling of a job"));
-        assertThat(headerValues.toArray(new String[headerValues.size()]), hasItemInArray(containsString("Something")));
+        assertThat(headerValues.toArray(new String[0]), hasItemInArray(containsString("Something")));
 
         List<Matcher<? super String>> testHeaders = new ArrayList<>();
         for (String name : names) {

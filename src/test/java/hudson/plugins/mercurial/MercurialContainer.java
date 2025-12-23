@@ -24,7 +24,6 @@
 
 package hudson.plugins.mercurial;
 
-import com.cloudbees.plugins.credentials.Credentials;
 import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
 import com.cloudbees.plugins.credentials.domains.Domain;
@@ -36,32 +35,66 @@ import hudson.slaves.NodeProperty;
 import hudson.slaves.NodePropertyDescriptor;
 import hudson.tools.ToolLocationNodeProperty;
 import hudson.util.DescribableList;
+
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
+
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.ArrayUtils;
-import org.jenkinsci.test.acceptance.docker.DockerFixture;
-import org.jenkinsci.test.acceptance.docker.fixtures.JavaContainer;
+import org.apache.commons.lang3.SystemUtils;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.images.builder.ImageFromDockerfile;
+
+import static java.nio.file.attribute.PosixFilePermission.OWNER_READ;
 
 /**
  * Docker container containing all that is needed for an SSH agent running Mercurial.
  */
-@DockerFixture(id="mercurial", ports=22)
-public class MercurialContainer extends JavaContainer {
+public class MercurialContainer extends GenericContainer<MercurialContainer> {
 
-    @SuppressWarnings("deprecation")
-    public Slave createSlave(JenkinsRule r) throws Exception {
+    private File privateKey;
+
+    public MercurialContainer() {
+        super(new ImageFromDockerfile("mercurial", false)
+                .withFileFromClasspath("Dockerfile", "hudson/plugins/mercurial/MercurialContainer/Dockerfile"));
+        setExposedPorts(List.of(22));
+    }
+
+    /**
+     * Get plaintext Private Key File
+     */
+    public File getPrivateKey() {
+        if (privateKey == null) {
+            try {
+                privateKey = File.createTempFile("ssh", "key");
+                privateKey.deleteOnExit();
+                FileUtils.copyURLToFile(MercurialContainer.class.getResource("unsafe"), privateKey);
+                if (SystemUtils.IS_OS_UNIX) {
+                    Files.setPosixFilePermissions(privateKey.toPath(), EnumSet.of(OWNER_READ));
+                }
+            } catch (IOException e) {
+                throw new RuntimeException("Not able to get the plaintext SSH key file. Missing file, wrong file permissions?!");
+            }
+        }
+        return privateKey;
+    }
+
+    public Slave createAgent(JenkinsRule r) throws Exception {
         int num = r.jenkins.getNodes().size();
         String credentialsId = "test" + num;
-        SystemCredentialsProvider.getInstance().setDomainCredentialsMap(Collections.singletonMap(Domain.global(), Collections.<Credentials>singletonList(new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL, credentialsId, null, "test", "test"))));
-        DumbSlave slave = new DumbSlave("agent" + num,"/home/test/agent", new SSHLauncher(ipBound(22), port(22), credentialsId));
-        slave.setNumExecutors(1);
-        slave.setLabelString("mercurial");
-        r.jenkins.addNode(slave);
-        r.waitOnline(slave);
-        return slave;
+        SystemCredentialsProvider.getInstance().setDomainCredentialsMap(Collections.singletonMap(Domain.global(), Collections.singletonList(new UsernamePasswordCredentialsImpl(CredentialsScope.GLOBAL, credentialsId, null, "test", "test"))));
+        DumbSlave agent = new DumbSlave("agent" + num,"/home/test/agent", new SSHLauncher(getHost(), getMappedPort(22), credentialsId));
+        agent.setNumExecutors(1);
+        agent.setLabelString("mercurial");
+        r.jenkins.addNode(agent);
+        r.waitOnline(agent);
+        return agent;
     }
 
     public enum Version {
@@ -73,13 +106,13 @@ public class MercurialContainer extends JavaContainer {
         }
     }
 
-    public MercurialInstallation createInstallation(JenkinsRule r, Version v, boolean debug, boolean useCaches, boolean useSharing, String config, Slave... slaves) throws IOException {
+    public MercurialInstallation createInstallation(JenkinsRule r, Version v, boolean debug, boolean useCaches, boolean useSharing, String config, Slave... agents) throws IOException {
         MercurialInstallation.DescriptorImpl desc = r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class);
         ToolLocationNodeProperty.ToolLocation location = new ToolLocationNodeProperty.ToolLocation(desc, v.name(), "/opt/mercurial-" + v.exactVersion);
         MercurialInstallation inst = new MercurialInstallation(v.name(), "", "INSTALLATION/hg", debug, useCaches, useSharing, config, null);
-        desc.setInstallations((MercurialInstallation[]) ArrayUtils.add(desc.getInstallations(), inst)); // TODO stop calling this here, should be responsibility of caller
-        for (Slave slave : slaves) {
-            DescribableList<NodeProperty<?>, NodePropertyDescriptor> props = slave.getNodeProperties();
+        desc.setInstallations(ArrayUtils.add(desc.getInstallations(), inst)); // TODO stop calling this here, should be responsibility of caller
+        for (Slave agent : agents) {
+            DescribableList<NodeProperty<?>, NodePropertyDescriptor> props = agent.getNodeProperties();
             ToolLocationNodeProperty prop = props.get(ToolLocationNodeProperty.class);
             List<ToolLocationNodeProperty.ToolLocation> locations;
             if (prop == null) {

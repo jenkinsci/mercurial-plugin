@@ -24,38 +24,40 @@
 
 package hudson.plugins.mercurial;
 
-import hudson.AbortException;
 import hudson.model.Action;
 import hudson.model.Actionable;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.Issue;
 
-import java.io.IOException;
 import java.util.*;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class MercurialSCMTest {
+class MercurialSCMTest {
 
-    @Test public void parseStatus() throws Exception {
-        assertEquals(new HashSet<String>(Arrays.asList("whatever", "added", "mo-re", "whatever-c", "initial", "more")), MercurialSCM.parseStatus(
-                  "M whatever\n"
-                + "A added\n"
-                + "A mo-re\n"
-                + "  more\n"
-                + "A whatever-c\n"
-                + "  whatever\n"
-                + "R initial\n"
-                + "R more\n"));
+    @Test
+    void parseStatus() {
+        assertEquals(new HashSet<>(Arrays.asList("whatever", "added", "mo-re", "whatever-c", "initial", "more")), MercurialSCM.parseStatus(
+                """
+                        M whatever
+                        A added
+                        A mo-re
+                          more
+                        A whatever-c
+                          whatever
+                        R initial
+                        R more
+                        """));
     }
 
-    @Test public void buildEnvVarsSetsShortId() throws IOException {
-        Map<String,String> actualEnvironment = new HashMap<String,String>();
+    @Test
+    void buildEnvVarsSetsShortId() {
+        Map<String,String> actualEnvironment = new HashMap<>();
         final String EXPECTED_SHORT_ID = "123456789012";
         new MercurialSCM("","","", "", "", null, true).buildEnvVarsFromActionable(new Actionable() {
             @Override public List<Action> getActions() {
-                return Collections.<Action>singletonList(new MercurialTagAction(EXPECTED_SHORT_ID + "1627e63489b4096a8858e559a456", "rev", null, null));
+                return Collections.singletonList(new MercurialTagAction(EXPECTED_SHORT_ID + "1627e63489b4096a8858e559a456", "rev", null, null));
             }
             @Override public String getDisplayName() {return null;}
             @Override public String getSearchUrl() {return null;}
@@ -63,12 +65,13 @@ public class MercurialSCMTest {
         assertEquals(EXPECTED_SHORT_ID, actualEnvironment.get("MERCURIAL_REVISION_SHORT"));
     }
 
-    @Test public void buildEnvVarsSetsUrl() throws IOException {
-        Map<String,String> actualEnvironment = new HashMap<String,String>();
+    @Test
+    void buildEnvVarsSetsUrl() {
+        Map<String,String> actualEnvironment = new HashMap<>();
         final String EXPECTED_REPOSITORY_URL = "http://mercurialserver/testrepo";
         new MercurialSCM("",EXPECTED_REPOSITORY_URL,"", "", "", null, true).buildEnvVarsFromActionable(new Actionable() {
             @Override public List<Action> getActions() {
-                return Collections.<Action>singletonList(new MercurialTagAction("1627e63489b4096a8858e559a456", "rev", null, null));            }
+                return Collections.singletonList(new MercurialTagAction("1627e63489b4096a8858e559a456", "rev", null, null));            }
             @Override public String getDisplayName() {return null;}
             @Override public String getSearchUrl() {return null;}
         }, actualEnvironment);
@@ -76,12 +79,9 @@ public class MercurialSCMTest {
     }
 
     @Issue("JENKINS-68562")
-    @Test public void abortIfSourceIsLocal() throws IOException {
-        try {
-            new MercurialSCM("", "https://mercurialserver/testrepo", "", "", "", null, true).abortIfSourceLocal();
-        } catch (AbortException e) {
-            fail("https source URLs should always be valid");
-        }
+    @Test
+    void abortIfSourceIsLocal() {
+        assertDoesNotThrow(() -> new MercurialSCM("", "https://mercurialserver/testrepo", "", "", "", null, true).abortIfSourceLocal(), "https source URLs should always be valid");
     }
 
 }

@@ -35,6 +35,7 @@ import hudson.triggers.SCMTrigger;
 import hudson.util.LogTaskListener;
 import hudson.util.StreamTaskListener;
 import hudson.util.VersionNumber;
+import java.io.File;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
@@ -46,45 +47,60 @@ import jenkins.branch.BranchSource;
 import jenkins.scm.api.SCMEvents;
 import jenkins.util.VirtualFile;
 import org.apache.commons.io.FileUtils;
-import static org.hamcrest.Matchers.is;
+
 import org.jenkinsci.plugins.scriptsecurity.scripts.ScriptApproval;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject;
 import org.jenkinsci.plugins.workflow.test.steps.SemaphoreStep;
-import org.jenkinsci.test.acceptance.docker.DockerClassRule;
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeThat;
-import org.junit.AssumptionViolatedException;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.jvnet.hudson.test.BuildWatcher;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.io.TempDir;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
+import org.opentest4j.TestAbortedException;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
-public class PipelineTest {
+@Testcontainers(disabledWithoutDocker = true)
+@WithJenkins
+class PipelineTest {
 
-    @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
-    @Rule public JenkinsRule r = new JenkinsRule();
-    @Rule public MercurialRule m = new MercurialRule(r);
-    @ClassRule public static DockerClassRule<MercurialContainer> docker = new DockerClassRule<>(MercurialContainer.class);
-    @Rule public TemporaryFolder tmp = new TemporaryFolder();
+    @SuppressWarnings("unused")
+    @RegisterExtension
+    private static final BuildWatcherExtension BUILD_WATCHER = new BuildWatcherExtension();
+    private JenkinsRule r;
+    private MercurialTestUtil m;
+    @Container
+    private static final MercurialContainer container = new MercurialContainer();
+    @TempDir
+    private File tmp;
 
-    @Test public void multipleSCMs() throws Exception {
-        MercurialContainer container = docker.create();
-        Slave slave = container.createSlave(r);
-        m.withNode(slave);
-        MercurialInstallation inst = container.createInstallation(r, MercurialContainer.Version.HG6, false, false, false, "", slave);
+    @BeforeEach
+    void beforeEach(JenkinsRule rule) {
+        r = rule;
+        m = new MercurialTestUtil(r);
+    }
+
+    @Test
+    void multipleSCMs() throws Exception {
+        Slave agent = container.createAgent(r);
+        m.withNode(agent);
+        MercurialInstallation inst = container.createInstallation(r, MercurialContainer.Version.HG6, false, false, false, "", agent);
         assertNotNull(inst);
         m.withInstallation(inst);
-        FilePath sampleRepo = slave.getRootPath().child("sampleRepo");
+        FilePath sampleRepo = agent.getRootPath().child("sampleRepo");
         sampleRepo.mkdirs();
         m.hg(sampleRepo, "init");
         m.touchAndCommit(sampleRepo, "file");
-        FilePath otherRepo = slave.getRootPath().child("otherRepo");
+        FilePath otherRepo = agent.getRootPath().child("otherRepo");
         otherRepo.mkdirs();
         m.hg(otherRepo, "init");
         m.touchAndCommit(otherRepo, "otherfile");
@@ -92,7 +108,7 @@ public class PipelineTest {
         p.addTrigger(new SCMTrigger(""));
         p.setQuietPeriod(3); // so it only does one build
         p.setDefinition(new CpsFlowDefinition(
-            "node('" + slave.getNodeName() + "') {\n" +
+            "node('" + agent.getNodeName() + "') {\n" +
             "    dir('main') {\n" +
             "        checkout([$class: 'MercurialSCM', source: $/" + sampleRepo.toURI() + "/$, installation: '" + inst.getName() + "'])\n" +
             "    }\n" +
@@ -148,9 +164,10 @@ public class PipelineTest {
     }
 
     @Issue("JENKINS-42278")
-    @Test public void exactRevisionMercurial() throws Exception {
+    @Test
+    void exactRevisionMercurial() throws Exception {
         // TODO mostly pointless to use MercurialContainer here since multibranch requires a caching installation and thus for hg to be installed on controller
-        FilePath sampleRepo = new FilePath(tmp.getRoot());
+        FilePath sampleRepo = new FilePath(tmp);
         m.hg(sampleRepo, "init");
         ScriptApproval sa = ScriptApproval.get();
         sa.approveSignature("staticField hudson.model.Items XSTREAM2");
@@ -199,7 +216,8 @@ public class PipelineTest {
         assertFalse(iterator.hasNext());
     }
 
-    @Test public void modernHook() throws Exception {
+    @Test
+    void modernHook() throws Exception {
         // Cannot use MercurialContainer here because of registerHook limitation, q.v.
         String instName = "caching";
         MercurialInstallation installation = new MercurialInstallation(instName, "", "hg", false, true, false, null, null);
@@ -210,14 +228,14 @@ public class PipelineTest {
         try {
             version = hg.version();
         } catch (Exception x) {
-            throw new AssumptionViolatedException("cannot run hg version; perhaps not installed locally", x);
+            throw new TestAbortedException("cannot run hg version; perhaps not installed locally", x);
         }
         // I could not find the exact version when the new hooks were added, but not found on any 2.x
         // and found in all the 3.x versions I could get my hands on
-        assumeThat("Need mercurial 3.0ish to have in-process hooks, have " + version,
-                new VersionNumber(version).isNewerThan(new VersionNumber("3.0")),is(true));
+        assumeTrue(new VersionNumber(version).isNewerThan(new VersionNumber("3.0")),
+                "Need mercurial 3.0ish to have in-process hooks, have " + version);
 
-        FilePath sampleRepo = new FilePath(tmp.getRoot());
+        FilePath sampleRepo = new FilePath(tmp);
         m.hg(sampleRepo, "init");
         sampleRepo.child("Jenkinsfile").write("node {checkout scm; echo readFile('file')}", null);
         sampleRepo.child("file").write("initial content", null);
@@ -241,7 +259,7 @@ public class PipelineTest {
         try {
             m.hg(sampleRepo, "commit", "--message=tweaked");
         } catch (AssertionError x) {
-            throw new AssumptionViolatedException("probably using Python 2", x);
+            throw new TestAbortedException("probably using Python 2", x);
         }
 
         // wait for the event to have completed processing

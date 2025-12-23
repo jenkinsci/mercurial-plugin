@@ -16,41 +16,38 @@ import hudson.util.VersionNumber;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.TreeSet;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.junit.Assume;
-import org.junit.AssumptionViolatedException;
-import org.junit.rules.ExternalResource;
+import org.apache.commons.lang3.Strings;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.opentest4j.TestAbortedException;
 
-public final class MercurialRule extends ExternalResource {
+public class MercurialTestUtil {
 
-    private TaskListener listener;
+    private final TaskListener listener = new StreamTaskListener(System.out, Charset.defaultCharset());
     private boolean validated;
 
     private final JenkinsRule j;
     private Node node;
     private MercurialInstallation inst;
 
-    public MercurialRule(JenkinsRule j) {
+    public MercurialTestUtil(JenkinsRule j) {
         this.j = j;
     }
 
-    @Override protected void before() throws Exception {
-        listener = new StreamTaskListener(System.out, Charset.defaultCharset());
-    }
-
-    public MercurialRule withNode(Node node) {
+    public MercurialTestUtil withNode(Node node) {
         this.node = node;
         return this;
     }
 
-    public MercurialRule withInstallation(MercurialInstallation inst) {
+    public MercurialTestUtil withInstallation(MercurialInstallation inst) {
         this.inst = inst;
         return this;
     }
@@ -72,15 +69,15 @@ public final class MercurialRule extends ExternalResource {
         if (!validated) {
             try {
                 String version = hg.version();
-                Assume.assumeNotNull(version);
+                assumeTrue(version != null);
                 System.out.println("Mercurial version detected: " + version);
-                Assume.assumeFalse(version + " is too old to even test", new VersionNumber(version).isOlderThan(new VersionNumber(MercurialContainer.Version.HG6.exactVersion)));
+                assumeFalse(new VersionNumber(version).isOlderThan(new VersionNumber(MercurialContainer.Version.HG6.exactVersion)), version + " is too old to even test");
             } catch (IOException ioe) {
                 String message = ioe.getMessage();
                 if (message.startsWith("Cannot run program \"hg\"") && message.endsWith("No such file or directory")) {
-                    throw new AssumptionViolatedException("hg is not available; please check that your PATH environment variable is properly configured");
+                    throw new TestAbortedException("hg is not available; please check that your PATH environment variable is properly configured");
                 }
-                Assume.assumeNoException(ioe); // failed to check availability of hg
+                throw new TestAbortedException(ioe.toString()); // failed to check availability of hg
             }
             validated = true;
         }
@@ -176,7 +173,7 @@ public final class MercurialRule extends ExternalResource {
     public long getLastChangesetUnixTimestamp(FilePath repo) throws Exception {
         //hgdate returns the date as a pair of numbers: "1157407993 25200" (Unix timestamp, timezone offset).
         String date = hgExe().popen(repo, listener, false, new ArgumentListBuilder("log", "-l1", "--template", "{date|hgdate}"));
-        return Long.valueOf(date.split(" ")[0]);
+        return Long.parseLong(date.split(" ")[0]);
     }
 
     // Borrowed from AbstractSampleDVCSRepoRule:
@@ -192,15 +189,17 @@ public final class MercurialRule extends ExternalResource {
         FilePath hgDir = repo.child(".hg");
         FilePath enforcePython3 = hgDir.child("enforce-python3.py");
         enforcePython3.write(
-                "import urllib.request, urllib.parse\n" +
-                        "def precommit(**kwargs):\n" +
-                        "    urllib.request.Request('http://nowhere.net/')\n", null);
+                """
+                        import urllib.request, urllib.parse
+                        def precommit(**kwargs):
+                            urllib.request.Request('http://nowhere.net/')
+                        """, null);
 
         FilePath hook = hgDir.child("hook.py");
 
-        String hook_text = IOUtils.toString(MercurialRule.class.getResourceAsStream("/hook.py"), "UTF-8");
-        hook_text = StringUtils.replace(hook_text, "@JENKINS_URL@", j.getURL().toString());
-        hook_text = StringUtils.replace(hook_text, "@REPO_URL@", repo.toURI().toString());
+        String hook_text = IOUtils.toString(MercurialTestUtil.class.getResourceAsStream("/hook.py"), StandardCharsets.UTF_8);
+        hook_text = Strings.CS.replace(hook_text, "@JENKINS_URL@", j.getURL().toString());
+        hook_text = Strings.CS.replace(hook_text, "@REPO_URL@", repo.toURI().toString());
         hook.write(hook_text, null);
 
         hgDir.child("hgrc").write(
@@ -208,5 +207,4 @@ public final class MercurialRule extends ExternalResource {
                         "precommit.enforce-python3 = python:" + enforcePython3.getRemote() + ":precommit\n" +
                         "commit.jenkins = python:" + hook.getRemote() + ":commit", null);
     }
-
 }

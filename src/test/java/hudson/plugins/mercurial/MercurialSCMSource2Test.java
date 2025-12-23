@@ -32,63 +32,94 @@ import hudson.FilePath;
 import hudson.model.Slave;
 import hudson.plugins.mercurial.traits.MercurialInstallationSCMSourceTrait;
 import hudson.util.StreamTaskListener;
+import java.io.File;
+import java.io.IOException;
 import java.util.Collections;
 import jenkins.branch.BranchSource;
-import jenkins.scm.api.trait.SCMSourceTrait;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject;
-import org.jenkinsci.test.acceptance.docker.DockerClassRule;
-import org.junit.ClassRule;
-import org.junit.Test;
-import static org.junit.Assert.*;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
-import org.junit.rules.TestRule;
-import org.jvnet.hudson.test.BuildWatcher;
-import org.jvnet.hudson.test.FlagRule;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.io.TempDir;
 import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.junit.jupiter.BuildWatcherExtension;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
-public class MercurialSCMSource2Test {
+@Testcontainers(disabledWithoutDocker = true)
+@WithJenkins
+class MercurialSCMSource2Test {
 
     // TODO -i option for authentication does not work with a space in $JENKINS_HOME (or agent root)
-    @ClassRule public static TestRule noSpaceInTmpDirs = FlagRule.systemProperty("jenkins.test.noSpaceInTmpDirs", "true");
+    private static String noSpaceInTmpDirs;
 
-    @ClassRule public static BuildWatcher buildWatcher = new BuildWatcher();
-    @Rule public JenkinsRule r = new JenkinsRule();
-    @Rule public MercurialRule m = new MercurialRule(r);
-    @ClassRule public static DockerClassRule<MercurialContainer> docker = new DockerClassRule<>(MercurialContainer.class);
-    @Rule public TemporaryFolder tmp = new TemporaryFolder();
+    @SuppressWarnings("unused")
+    @RegisterExtension
+    private static final BuildWatcherExtension BUILD_WATCHER = new BuildWatcherExtension();
+    private JenkinsRule r;
+    private MercurialTestUtil m;
+    @Container
+    private static final MercurialContainer container = new MercurialContainer();
+    @TempDir
+    private File tmp;
+
+    @BeforeAll
+    static void beforeAll() {
+        noSpaceInTmpDirs = System.setProperty("jenkins.test.noSpaceInTmpDirs", "true");
+    }
+
+    @BeforeEach
+    void beforeEach(JenkinsRule rule) {
+        r = rule;
+        m = new MercurialTestUtil(r);
+    }
+
+    @AfterAll
+    static void afterAll() {
+        if (noSpaceInTmpDirs != null) {
+            System.setProperty("jenkins.test.noSpaceInTmpDirs", noSpaceInTmpDirs);
+        } else {
+            System.clearProperty("jenkins.test.noSpaceInTmpDirs");
+        }
+    }
 
     @Issue({"JENKINS-42278", "JENKINS-46851", "JENKINS-48867"})
-    @Test public void withCredentialsId() throws Exception {
+    @Test
+    void withCredentialsId() throws Exception {
         m.hg("version"); // test environment needs to be able to run Mercurial
-        MercurialContainer container = docker.create();
-        Slave slave = container.createSlave(r);
-        m.withNode(slave);
-        MercurialInstallation inst = container.createInstallation(r, MercurialContainer.Version.HG6, false, false, false, "", slave);
+        Slave agent = container.createAgent(r);
+        m.withNode(agent);
+        MercurialInstallation inst = container.createInstallation(r, MercurialContainer.Version.HG6, false, false, false, "", agent);
         assertNotNull(inst);
         m.withInstallation(inst);
-        FilePath sampleRepo = slave.getRootPath().child("sampleRepo");
+        FilePath sampleRepo = agent.getRootPath().child("sampleRepo");
         sampleRepo.mkdirs();
         m.hg(sampleRepo, "init");
         // Tricky because the SSH URL will not work on that agent; it is actually only valid on the controller.
         // So we need to check out on the controller, which is where branch indexing happens as well.
         sampleRepo.child("Jenkinsfile").write("node('master') {checkout scm}", null);
         m.hg(sampleRepo, "commit", "--addremove", "--message=flow");
-        MercurialSCMSource s = new MercurialSCMSource("ssh://test@" + container.ipBound(22) + ":" + container.port(22) + "/" + sampleRepo);
+        MercurialSCMSource s = new MercurialSCMSource("ssh://test@" + container.getHost() + ":" + container.getMappedPort(22) + "/" + sampleRepo);
         CredentialsProvider.lookupStores(r.jenkins).iterator().next().addCredentials(Domain.global(),
             new BasicSSHUserPrivateKey(CredentialsScope.GLOBAL, "creds", "test", new BasicSSHUserPrivateKey.FileOnMasterPrivateKeySource(container.getPrivateKey().getAbsolutePath()), null, null));
         s.setCredentialsId("creds");
-        String toolHome = inst.forNode(slave, StreamTaskListener.fromStdout()).getHome();
+        String toolHome = inst.forNode(agent, StreamTaskListener.fromStdout()).getHome();
         assertNotNull(toolHome);
         String remoteHgLoc = inst.executableWithSubstitution(toolHome);
         r.jenkins.getDescriptorByType(MercurialInstallation.DescriptorImpl.class).setInstallations(
                 new MercurialInstallation("default", "", "hg", false, true, null, false,
-                    "[ui]\nssh = ssh -o UserKnownHostsFile=" + tmp.newFile("known_hosts") + " -o StrictHostKeyChecking=no\n" +
+                    "[ui]\nssh = ssh -o UserKnownHostsFile=" + newFile(tmp, "known_hosts") + " -o StrictHostKeyChecking=no\n" +
                     "remotecmd = " + remoteHgLoc, null));
-        s.setTraits(Collections.<SCMSourceTrait>singletonList(new MercurialInstallationSCMSourceTrait("default")));
+        s.setTraits(Collections.singletonList(new MercurialInstallationSCMSourceTrait("default")));
         WorkflowMultiBranchProject mp = r.jenkins.createProject(WorkflowMultiBranchProject.class, "p");
         mp.getSourcesList().add(new BranchSource(s));
         WorkflowJob p = PipelineTest.scheduleAndFindBranchProject(mp, "default");
@@ -102,6 +133,12 @@ public class MercurialSCMSource2Test {
         // JENKINS-48867: if indexing fails, should not lose existing branches
         sampleRepo.deleteRecursive();
         assertEquals(p, PipelineTest.scheduleAndFindBranchProject(mp, "default"));
+    }
+
+    private static File newFile(File parent, String child) throws IOException {
+        File result = new File(parent, child);
+        result.createNewFile();
+        return result;
     }
 
 }

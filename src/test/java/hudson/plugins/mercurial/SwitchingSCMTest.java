@@ -1,49 +1,59 @@
 package hudson.plugins.mercurial;
 
 import hudson.model.FreeStyleProject;
-import hudson.tools.ToolProperty;
 
-import static org.junit.Assert.*;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.jvnet.hudson.test.JenkinsRule;
 
 import java.io.File;
 import java.util.Collections;
 import jenkins.model.Jenkins;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 
-public class SwitchingSCMTest {
+@WithJenkins
+class SwitchingSCMTest {
 
-    @Rule public JenkinsRule j = new JenkinsRule();
-    @Rule public MercurialRule m = new MercurialRule(j);
-    @Rule public TemporaryFolder tmp = new TemporaryFolder();
+    private JenkinsRule j;
+    private MercurialTestUtil m;
+
+    @TempDir
+    private File tmp;
     private File repo;
-    protected String cachingInstallation = "caching";
-    protected String sharingInstallation = "sharing";
 
-    @Before public void setUp() throws Exception {
-        repo = tmp.getRoot();
+    private static final String CACHING_INSTALLATION = "caching";
+    private static final String SHARING_INSTALLATION = "sharing";
 
-        Jenkins.getInstance()
+    @BeforeEach
+    void beforeEach(JenkinsRule rule) {
+        j = rule;
+        m = new MercurialTestUtil(j);
+
+        repo = tmp;
+
+        Jenkins.get()
                 .getDescriptorByType(MercurialInstallation.DescriptorImpl.class)
                 .setInstallations(
-                        new MercurialInstallation(cachingInstallation, "",
+                        new MercurialInstallation(CACHING_INSTALLATION, "",
                                 "hg", false, true, false, Collections
-                                        .<ToolProperty<?>> emptyList()));
-        Jenkins.getInstance()
+                                        .emptyList()));
+        Jenkins.get()
                 .getDescriptorByType(MercurialInstallation.DescriptorImpl.class)
                 .setInstallations(
-                        new MercurialInstallation(sharingInstallation, "",
+                        new MercurialInstallation(SHARING_INSTALLATION, "",
                                 "hg", false, true, true, Collections
-                                        .<ToolProperty<?>> emptyList()));
+                                        .emptyList()));
 
     }
 
-    @Test public void switchingFromCachedToShared() throws Exception {
+    @Test
+    void switchingFromCachedToShared() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
-        p.setScm(new MercurialSCM(cachingInstallation, repo.getPath(), null,
+        p.setScm(new MercurialSCM(CACHING_INSTALLATION, repo.getPath(), null,
                 null, null, null, false));
 
         m.hg(repo, "init");
@@ -52,7 +62,7 @@ public class SwitchingSCMTest {
         assertFalse(p.getSomeWorkspace().child(".hg").child("sharedpath")
                 .exists());
 
-        p.setScm(new MercurialSCM(sharingInstallation, repo.getPath(), null,
+        p.setScm(new MercurialSCM(SHARING_INSTALLATION, repo.getPath(), null,
                 null, null, null, false));
 
         m.touchAndCommit(repo, "b");
@@ -62,9 +72,10 @@ public class SwitchingSCMTest {
 
     }
 
-    public void testSwitchingFromSharedToCached() throws Exception {
+    @Test
+    void testSwitchingFromSharedToCached() throws Exception {
         FreeStyleProject p = j.createFreeStyleProject();
-        p.setScm(new MercurialSCM(sharingInstallation, repo.getPath(), null,
+        p.setScm(new MercurialSCM(SHARING_INSTALLATION, repo.getPath(), null,
                 null, null, null, false));
 
         m.hg(repo, "init");
@@ -74,7 +85,7 @@ public class SwitchingSCMTest {
         assertTrue(p.getSomeWorkspace().child(".hg").child("sharedpath")
                 .exists());
 
-        p.setScm(new MercurialSCM(cachingInstallation, repo.getPath(), null,
+        p.setScm(new MercurialSCM(CACHING_INSTALLATION, repo.getPath(), null,
                 null, null, null, false));
 
         m.touchAndCommit(repo, "b");
