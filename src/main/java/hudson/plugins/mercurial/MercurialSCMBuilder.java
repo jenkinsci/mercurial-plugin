@@ -115,10 +115,13 @@ public class MercurialSCMBuilder<B extends MercurialSCMBuilder<B>> extends SCMBu
         MercurialSCM result = new MercurialSCM(source());
         if (revision instanceof MercurialSCMSource.MercurialRevision) {
             result.setRevisionType(MercurialSCM.RevisionType.CHANGESET);
-            result.setRevision(((MercurialSCMSource.MercurialRevision) revision).getHash());
+            MercurialSCMSource.MercurialRevision mercurialRevision = (MercurialSCMSource.MercurialRevision) revision;
+            result.setRevision(mercurialRevision.getHash());
+            result.setHeadName(mercurialRevision.getHead().getName());
         } else {
             result.setRevisionType(MercurialSCM.RevisionType.BRANCH);
             result.setRevision(head().getName());
+            result.setHeadName(head().getName());
         }
         result.setBrowser(browser());
         result.setClean(clean());

@@ -151,6 +151,8 @@ public class MercurialSCM extends SCM implements Serializable {
     @Deprecated
     private String branch;
 
+    private String headName = "default";
+
     /** Slash-separated subdirectory of the workspace in which the repository will be kept; null for top level. */
     private String subdir;
 
@@ -298,6 +300,14 @@ public class MercurialSCM extends SCM implements Serializable {
 
     @DataBoundSetter public final void setRevision(@NonNull String revision) {
         this.revision = Util.fixEmpty(revision) == null ? "default" : revision;
+    }
+
+    public @NonNull String getHeadName() {
+        return headName;
+    }
+
+    public final void setHeadName(@NonNull String headName) {
+        this.headName = Util.fixEmpty(headName) == null ? "default" : headName;
     }
 
     @Deprecated
